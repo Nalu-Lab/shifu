@@ -1,5 +1,6 @@
 mod agents;
 mod antigravity;
+mod clamshell;
 mod clis;
 mod config;
 mod files;
