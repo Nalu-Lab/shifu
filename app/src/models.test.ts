@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AGENTS, specOf, effortsFor, mergeCatalog, validPick, type ModelInfo } from "./models";
+import { AGENTS, specOf, defaultKind, effortsFor, installUrl, isInstalled, mergeCatalog, splitAgents, validPick, type ModelInfo } from "./models";
+import type { CliReport } from "./api";
 
 const m = (id: string, efforts: string[]): ModelInfo => ({ id, label: id, efforts });
 const models = [m("opus", ["low", "high", "max"]), m("sonnet", ["low", "medium", "high"]), m("haiku-4-5", [])];
@@ -38,5 +39,40 @@ describe("models", () => {
       codex: ["gpt"],
       codebuddy: ["hy4free"],
     });
+  });
+});
+
+describe("installed agents", () => {
+  const report = (installed: string[]): CliReport => ({
+    agents: AGENTS.filter((a) => a.kind !== "terminal").map((a) => ({
+      kind: a.kind,
+      name: a.name,
+      path: installed.includes(a.kind) ? `/bin/${a.kind}` : null,
+      install_url: `https://example.com/${a.kind}`,
+    })),
+    tmux: "/opt/homebrew/bin/tmux",
+    shell_read: true,
+  });
+
+  it("before the first answer nothing is hidden", () => {
+    expect(splitAgents(null).missing).toEqual([]);
+    expect(defaultKind(null, "kimi")).toBe("kimi");
+  });
+
+  it("offers what is installed, keeps the terminal, and points at the rest", () => {
+    const { installed, missing } = splitAgents(report(["codex", "qwen"]));
+    expect(installed.map((a) => a.kind)).toEqual(["codex", "qwen", "terminal"]);
+    expect(missing.map((a) => a.kind)).toEqual(["claude", "codebuddy", "kimi", "antigravity", "stepfun"]);
+    expect(installUrl(report([]), "kimi")).toBe("https://example.com/kimi");
+  });
+
+  it("keeps the remembered agent while it is installed, else takes the first installed one", () => {
+    expect(defaultKind(report(["claude", "codex"]), "codex")).toBe("codex");
+    expect(defaultKind(report(["codex", "qwen"]), "claude")).toBe("codex");
+    expect(defaultKind(report([]), "claude")).toBe("terminal");
+  });
+
+  it("an agent the report does not list is not hidden", () => {
+    expect(isInstalled({ agents: [], tmux: null, shell_read: false }, "claude")).toBe(true);
   });
 });

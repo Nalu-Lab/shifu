@@ -9,6 +9,7 @@ pub mod app_session;
 pub mod app_statusline;
 pub mod agent;
 pub mod bridge;
+pub mod clis;
 pub mod browser;
 pub mod web;
 pub mod commands;

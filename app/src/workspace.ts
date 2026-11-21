@@ -11,7 +11,8 @@ import type {
 } from "dockview";
 import { AGENT_MIME, layoutLoad, layoutSave } from "./api";
 import { AgentTab, FileTab } from "./tab";
-import { AGENTS } from "./models";
+import { getClis, onClisChange, splitAgents } from "./models";
+import { missingLine } from "./newpopover";
 import { vendorIcon } from "./vendoricons";
 import { TerminalPanel } from "./terminal";
 import { FILE_PREFIX, FilePanel, isFilePanel, setFileOpener } from "./preview";
@@ -105,15 +106,35 @@ const plusIcon =
 class EmptyState implements IWatermarkRenderer {
   readonly element = document.createElement("div");
   private readonly unsubscribe: () => void;
+  private readonly unsubscribeClis: () => void;
   constructor(private readonly hooks: WorkspaceHooks) {
     this.element.className = "empty";
     this.unsubscribe = subscribe(() => this.paint());
+    this.unsubscribeClis = onClisChange(() => this.paint());
     this.paint();
+  }
+  /** What was found on this Mac: tmux missing first (nothing runs without it), then the agents. */
+  private setupNotes(): HTMLElement[] {
+    const clis = getClis();
+    if (!clis) return [];
+    const notes: HTMLElement[] = [];
+    const note = (text: string) => {
+      const n = document.createElement("div");
+      n.className = "empty-note";
+      n.textContent = text;
+      notes.push(n);
+    };
+    if (!clis.tmux) note("没找到 tmux：Shifu 的每个对话都在 tmux 里运行。在终端运行 brew install tmux，装好后回到这里。");
+    const found = clis.agents.filter((a) => a.path !== null);
+    note(found.length ? `这台 Mac 上找到：${found.map((a) => a.name).join("、")}` : "这台 Mac 上还没找到 Agent 命令行工具，装好一个后回到这里。");
+    const line = missingLine(splitAgents(clis).missing);
+    if (line) notes.push(line);
+    return notes;
   }
   private paint(): void {
     this.element.replaceChildren();
     if (!getCurrentTask()) {
-      this.element.append(this.button("新建任务", (b) => this.hooks.requestNewTask(b)));
+      this.element.append(this.button("新建任务", (b) => this.hooks.requestNewTask(b)), ...this.setupNotes());
       return;
     }
     const label = document.createElement("div");
@@ -122,13 +143,14 @@ class EmptyState implements IWatermarkRenderer {
     const buttons = document.createElement("div");
     buttons.className = "empty-buttons";
     buttons.append(
-      ...AGENTS.map((a) => {
+      ...splitAgents(getClis()).installed.map((a) => {
         const b = this.button(a.name, () => this.hooks.addAgent(a.kind));
         b.prepend(vendorIcon(a.kind, "agent-mark"));
         return b;
       }),
     );
-    this.element.append(label, buttons);
+    const line = missingLine(splitAgents(getClis()).missing);
+    this.element.append(label, buttons, ...(line ? [line] : []));
   }
   private button(text: string, onClick: (b: HTMLButtonElement) => void): HTMLButtonElement {
     const b = document.createElement("button");
@@ -140,6 +162,7 @@ class EmptyState implements IWatermarkRenderer {
   init(): void {}
   dispose(): void {
     this.unsubscribe();
+    this.unsubscribeClis();
   }
 }
 

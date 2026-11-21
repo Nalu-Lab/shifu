@@ -18,27 +18,6 @@ pub fn resolve_socket(app_socket: Option<&str>) -> String {
     app_socket.filter(|s| !s.is_empty()).unwrap_or("shifu-app").to_string()
 }
 
-/// A Finder-launched app gets PATH=/usr/bin:/bin:/usr/sbin:/sbin, so `claude`/`codex` would not be found.
-/// Keep the inherited entries first and append the usual install locations that are missing.
-pub fn merge_path(current: &str, user_home: &str) -> String {
-    // Kimi Code before ~/.local/bin: a reinstalled old kimi-cli (uv) would put a `kimi` there too.
-    let extras = [
-        format!("{user_home}/.kimi-code/bin"),
-        format!("{user_home}/.local/bin"),
-        format!("{user_home}/.cargo/bin"),
-        "/opt/homebrew/bin".to_string(),
-        "/opt/homebrew/sbin".to_string(),
-        "/usr/local/bin".to_string(),
-    ];
-    let mut dirs: Vec<&str> = current.split(':').filter(|d| !d.is_empty()).collect();
-    for extra in &extras {
-        if !dirs.contains(&extra.as_str()) {
-            dirs.push(extra);
-        }
-    }
-    dirs.join(":")
-}
-
 /// Reads the overrides and exports `SHIFU_HOME` / `SHIFU_SOCKET`, which the shared `shifu` library reads for
 /// its agent files and tmux calls. Must run first thing in `main`, before any thread exists.
 pub fn init() -> Config {
@@ -50,7 +29,11 @@ pub fn init() -> Config {
         .filter(|b| !b.is_empty())
         .unwrap_or_else(|| format!("{user_home}/.cargo/bin/shifu"));
     let user_statusline = crate::statusline::user_command_from_file(&Path::new(&user_home).join(".claude/settings.json"));
-    let path = merge_path(&var("PATH").unwrap_or_default(), &user_home);
+    // A Finder-launched app gets PATH=/usr/bin:/bin:/usr/sbin:/sbin, so `claude`/`codex` would not be found: the
+    // login shell's PATH from last run and the usual install folders are added (see `clis`).
+    let cached_shell = crate::clis::cached_shell_path(&home);
+    let path = crate::clis::startup_path(cached_shell.as_deref(), &var("PATH").unwrap_or_default(), &user_home);
+    shifu::clis::set_agent_path(&path);
     // A Finder-launched app has no locale; without UTF-8 the agents mangle Chinese.
     let lang = var("LANG").filter(|l| l.contains("UTF-8")).unwrap_or_else(|| "en_US.UTF-8".to_string());
     // SAFETY: called at the top of main before any other thread is started.
@@ -79,17 +62,6 @@ mod tests {
         assert_eq!(resolve_socket(None), "shifu-app");
         assert_eq!(resolve_socket(Some("")), "shifu-app");
         assert_eq!(resolve_socket(Some("shifu-app-dev")), "shifu-app-dev");
-    }
-
-    #[test]
-    fn path_keeps_inherited_order_and_appends_only_missing_dirs() {
-        let got = merge_path("/usr/bin:/bin:/opt/homebrew/bin", "/Users/e");
-        assert_eq!(got, "/usr/bin:/bin:/opt/homebrew/bin:/Users/e/.kimi-code/bin:/Users/e/.local/bin:/Users/e/.cargo/bin:/opt/homebrew/sbin:/usr/local/bin");
-    }
-
-    #[test]
-    fn path_from_empty_gets_the_usual_dirs() {
-        assert!(merge_path("", "/Users/e").starts_with("/Users/e/.kimi-code/bin:/Users/e/.local/bin:"));
     }
 }
 

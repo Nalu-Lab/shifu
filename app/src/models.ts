@@ -1,7 +1,7 @@
 /** The agents the new-agent popover offers, the models each CLI reports on this machine (models.rs probes them;
  *  the last answer is kept in localStorage so the popover has a list before this launch's probe returns), and the
  *  last model/effort chosen per agent. "" means the CLI's own default (nothing is passed). */
-import { modelsList } from "./api";
+import { type CliReport, clisDetect, modelsList } from "./api";
 import type { Mark } from "./vendoricons";
 
 export type AgentKind = Mark;
@@ -23,6 +23,48 @@ export const AGENTS: AgentSpec[] = [
 ];
 
 export const specOf = (kind: string): AgentSpec | undefined => AGENTS.find((a) => a.kind === kind);
+
+/** What `clis_detect` found; null until the first answer, when every agent counts as installed (nothing hidden). */
+let clis: CliReport | null = null;
+const clisListeners = new Set<() => void>();
+
+export function setClis(report: CliReport): void {
+  clis = report;
+  clisListeners.forEach((l) => l());
+}
+export function onClisChange(listener: () => void): () => void {
+  clisListeners.add(listener);
+  return () => clisListeners.delete(listener);
+}
+export const getClis = () => clis;
+
+export async function refreshClis(): Promise<void> {
+  setClis(await clisDetect());
+}
+
+/** The terminal is always there; an agent the report does not know about is not hidden. */
+export function isInstalled(report: CliReport | null, kind: string): boolean {
+  if (kind === "terminal" || report === null) return true;
+  const found = report.agents.find((a) => a.kind === kind);
+  return !found || found.path !== null;
+}
+
+/** The agents to offer (installed, in catalog order) and the ones to point at an install page. */
+export function splitAgents(report: CliReport | null): { installed: AgentSpec[]; missing: AgentSpec[] } {
+  return {
+    installed: AGENTS.filter((a) => isInstalled(report, a.kind)),
+    missing: AGENTS.filter((a) => !isInstalled(report, a.kind)),
+  };
+}
+
+/** `current` while it is installed, else the first installed agent (Claude, Codex, … order), else the terminal. */
+export function defaultKind(report: CliReport | null, current: string): string {
+  if (isInstalled(report, current)) return current;
+  return AGENTS.find((a) => a.kind !== "terminal" && isInstalled(report, a.kind))?.kind ?? "terminal";
+}
+
+export const installUrl = (report: CliReport | null, kind: string): string | undefined =>
+  report?.agents.find((a) => a.kind === kind)?.install_url;
 
 /** Mirrors `ModelInfo` / `AgentModels` in app/src-tauri/src/models.rs. */
 export interface ModelInfo {

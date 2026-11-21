@@ -1,9 +1,22 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { recentDirs } from "./api";
+import { pathOpen, recentDirs } from "./api";
 import { projectName } from "./tasks";
 import { shortPath } from "./format";
 import { reportError } from "./store";
-import { AGENTS, type AgentSpec, effortLabel, effortsFor, modelsOf, pickFor, savePick, specOf } from "./models";
+import {
+  AGENTS,
+  type AgentSpec,
+  defaultKind,
+  effortLabel,
+  effortsFor,
+  getClis,
+  installUrl,
+  modelsOf,
+  pickFor,
+  savePick,
+  specOf,
+  splitAgents,
+} from "./models";
 import { vendorIcon } from "./vendoricons";
 
 let kind = "claude";
@@ -44,14 +57,37 @@ function select(options: { id: string; label: string }[], value: string, onChang
   return sel;
 }
 
-/** Agent buttons (mark and name), then model and effort for the chosen one. Choices are remembered per agent. */
+/** "未安装：Kimi · Qwen Code": each name opens its install page. Empty (null) when everything is installed. */
+export function missingLine(missing: readonly AgentSpec[]): HTMLElement | null {
+  if (missing.length === 0) return null;
+  const line = document.createElement("div");
+  line.className = "missing-agents";
+  line.append("未安装：");
+  missing.forEach((spec, i) => {
+    if (i > 0) line.append(" · ");
+    const link = button(spec.name, "link-btn");
+    const url = installUrl(getClis(), spec.kind);
+    link.title = url ? `安装说明：${url}` : "";
+    link.disabled = !url;
+    link.addEventListener("click", () => {
+      if (url) pathOpen(url).catch(reportError);
+    });
+    line.append(link);
+  });
+  return line;
+}
+
+/** Agent buttons (mark and name) for the agents installed here, then model and effort for the chosen one; the
+ *  missing ones are named under them with their install pages. Choices are remembered per agent. */
 function agentPicker(): HTMLElement {
   const box = document.createElement("div");
   const seg = document.createElement("div");
   seg.className = "seg agent-seg";
   const picks = document.createElement("div");
   picks.className = "pick-row";
-  const buttons = AGENTS.map((spec) => {
+  const { installed, missing } = splitAgents(getClis());
+  kind = defaultKind(getClis(), kind);
+  const buttons = installed.map((spec) => {
     const b = button("", "seg-btn agent-btn");
     b.append(...agentLabel(spec));
     b.addEventListener("click", () => {
@@ -93,6 +129,8 @@ function agentPicker(): HTMLElement {
   paint();
   seg.append(...buttons.map(([, b]) => b));
   box.append(seg, picks);
+  const line = missingLine(missing);
+  if (line) box.append(line);
   return box;
 }
 
@@ -139,7 +177,8 @@ type AddAgent = (kind: string) => Promise<void>;
 export function showAddAgentPopover(anchor: HTMLElement, add: AddAgent, options: { agentsOnly?: boolean } = {}): void {
   const pop = document.createElement("div");
   pop.className = "popup add-pop";
-  for (const spec of AGENTS) {
+  const { installed, missing } = splitAgents(getClis());
+  for (const spec of installed) {
     if (options.agentsOnly && spec.kind === "terminal") continue;
     const item = button("", "popup-item agent-item");
     const model = modelsOf(spec.kind).find((m) => m.id === pickFor(spec.kind).model)?.label ?? "默认模型";
@@ -153,6 +192,8 @@ export function showAddAgentPopover(anchor: HTMLElement, add: AddAgent, options:
     });
     pop.append(item);
   }
+  const line = missingLine(missing.filter((spec) => !(options.agentsOnly && spec.kind === "terminal")));
+  if (line) pop.append(line);
   present(anchor, "add-agent", pop, { suspended: false });
 }
 

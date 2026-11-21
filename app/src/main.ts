@@ -7,7 +7,7 @@ import { applyStoredTheme } from "./theme";
 import { ProgressPage } from "./progress";
 import { progressReader } from "./progressrefresh";
 import { EndNotices } from "./endnotices";
-import { pickArgs, pickFor, refreshModels } from "./models";
+import { pickArgs, pickFor, refreshClis, refreshModels, setClis } from "./models";
 import {
   agentKill,
   agentResume,
@@ -39,6 +39,7 @@ import {
   taskGoalsGet,
   taskSetCurrent,
   tasksLoad,
+  type CliReport,
 } from "./api";
 import { baselineSeen } from "./attention";
 import { agentLabel, type AgentView } from "./format";
@@ -85,6 +86,10 @@ async function main() {
   applyStoredTheme();
   // The picker uses last launch's list until this answers (a couple of seconds).
   void refreshModels().catch(reportError);
+  // Which agent CLIs are installed (file checks); again when the login shell's PATH arrives and on every return
+  // to the window, so one installed meanwhile shows up.
+  void refreshClis().catch(reportError);
+  void listen<CliReport>("clis", ({ payload }) => setClis(payload));
   await startPtyBus();
   const initial = await agentsList();
   // First start with this version: everything that exists counts as seen. The baseline is written right away,
@@ -100,7 +105,10 @@ async function main() {
   onSeenChange((next) => void seenSave(next).catch(reportError));
   onAttentionChange((count) => void setAttention(count).catch(reportError));
   setWindowFocused(document.hasFocus());
-  window.addEventListener("focus", () => setWindowFocused(true));
+  window.addEventListener("focus", () => {
+    setWindowFocused(true);
+    void refreshClis().catch(reportError);
+  });
   window.addEventListener("blur", () => setWindowFocused(false));
   setAgents(initial);
   // Notifications (APP-SPEC-B4): what already needs the user at start-up is not announced.
