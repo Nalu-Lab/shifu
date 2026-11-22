@@ -615,6 +615,10 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         .item(&item("search", "搜索对话", "CmdOrCtrl+K")?)
         .item(&item("sidebar", "显示或隐藏侧栏", "CmdOrCtrl+B")?)
         .separator()
+        .item(&item("font-bigger", "终端字号放大", "CmdOrCtrl+=")?)
+        .item(&item("font-smaller", "终端字号缩小", "CmdOrCtrl+-")?)
+        .item(&item("font-default", "终端默认字号", "CmdOrCtrl+0")?)
+        .separator()
         .item(&item("split-down", "上下分屏", "CmdOrCtrl+Shift+D")?)
         .item(&item("split-right", "左右分屏", "CmdOrCtrl+D")?)
         .build()?;

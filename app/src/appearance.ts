@@ -1,4 +1,5 @@
 import { present } from "./newpopover";
+import { SIDEBAR_RANGE, TERMINAL_RANGE, getFontSizes, setFontSizes, type FontSizes } from "./fontsize";
 import { PRESETS, type Theme, getTheme, resetTheme, sameTheme, setTheme } from "./theme";
 
 const FIELDS: { key: keyof Theme; name: string }[] = [
@@ -7,7 +8,8 @@ const FIELDS: { key: keyof Theme; name: string }[] = [
   { key: "accent", name: "强调色" },
 ];
 
-/** Shifu 菜单「外观…」: four presets, then the three colors everything else is mixed from. Changes apply live. */
+/** Shifu 菜单「外观…」: four presets, the three colors everything else is mixed from, then text sizes. Changes apply
+ *  live. */
 export function showAppearancePopover(anchor: HTMLElement): void {
   const pop = document.createElement("div");
   pop.className = "popup theme-pop";
@@ -44,6 +46,39 @@ export function showAppearancePopover(anchor: HTMLElement): void {
     return [key, input, row] as const;
   });
 
+  // − value +, for the terminals (points) and the sidebar (percent).
+  const sizeRow = (name: string, key: keyof FontSizes, range: { min: number; max: number; step: number }, unit: string) => {
+    const row = document.createElement("div");
+    row.className = "theme-color font-size-row";
+    const value = document.createElement("span");
+    value.className = "font-size-value";
+    const step = (sign: -1 | 1, text: string, label: string) => {
+      const b = document.createElement("button");
+      b.className = "btn font-size-step";
+      b.textContent = text;
+      b.setAttribute("aria-label", `${name}${label}`);
+      b.addEventListener("click", () => {
+        setFontSizes({ [key]: getFontSizes()[key] + sign * range.step });
+        paint();
+      });
+      return b;
+    };
+    const smaller = step(-1, "−", "缩小");
+    const bigger = step(1, "+", "放大");
+    const controls = document.createElement("span");
+    controls.className = "font-size-controls";
+    controls.append(smaller, value, bigger);
+    row.append(name, controls);
+    const update = () => {
+      const v = getFontSizes()[key];
+      value.textContent = `${v}${unit}`;
+      smaller.disabled = v <= range.min;
+      bigger.disabled = v >= range.max;
+    };
+    return { row, update };
+  };
+  const sizes = [sizeRow("终端", "terminal", TERMINAL_RANGE, ""), sizeRow("侧栏", "sidebar", SIDEBAR_RANGE, "%")];
+
   const foot = document.createElement("div");
   foot.className = "pop-foot";
   const reset = document.createElement("button");
@@ -61,10 +96,19 @@ export function showAppearancePopover(anchor: HTMLElement): void {
     inputs.forEach(([key, input]) => {
       if (input.value !== t[key]) input.value = t[key];
     });
+    sizes.forEach((size) => size.update());
   };
   paint();
 
-  pop.append(label("配色"), presets, label("自定义"), ...inputs.map(([, , row]) => row), foot);
+  pop.append(
+    label("配色"),
+    presets,
+    label("自定义"),
+    ...inputs.map(([, , row]) => row),
+    label("字号（终端也可用 ⌘= ⌘- ⌘0）"),
+    ...sizes.map((size) => size.row),
+    foot,
+  );
   // The system color picker takes focus from the window; that must not close the popover.
   present(anchor, "appearance", pop, { suspended: true });
 }
