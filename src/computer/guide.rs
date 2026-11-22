@@ -13,6 +13,7 @@ Shifu 自带独立的 macOS 后台窗口工具，不依赖 Orca。可读取和�
   shifu computer list-windows --app com.apple.TextEdit --json
   shifu computer get-app-state --app com.apple.TextEdit --window-id <刚返回的ID> --json
 用 get-app-state --app <应用> --window-id <ID> 明确选择应用和窗口；多窗口时不要依赖默认窗口，也可按返回顺序使用 --window-index。
+list-windows 会返回窗口 visibility。可用窗口 ID 后台读取最小化、随应用隐藏或其他辅助功能可访问的离屏窗口。离屏截图单独报告失败，坐标等合成输入要求窗口在屏。
 先读取目标窗口，之后使用动作返回的新观察选择下一步；延迟、导航、切窗或目标不确定时重新 get-app-state。不要猜索引或使用其他对话的索引。
 动作回读的 snapshot.treeDiff:true 表示差量：~ 是变化行，- 是删除行，No change 表示控件树未变化；未列出的控件沿用 baselineSnapshotId 对应状态，索引不重排。没有 treeDiff 时按完整树读取。
 需要完整树时使用 get-app-state 或动作 --full-tree；新增、移动、结构变化或缺少可靠基线时自动返回完整树。--match/--limit/--role/--within 筛选之后的下一动作也返回完整树。文字/文件条件始终用完整观察判断，不拿差量中的缺失判消失。
@@ -20,12 +21,13 @@ Shifu 自带独立的 macOS 后台窗口工具，不依赖 Orca。可读取和�
 
 每次只执行一个改变界面的动作，等待它的 JSON 回执和新观察后再决定下一步；不要批量盲目操作或自动重试。
 用 --wait-for / --wait-for-gone 和 --timeout-ms 明确界面后置条件；它们只重复观察，不会重做动作。
+--wait-for-enabled 根据辅助功能判断匹配控件是否可用。--wait-for-window 按窗口标题匹配；用于动作时要求在同一应用进程中出现新窗口 ID。
 文件任务用绝对路径的 --expect-path / --expect-missing-path 核对结果；路径存在性不证明内容正确或业务完成。
 ok:true 不等于任务完成；检查 action.verification、result.postcondition 和实际回读，taskCompletion:not_checked 不能宣称完成。
 
 截图保存在本地文件，响应的 result.screenshot.path 给出 screenshot 路径，而不是图片内容。
 调用 agent 必须用自己的图片读取工具打开该路径并查看截图；仅拿到路径不代表已经看过，本命令不会替 agent 打开图片。
-不需要截图时使用 --no-screenshot；截图像素坐标须按返回的 scale 换算。
+不需要截图时使用 --no-screenshot。可用 --screenshot-format png|jpeg、--screenshot-scale 和 --screenshot-max-edge 控制截图。截图像素坐标按返回的 scaleX 和 scaleY 换算。
 
 上传文件时，先核对本地绝对路径及目标站点。打开选择框后重新 list-windows，用选择框自己的窗口 ID 读取；不能用底下网页的控件树代表选择框。需要前台时须在已有授权内使用 --restore-window。
 标准 macOS 选择框可用 CmdOrCtrl+Shift+G 打开路径框；发现新路径窗口后读取其聚焦输入框，用 set-value --value-stdin 写完整路径并核对回读。Return 只确认路径，再读取原选择框，确认唯一选中的文件行与预期文件名一致且 Open 可用，才点 Open 一次。

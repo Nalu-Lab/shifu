@@ -16,6 +16,8 @@ pub const HELP: &str = "shifu computer — 操作本机窗口，不依赖 Orca
   list-windows --app <bundle-id|pid:PID|应用名>
   get-app-state --app <应用> [--window-id ID] [--no-screenshot]
     [--match 文字] [--role 类型[,类型]] [--within 控件索引] [--ancestors] [--limit 数量] [--wait-for 控件文字] [--wait-for-gone 控件文字] [--timeout-ms 5000]
+    [--wait-for-enabled 控件文字] [--wait-for-window 窗口标题]
+    [--screenshot-format png|jpeg] [--screenshot-scale 比例] [--screenshot-max-edge 像素]
     [--foreground-fallback]
   click --app <应用> --element-index N
   click --app <应用> --x X --y Y
@@ -31,6 +33,8 @@ pub const HELP: &str = "shifu computer — 操作本机窗口，不依赖 Orca
 --match / --limit 缩小控件输出，保留原索引。--role 只留某类控件（如 button，或 'text field,link'）；
 --within 只读某个控件及其下级；--ancestors 给命中的控件带上所在的上级。--wait-for 等待控件文字出现。
 --wait-for-gone 等待控件文字消失；控件树截断时不会据缺失判成功。
+--wait-for-enabled 核对匹配控件的辅助功能可用状态。
+--wait-for-window 读取时等匹配的窗口；动作后等刚出现的匹配窗口。
 --expect-path / --expect-missing-path 核对绝对路径；超时报告失败，不重做动作。
 --foreground-fallback 只在等待读取超时前短暂前台读取一次，再还原原应用。
 --background-only 强制只读或对文本框 AXSetValue；拒绝前台恢复、点击、合成输入和剪贴板。
@@ -61,7 +65,8 @@ pub fn run(args: &[String]) -> Result<(), String> {
         }
         let namespace = std::env::var("SHIFU_ID").unwrap_or_else(|_| "default".into());
         let r = request(args, &namespace)?;
-        let response = observation::execute(r, runtime::call)?;
+        let mut response = observation::execute(r, runtime::call)?;
+        runtime::persist_screenshot(&mut response);
         println!("{}", serde_json::to_string_pretty(&response).map_err(|e| e.to_string())?);
         if response["ok"] == false { return Err("操作未完成，原因见上方 error".into()); }
         Ok(())
@@ -98,12 +103,17 @@ pub fn request(args: &[String], namespace: &str) -> Result<Value, String> {
             "--action" => ("action", "text"), "--mouse-button" => ("mouseButton", "text"),
             "--modifiers" => ("modifiers", "text"), "--click-count" => ("clickCount", "integer"),
             "--no-screenshot" => ("noScreenshot", "bool"), "--restore-window" => ("restoreWindow", "bool"),
+            "--screenshot-format" => ("screenshotFormat", "text"),
+            "--screenshot-scale" => ("screenshotScale", "number"),
+            "--screenshot-max-edge" => ("screenshotMaxEdge", "integer"),
             "--full-tree" => ("fullTree", "bool"),
             "--background-only" => ("backgroundOnly", "bool"),
             "--match" => ("match", "text"), "--limit" => ("limit", "integer"),
             "--role" => ("role", "text"), "--within" => ("within", "integer"), "--ancestors" => ("ancestors", "bool"),
             "--wait-for" => ("waitFor", "text"), "--timeout-ms" => ("timeoutMs", "integer"),
             "--wait-for-gone" => ("waitForGone", "text"),
+            "--wait-for-enabled" => ("waitForEnabled", "text"),
+            "--wait-for-window" => ("waitForWindow", "text"),
             "--expect-path" => ("expectPath", "text"), "--expect-missing-path" => ("expectMissingPath", "text"),
             "--foreground-fallback" => ("foregroundFallback", "bool"),
             "--text-stdin" => ("text", "stdin"), "--value-stdin" => ("value", "stdin"),
@@ -187,6 +197,25 @@ mod tests {
         assert_eq!(r["params"]["waitForGone"], "正在保存");
         assert_eq!(r["params"]["timeoutMs"], 2500);
         assert!(request(&args(&["list-apps", "--wait-for-gone", "x"]), "a").is_err());
+    }
+
+    #[test]
+    fn screenshot_options_use_positive_caps_and_cannot_be_silently_ignored() {
+        let request_args = args(&["get-app-state", "--app", "test", "--screenshot-format", "jpeg",
+            "--screenshot-scale", "0.5", "--screenshot-max-edge", "800"]);
+        let r = request(&request_args, "a").unwrap();
+        assert_eq!(r["params"]["screenshotFormat"], "jpeg");
+        assert_eq!(r["params"]["screenshotScale"], 0.5);
+        assert_eq!(r["params"]["screenshotMaxEdge"], 800);
+        for options in [
+            vec!["--screenshot-format", "webp"],
+            vec!["--screenshot-max-edge", "0"],
+            vec!["--screenshot-scale", "0"],
+            vec!["--no-screenshot", "--screenshot-format", "jpeg"],
+        ] {
+            let all = [&["get-app-state", "--app", "test"][..], &options].concat();
+            assert!(request(&args(&all), "a").is_err(), "{all:?}");
+        }
     }
 
     #[test]

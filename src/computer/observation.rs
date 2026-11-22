@@ -1,9 +1,19 @@
 //! Bounded observation and explicit postconditions. Actions are never replayed.
 use serde_json::{Value, json};
+use std::collections::HashSet;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-const OPTIONS: [&str; 11] = ["match", "limit", "role", "within", "ancestors", "waitFor", "waitForGone", "timeoutMs", "expectPath", "expectMissingPath", "foregroundFallback"];
+const OPTIONS: &[&str] = &[
+    "match", "limit", "role", "within", "ancestors", "waitFor", "waitForGone", "waitForEnabled",
+    "waitForWindow", "timeoutMs", "expectPath", "expectMissingPath", "foregroundFallback",
+];
+const WAIT_OPTIONS: &[&str] = &["waitFor", "waitForGone", "waitForEnabled", "waitForWindow", "expectPath", "expectMissingPath"];
+const SCREENSHOT_OPTIONS: &[&str] = &["screenshotFormat", "screenshotScale", "screenshotMaxEdge"];
+
+fn has_any(params: &Value, keys: &[&str]) -> bool {
+    keys.iter().any(|&key| !params[key].is_null())
+}
 
 pub fn validate(method: &str, params: &Value) -> Result<(), String> {
     if params["backgroundOnly"] == true {
@@ -14,20 +24,31 @@ pub fn validate(method: &str, params: &Value) -> Result<(), String> {
             return Err("--background-only 仅支持读取和文本框 set-value；当前动作可能改变焦点、打开窗口或使用合成输入／剪贴板，未执行".into());
         }
     }
-    let waiting = ["waitFor", "waitForGone", "expectPath", "expectMissingPath"].iter().any(|key| !params[key].is_null());
+    let waiting = has_any(params, WAIT_OPTIONS);
     if !params["waitFor"].is_null() && params["waitFor"] == params["waitForGone"] {
         return Err("等待出现和消失的文字不能相同".into());
     }
-    if matches!(method, "handshake" | "listApps" | "listWindows" | "stop") && (OPTIONS.iter().any(|key| !params[key].is_null()) || params["fullTree"] == true) {
-        return Err("筛选和等待参数只用于窗口读取或窗口操作".into());
+    if matches!(method, "handshake" | "listApps" | "listWindows" | "stop")
+        && (has_any(params, OPTIONS) || has_any(params, SCREENSHOT_OPTIONS) || params["fullTree"] == true)
+    {
+        return Err("筛选、等待和截图参数只用于窗口读取或窗口操作".into());
     }
-    for key in ["match", "role", "waitFor", "waitForGone", "expectPath", "expectMissingPath"] {
+    for key in ["match", "role"].into_iter().chain(WAIT_OPTIONS.iter().copied()) {
         if params[key].as_str().is_some_and(|s| s.trim().is_empty()) { return Err(format!("{key} 不能为空")); }
+    }
+    if params["noScreenshot"] == true && has_any(params, SCREENSHOT_OPTIONS) {
+        return Err("--no-screenshot 不能与截图格式、比例或尺寸一起使用".into());
+    }
+    if params["screenshotFormat"].as_str().is_some_and(|s| !matches!(s, "png" | "jpeg")) {
+        return Err("--screenshot-format 只支持 png 和 jpeg".into());
+    }
+    if params["screenshotScale"].as_f64() == Some(0.0) || params["screenshotMaxEdge"].as_u64() == Some(0) {
+        return Err("截图比例和尺寸需大于零".into());
     }
     if params["limit"].as_u64().is_some_and(|n| n == 0 || n > 1200) { return Err("--limit 范围是 1 到 1200".into()); }
     if params["ancestors"] == true && params["match"].is_null() && params["role"].is_null() { return Err("--ancestors 需要和 --match 或 --role 一起用".into()); }
     if params["timeoutMs"].as_u64().is_some_and(|n| n > 30000) { return Err("--timeout-ms 最多 30000 毫秒".into()); }
-    if !params["timeoutMs"].is_null() && !waiting { return Err("--timeout-ms 需要等待文字或文件条件".into()); }
+    if !params["timeoutMs"].is_null() && !waiting { return Err("--timeout-ms 需要至少一个等待条件".into()); }
     if params["foregroundFallback"] == true && (method != "getAppState" || !waiting || params["restoreWindow"] == true) {
         return Err("--foreground-fallback 只用于带等待条件的 get-app-state，且不能和 --restore-window 同用".into());
     }
@@ -71,15 +92,23 @@ fn control_lines(tree: &str) -> impl Iterator<Item = &str> {
 
 fn conditions(options: &Value, response: &Value) -> Result<Vec<Value>, String> {
     let mut checks = Vec::new();
+    let snap = &response["result"]["snapshot"];
+    let tree = snap["treeText"].as_str().unwrap_or("");
     if let Some(text) = options["waitFor"].as_str() {
-        let found = response["result"]["snapshot"]["treeText"].as_str().is_some_and(|tree| control_lines(tree).any(|l| l.contains(text)));
+        let found = control_lines(tree).any(|l| l.contains(text));
         checks.push(json!({"kind":"text", "expected":text, "met":found}));
     }
     if let Some(text) = options["waitForGone"].as_str() {
-        let snap = &response["result"]["snapshot"];
-        let absent = snap["treeText"].as_str().is_some_and(|tree| control_lines(tree).next().is_some() && !control_lines(tree).any(|l| l.contains(text)));
+        let absent = control_lines(tree).next().is_some() && !control_lines(tree).any(|l| l.contains(text));
         let complete = snap["truncation"]["truncated"] == false && snap["truncation"]["maxDepthReached"] == false;
         checks.push(json!({"kind":"text_absent", "expected":text, "met":absent && complete}));
+    }
+    if let Some(text) = options["waitForEnabled"].as_str() {
+        let matched = snap["enabledElementIndices"].as_array().and_then(|enabled| {
+            control_lines(tree).filter(|line| line.contains(text)).filter_map(index_of)
+                .find(|&index| enabled.iter().any(|value| value.as_u64() == Some(index)))
+        });
+        checks.push(json!({"kind":"enabled_element", "expected":text, "elementIndex":matched, "windowId":snap["window"]["id"], "met":matched.is_some()}));
     }
     for (key, expected) in [("expectPath", true), ("expectMissingPath", false)] {
         if let Some(path) = options[key].as_str() {
@@ -95,39 +124,90 @@ fn conditions(options: &Value, response: &Value) -> Result<Vec<Value>, String> {
     Ok(checks)
 }
 
+fn window_query(request: &Value) -> Value {
+    let mut params = request["params"].as_object().unwrap().clone();
+    params.retain(|key, _| matches!(key.as_str(), "app" | "session" | "backgroundOnly"));
+    json!({"id":request["id"],"method":"listWindows","params":params})
+}
+
+fn window_check(inventory: &Value, title: &str, previous_ids: Option<&HashSet<u64>>) -> Result<Value, String> {
+    let found = if inventory["error"]["code"] == "app_not_found" {
+        None
+    } else {
+        let windows = inventory["result"]["windows"].as_array()
+            .filter(|_| inventory["ok"] == true)
+            .ok_or_else(|| format!("无法核对窗口：{}", inventory["error"]["message"].as_str().unwrap_or("辅助程序没有返回窗口列表")))?;
+        windows.iter().find(|window| {
+            window["title"].as_str().is_some_and(|name| name.contains(title))
+                && window["id"].as_u64().is_some_and(|id| previous_ids.is_none_or(|ids| !ids.contains(&id)))
+        })
+    };
+    Ok(json!({"kind":"window", "expected":title, "new":previous_ids.is_some(), "window":found, "met":found.is_some()}))
+}
+
 pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, String>) -> Result<Value, String> {
-    if request["params"]["backgroundOnly"] == true && request["method"] != "handshake" {
+    let params = &request["params"];
+    let verification_capabilities = [
+        (params["backgroundOnly"] == true && request["method"] != "handshake", "input", "backgroundOnly", "background_only_unsupported", "严格后台模式"),
+        (has_any(params, SCREENSHOT_OPTIONS), "observation", "screenshotOptions", "feature_unsupported", "截图设置"),
+        (!params["waitForEnabled"].is_null(), "observation", "enabledElements", "feature_unsupported", "控件可用状态核对"),
+        (!params["waitForWindow"].is_null(), "windows", "offscreenDiscovery", "feature_unsupported", "窗口核对"),
+    ];
+    if verification_capabilities.iter().any(|&(required, ..)| required) {
         // Older helpers ignore unknown parameters. Verify support before sending the target request.
         let capabilities = call(json!({"id":1,"method":"handshake","params":{}}))?;
         if capabilities["ok"] == false { return Ok(capabilities); }
-        if capabilities["ok"] != true || capabilities["result"]["supports"]["input"]["backgroundOnly"] != true {
+        for (required, category, capability, code, label) in verification_capabilities {
+            if !required || (capabilities["ok"] == true && capabilities["result"]["supports"][category][capability] == true) {
+                continue;
+            }
             return Ok(json!({"ok":false,"error":{
-                "code":"background_only_unsupported",
-                "message":"当前辅助程序不支持严格后台模式，目标请求未发送；请使用匹配的新辅助程序"
+                "code":code,
+                "message":format!("当前辅助程序不支持{label}，目标请求未发送；请使用匹配的新辅助程序")
             },"result":{"recovery":{"automaticRetry":false,"actionReported":false,"nextStep":"stop"}}}));
         }
     }
     let mut options = json!({});
-    for key in OPTIONS {
+    for &key in OPTIONS {
         if let Some(value) = request["params"].as_object_mut().unwrap().remove(key) { options[key] = value; }
     }
-    let waiting = ["waitFor", "waitForGone", "expectPath", "expectMissingPath"].iter().any(|key| !options[key].is_null());
+    let waiting = has_any(&options, WAIT_OPTIONS);
+    let tree_wait = has_any(&options, &["waitFor", "waitForGone", "waitForEnabled"]);
+    let window_title = options["waitForWindow"].as_str();
+    let is_read = request["method"] == "getAppState";
+    let window_baseline = if !is_read && window_title.is_some() {
+        let inventory = call(window_query(&request))?;
+        if inventory["ok"] != true { return Ok(inventory); }
+        let result = &inventory["result"];
+        let pid = result["app"]["pid"].as_u64().ok_or("无法确定窗口所属进程，动作未发送")?;
+        let windows = result["windows"].as_array().ok_or("无法获取动作前的窗口，动作未发送")?;
+        let ids = windows.iter().map(|w| w["id"].as_u64().ok_or("窗口列表缺少 ID，动作未发送"))
+            .collect::<Result<HashSet<_>, _>>()?;
+        // Use the exact process that supplied the baseline, even if the app's name is shared.
+        request["params"]["app"] = json!(format!("pid:{pid}"));
+        Some(ids)
+    } else { None };
+    let window_request = window_title.map(|_| window_query(&request));
     let filtered = FILTERS.iter().any(|key| !options[key].is_null());
     if waiting || filtered { request["params"]["fullTree"] = json!(true); }
+    if !options["waitForEnabled"].is_null() { request["params"]["includeEnabledElements"] = json!(true); }
     // A client that saw only matching rows cannot reconstruct the next delta.
     if filtered { request["params"]["treeViewFiltered"] = json!(true); }
     let timeout = Duration::from_millis(options["timeoutMs"].as_u64().unwrap_or(5000));
     let start = Instant::now();
-    let is_read = request["method"] == "getAppState";
     let explicit_window = !request["params"]["windowId"].is_null() || !request["params"]["windowIndex"].is_null();
     let mut response = call(request.clone())?;
     let action = response["result"]["action"].clone();
     let mut used_foreground = false;
     loop {
-        let retryable = is_read && matches!(response["error"]["code"].as_str(), Some("window_not_found" | "app_not_found"));
-        if response["ok"] != true && !retryable { break; }
         if !waiting { break; }
-        if explicit_window && (!options["waitFor"].is_null() || !options["waitForGone"].is_null()) {
+        let retryable = is_read && matches!(response["error"]["code"].as_str(), Some("window_not_found" | "app_not_found"));
+        let observation_error = response["result"]["observationError"].as_object();
+        let target_lost = !action.is_null() && !tree_wait
+            && matches!(observation_error.and_then(|e| e["code"].as_str()).or_else(|| response["error"]["code"].as_str()),
+                Some("window_not_found" | "window_stale"));
+        if response["ok"] != true && !retryable && !target_lost { break; }
+        if tree_wait && (explicit_window || !options["waitForEnabled"].is_null()) {
             let target_window = action["targetWindowId"].as_u64();
             let observed_window = response["result"]["snapshot"]["window"]["id"].as_u64();
             if let (Some(target), Some(observed)) = (target_window, observed_window)
@@ -142,7 +222,14 @@ pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, 
                 break;
             }
         }
-        let checks = match conditions(&options, &response) {
+        let check_results = (|| {
+            let mut checks = conditions(&options, &response)?;
+            if let (Some(title), Some(query)) = (window_title, &window_request) {
+                checks.push(window_check(&call(query.clone())?, title, window_baseline.as_ref())?);
+            }
+            Ok(checks)
+        })();
+        let checks = match check_results {
             Ok(checks) => checks,
             Err(message) if !action.is_null() => {
                 response["ok"] = json!(false);
@@ -152,11 +239,17 @@ pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, 
             }
             Err(message) => return Err(message),
         };
-        let met = response["ok"] == true && checks.iter().all(|c| c["met"] == true);
+        let met = (response["ok"] == true || target_lost) && checks.iter().all(|c| c["met"] == true);
         if met || start.elapsed() >= timeout {
+            if target_lost && observation_error.is_none() {
+                response["result"] = json!({"observationError":response["error"].clone()});
+            }
             if !response["result"].is_object() { response["result"] = json!({}); }
             response["result"]["postcondition"] = json!({"state":if met {"met"} else {"timeout"},"checks":checks,"foregroundFallbackUsed":used_foreground,"elapsedMs":start.elapsed().as_millis() as u64});
-            if !met {
+            if met && target_lost {
+                response["ok"] = json!(true);
+                response.as_object_mut().unwrap().remove("error");
+            } else if !met {
                 response["ok"] = json!(false);
                 response["error"] = json!({"code":"postcondition_timeout","message":"未观察到要求的结果；动作不会自动重做，请检查当前状态"});
             }
@@ -169,9 +262,12 @@ pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, 
             request["params"]["windowId"] = window;
         }
         request["method"] = json!("getAppState");
-        request["params"].as_object_mut().unwrap().retain(|k, _| matches!(k.as_str(), "app" | "session" | "windowId" | "windowIndex" | "noScreenshot" | "fullTree" | "treeViewFiltered" | "backgroundOnly"));
+        request["params"].as_object_mut().unwrap().retain(|k, _| SCREENSHOT_OPTIONS.contains(&k.as_str())
+            || matches!(k.as_str(), "app" | "session" | "windowId" | "windowIndex" | "noScreenshot" | "fullTree"
+                | "treeViewFiltered" | "backgroundOnly" | "includeEnabledElements"));
         let interval = if options["foregroundFallback"] == true { (timeout / 2).min(Duration::from_millis(200)) } else { Duration::from_millis(200) };
         std::thread::sleep(interval.min(timeout.saturating_sub(start.elapsed())));
+        if target_lost { continue; }
         if !used_foreground && options["foregroundFallback"] == true && start.elapsed() >= timeout / 2 {
             request["params"]["briefForeground"] = json!(true);
             used_foreground = true;
@@ -304,6 +400,53 @@ mod tests {
         }).unwrap();
         assert_eq!(methods, ["setValue"]);
         assert_eq!(response["ok"], true);
+    }
+
+    #[test]
+    fn new_controls_require_a_matching_helper_before_input() {
+        for params in [
+            json!({"screenshotFormat":"jpeg"}),
+            json!({"waitForEnabled":"Save"}),
+            json!({"waitForWindow":"Result"}),
+        ] {
+            let mut calls = 0;
+            let response = execute(request("click", params), |r| {
+                calls += 1;
+                assert_eq!(r["method"], "handshake");
+                Ok(json!({"ok":true,"result":{"supports":{}}}))
+            }).unwrap();
+            assert_eq!(response["error"]["code"], "feature_unsupported");
+            assert_eq!(calls, 1);
+        }
+    }
+
+    #[test]
+    fn new_window_can_verify_an_action_whose_target_closed() {
+        let mut calls = Vec::new();
+        let response = execute(request("click", json!({"windowId":23,"waitForWindow":"Result","timeoutMs":0})), |r| {
+            let method = r["method"].as_str().unwrap();
+            calls.push(method.to_owned());
+            match method {
+                "handshake" => Ok(json!({"ok":true,"result":{"supports":{"windows":{"offscreenDiscovery":true}}}})),
+                "listWindows" if calls.len() == 2 => Ok(json!({"ok":true,"result":{"app":{"pid":45},"windows":[{"id":23,"title":"Original"},{"id":24,"title":"Result"}]}})),
+                "click" => {
+                    assert_eq!(r["params"]["app"], "pid:45");
+                    Ok(json!({"ok":false,"error":{"code":"observation_failed"},"result":{
+                        "action":{"targetWindowId":23},"observationError":{"code":"window_not_found"}
+                    }}))
+                }
+                "listWindows" => {
+                    assert_eq!(r["params"]["app"], "pid:45");
+                    Ok(json!({"ok":true,"result":{"windows":[{"id":24,"title":"Result"},{"id":25,"title":"Result"}]}}))
+                }
+                _ => panic!("unexpected call: {method}"),
+            }
+        }).unwrap();
+        assert_eq!(calls, ["handshake", "listWindows", "click", "listWindows"]);
+        assert_eq!(response["ok"], true);
+        assert_eq!(response["result"]["postcondition"]["checks"][0]["window"]["id"], 25);
+        assert_eq!(response["result"]["action"]["targetWindowId"], 23);
+        assert_eq!(response["result"]["observationError"]["code"], "window_not_found");
     }
 
     fn request(method: &str, options: Value) -> Value {

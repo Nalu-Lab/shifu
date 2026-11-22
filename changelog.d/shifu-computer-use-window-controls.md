@@ -1,0 +1,2 @@
+- Computer Use 可读取隐藏和最小化窗口、拒绝已失效的窗口序号、控制截图格式和尺寸，以及在动作后核对新窗口与控件可用状态。（还没装）
+- Computer Use reads hidden and minimized windows, rejects stale window indexes, supports screenshot format and size controls, and verifies new windows and enabled controls after actions. (Not installed yet.)
