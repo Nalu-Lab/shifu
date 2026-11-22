@@ -96,12 +96,13 @@ export function resetText(resetsAt: number, now: number): string {
   return at.toDateString() === today.toDateString() ? clock(at) : `${at.getMonth() + 1}/${at.getDate()} ${clock(at)}`;
 }
 
-/** The compact display rounds up so an upcoming reset never appears to be due already. */
+/** Whole days or hours left, like any countdown: 6 days 6 hours is "6d", not "7d" (Eddie 11-22). Only the last
+ *  minute rounds up, so an upcoming reset never reads "0m". */
 export function resetCountdown(resetsAt: number, now: number): string {
   const left = resetsAt - now;
-  if (left >= 86400) return `${Math.ceil(left / 86400)}d`;
-  if (left >= 3600) return `${Math.ceil(left / 3600)}h`;
-  return `${Math.ceil(left / 60)}m`;
+  if (left >= 86400) return `${Math.floor(left / 86400)}d`;
+  if (left >= 3600) return `${Math.floor(left / 3600)}h`;
+  return `${Math.max(1, Math.floor(left / 60))}m`;
 }
 
 export const fullTime = (secs: number) => {

@@ -1,0 +1,2 @@
+- 左下角额度的重置倒计时不再多算：还剩 6 天 6 小时显示「6d 重置」，不再显示「7d」；小时同理。（还没装）
+- The quota reset countdown in the bottom-left no longer overstates the wait: 6 days 6 hours left now reads "6d", not "7d"; hours likewise. (not installed yet)

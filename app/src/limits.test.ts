@@ -28,13 +28,20 @@ describe("resetText", () => {
 });
 
 describe("resetCountdown", () => {
-  it("counts at the largest applicable unit and rounds up", () => {
-    const now = at(2026, 11, 22, 10, 30);
-    expect(resetCountdown(now + 45 * 3600, now)).toBe("2d");
+  it("counts whole days and hours left, so the reset never looks further away than it is", () => {
+    const now = at(2026, 11, 22, 14, 27);
+    // Codex on 11-22: the week resets 11-28 21:05, 6 days 6 hours away.
+    expect(resetCountdown(at(2026, 11, 28, 21, 5), now)).toBe("6d");
+    // Claude on 11-22: the week resets 11-23 03:00, 12 hours 33 minutes away.
+    expect(resetCountdown(at(2026, 11, 23, 3, 0), now)).toBe("12h");
     expect(resetCountdown(now + 86400, now)).toBe("1d");
-    expect(resetCountdown(now + 3601, now)).toBe("2h");
+    expect(resetCountdown(now + 86399, now)).toBe("23h");
     expect(resetCountdown(now + 3600, now)).toBe("1h");
-    expect(resetCountdown(now + 3599, now)).toBe("60m");
+    expect(resetCountdown(now + 3599, now)).toBe("59m");
+  });
+  it("never shows 0m while the reset is still ahead", () => {
+    const now = at(2026, 11, 22, 14, 27);
+    expect(resetCountdown(now + 59, now)).toBe("1m");
     expect(resetCountdown(now + 1, now)).toBe("1m");
   });
 });
