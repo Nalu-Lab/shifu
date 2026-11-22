@@ -347,6 +347,19 @@ fn check_pick(what: &str, value: Option<&str>) -> Res<()> {
     }
 }
 
+/// Every agent name the app's task list (`<home>/tasks.json`) mentions; empty when there is none or it is unreadable.
+fn names_in_tasks(home: &Path) -> Vec<String> {
+    let Ok(text) = std::fs::read_to_string(home.join("tasks.json")) else { return Vec::new() };
+    let Ok(file) = serde_json::from_str::<serde_json::Value>(&text) else { return Vec::new() };
+    file["tasks"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .flat_map(|t| t["agents"].as_array().into_iter().flatten())
+        .filter_map(|a| a.as_str().map(str::to_string))
+        .collect()
+}
+
 pub fn create_agent(cfg: &Config, command: &str, cwd: &str, model: Option<&str>, effort: Option<&str>) -> Res<String> {
     check_pick("model", model)?;
     check_pick("effort", effort)?;
@@ -356,7 +369,9 @@ pub fn create_agent(cfg: &Config, command: &str, cwd: &str, model: Option<&str>,
     }
     let kind = Kind::of_command(command);
     let (existing, _) = agent::list();
-    let taken: Vec<String> = existing.into_iter().map(|a| a.name).collect();
+    let mut taken: Vec<String> = existing.into_iter().map(|a| a.name).collect();
+    // A task may still list an agent whose record is gone; reusing that name would put the new agent in two tasks.
+    taken.extend(names_in_tasks(&cfg.home));
     let name = make_name(command, &dir, &taken);
     let settings = write_settings(cfg, kind)?;
     let launch = agent_command(kind, command, &cfg.shifu_bin, &settings, &model_flags(kind, model, effort));
@@ -480,6 +495,19 @@ pub fn reveal(cwd: &str) -> Res<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn names_a_task_still_lists_count_as_taken() {
+        let home = std::env::temp_dir().join(format!("shifu-names-{}", std::process::id()));
+        std::fs::create_dir_all(&home).unwrap();
+        assert!(names_in_tasks(&home).is_empty());
+        std::fs::write(home.join("tasks.json"), r#"{"tasks":[{"agents":["claude-w-10"]},{"agents":["codex-w","claude-w-10"]},{}]}"#).unwrap();
+        assert_eq!(names_in_tasks(&home), ["claude-w-10", "codex-w", "claude-w-10"]);
+        let mut taken = names_in_tasks(&home);
+        taken.push("claude-w".into());
+        assert_eq!(crate::agent::make_name("claude", Path::new("/x/w"), &taken), "claude-w-2");
+        std::fs::remove_dir_all(&home).unwrap();
+    }
 
     #[test]
     fn record_reads_bound_size_and_finish_when_a_path_is_a_pipe() {

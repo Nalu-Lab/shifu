@@ -117,6 +117,37 @@ pub fn adopt_orphans(mut file: TaskFile, agents: &[AgentRef], now_ms: u64) -> Ta
     file
 }
 
+/// Mends names that point at the wrong agent. An agent's record can be deleted outside the app (`shifu act close`
+/// in one of its sessions, say) while a task still lists its name; a later agent could then get the same name and
+/// belong to two tasks (11-21: claude-Workspace-10 in both LLL and Nalu Lab). `gone(name)` says the record no
+/// longer exists: such names are dropped. A name still in several tasks stays only in the newest task made no
+/// later than its agent (the one it was created into or added to), else in the newest task.
+pub fn repair_names(mut file: TaskFile, agents: &[AgentRef], gone: impl Fn(&str) -> bool) -> TaskFile {
+    for t in &mut file.tasks {
+        t.agents.retain(|name| !gone(name));
+    }
+    for a in agents {
+        let owners: Vec<&Task> = file.tasks.iter().filter(|t| t.agents.contains(&a.name)).collect();
+        if owners.len() < 2 {
+            continue;
+        }
+        let keep = newest(owners.iter().copied().filter(|t| t.created_at <= a.created_at))
+            .or_else(|| newest(owners.iter().copied()))
+            .map(|t| t.id.clone());
+        for t in &mut file.tasks {
+            if Some(&t.id) != keep.as_ref() {
+                t.agents.retain(|name| name != &a.name);
+            }
+        }
+    }
+    for (task_id, order) in file.agent_order.iter_mut() {
+        if let Some(task) = file.tasks.iter().find(|t| &t.id == task_id) {
+            order.retain(|name| task.agents.contains(name));
+        }
+    }
+    file
+}
+
 /// "任务 N", N = the project's task count plus one.
 pub fn default_name(file: &TaskFile, project: &str) -> String {
     format!("任务 {}", file.tasks.iter().filter(|t| t.project == project).count() + 1)
@@ -262,7 +293,9 @@ impl Tasks {
         let (agents, _) = agent::list();
         let refs: Vec<AgentRef> =
             agents.into_iter().map(|a| AgentRef { name: a.name, cwd: a.cwd, created_at: a.created_at }).collect();
-        let adopted = adopt_orphans(file.clone(), &refs, now_ms());
+        // A record that cannot be read is not gone: only a missing file drops its name.
+        let repaired = repair_names(file.clone(), &refs, |name| matches!(agent::load(name), Ok(None)));
+        let adopted = adopt_orphans(repaired, &refs, now_ms());
         if adopted != file {
             write(cfg, &adopted)?;
         }
@@ -588,6 +621,22 @@ mod tests {
         assert!(agent_order_file(file.clone(), "t-missing", &["p".into()]).agent_order.is_empty());
         let got: TaskFile = serde_json::from_str(&serde_json::to_string(&got).unwrap()).unwrap();
         assert!(remove_task(got, "t-1").agent_order.is_empty());
+    }
+
+    #[test]
+    fn a_name_left_by_a_deleted_agent_is_dropped_and_a_reused_one_stays_with_its_own_task() {
+        // "q" was deleted outside the app while t-1 listed it; a new "q" was then created with t-2.
+        let mut file = three();
+        file.tasks[0].agents.push("q".into());
+        file.tasks[0].agents.push("old".into());
+        file.agent_order.insert("t-1".into(), vec!["q".into(), "p".into(), "old".into()]);
+        let agents = [aref("p", "/w/a", 10), aref("q", "/w/a", 20), aref("r", "/w/b", 30)];
+        let got = repair_names(file, &agents, |name| name == "old");
+        assert_eq!(got.tasks[0].agents, ["p"]);
+        assert_eq!(got.tasks[1].agents, ["q"]);
+        assert_eq!(got.agent_order["t-1"], ["p"]);
+        // Nothing to mend: unchanged.
+        assert_eq!(repair_names(got.clone(), &agents, |_| false), got);
     }
 
     #[test]
