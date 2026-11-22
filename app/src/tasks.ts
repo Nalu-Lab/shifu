@@ -45,6 +45,7 @@ export function projectsOf(
   tasks: readonly Task[],
   order: readonly string[] = [],
   taskOrder: Readonly<Record<string, readonly string[]>> = {},
+  pinned: ReadonlySet<string> = new Set(),
 ): Project[] {
   const byPath = new Map<string, Task[]>();
   for (const t of tasks) byPath.set(t.project, [...(byPath.get(t.project) ?? []), t]);
@@ -61,6 +62,8 @@ export function projectsOf(
     const ranks = new Map(ids.map((id, index) => [id, index]));
     project.tasks.sort((a, b) => (ranks.get(a.id) ?? ids.length) - (ranks.get(b.id) ?? ids.length));
   }
+  // 置顶 beats the dragged order; the sort is stable, so each side keeps its own order.
+  for (const project of projects) project.tasks.sort((a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)));
   return projects;
 }
 

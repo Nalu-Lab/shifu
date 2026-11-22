@@ -1,0 +1,2 @@
+- 对话标签的右键菜单去掉「移到下面」「移到右边」（直接拖动标签即可）；对话和侧栏任务的右键菜单新增「标为未读」（看过的回复重新加粗、回到「在等你」）和「置顶」（任务固定排在本项目最上面，左侧显示图钉）。（还没装）
+- The conversation tab menu drops 移到下面 and 移到右边 (drag the tab instead); the tab and sidebar menus gain 标为未读 (a seen reply turns bold and returns to 在等你) and 置顶 (the task stays first in its project, with a pin on its left). (not installed yet)

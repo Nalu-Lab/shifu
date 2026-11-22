@@ -60,6 +60,7 @@ import {
   getWaitingList,
   dismissWaitingFor,
   initWaitingOpened,
+  initPinnedTasks,
   onWaitingOpenedChange,
   getAgents,
   getCurrentId,
@@ -80,6 +81,17 @@ import {
 } from "./store";
 import { projectsOf, taskOfAgent } from "./tasks";
 import { loadWaitingSeen, WAITING_SEEN_KEY } from "./waitingseen";
+
+const PINNED_TASKS_KEY = "shifu.pinnedTasks";
+/** Saved by an older or interrupted write, or absent: then nothing is pinned. */
+function loadPinnedTasks(storage: Pick<Storage, "getItem">): string[] {
+  try {
+    const ids: unknown = JSON.parse(storage.getItem(PINNED_TASKS_KEY) ?? "[]");
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
 import { Workspace } from "./workspace";
 import type { DockviewGroupPanel } from "dockview";
 
@@ -101,6 +113,9 @@ async function main() {
   if (!stored) await seenSave(seen).catch(reportError);
   initSeen(seen);
   initWaitingOpened(loadWaitingSeen(localStorage));
+  initPinnedTasks(loadPinnedTasks(localStorage), (ids) => {
+    try { localStorage.setItem(PINNED_TASKS_KEY, JSON.stringify(ids)); } catch (error) { reportError(error); }
+  });
   onWaitingOpenedChange((next) => {
     try { localStorage.setItem(WAITING_SEEN_KEY, JSON.stringify(next)); } catch (error) { reportError(error); }
   });
