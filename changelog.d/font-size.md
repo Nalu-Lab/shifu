@@ -1,0 +1,2 @@
+- 「外观…」里可以调字号：终端 10–24（默认 14），侧栏 80%–150%（默认 100%），改完立即生效并记住。终端字号也能用菜单「显示」或 ⌘= 放大、⌘- 缩小、⌘0 恢复默认。只需更新 App。
+- Text size in 外观…: terminals 10–24 pt (default 14) and the sidebar 80%–150% (default 100%), applied live and remembered. Terminal size also goes up with ⌘=, down with ⌘- and back to default with ⌘0 (also in the 显示 menu). App update only.

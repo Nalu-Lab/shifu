@@ -1,4 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
+import { applyStoredFontSizes, stepTerminal } from "./fontsize";
 import "@xterm/xterm/css/xterm.css";
 import "dockview/dist/styles/dockview.css";
 import "./style.css";
@@ -84,6 +85,7 @@ import type { DockviewGroupPanel } from "dockview";
 
 async function main() {
   applyStoredTheme();
+  applyStoredFontSizes();
   // The picker uses last launch's list until this answers (a couple of seconds).
   void refreshModels().catch(reportError);
   // Which agent CLIs are installed (file checks); again when the login shell's PATH arrives and on every return
@@ -468,6 +470,9 @@ async function main() {
     else if (payload === "split-down") split("below");
     else if (payload === "split-right") split("right");
     else if (payload === "sidebar") sideToggle.click();
+    else if (payload === "font-bigger") stepTerminal(1);
+    else if (payload === "font-smaller") stepTerminal(-1);
+    else if (payload === "font-default") stepTerminal(0);
     else if (payload === "search") {
       setSidebarHidden(false);
       sidebar.focusSearch();

@@ -12,6 +12,7 @@ import { type Cell, CodexFileLinkLabelCache, fileUris, glueRows, linkColumns, li
 import { type MenuItem, showMenu } from "./menu";
 import { openFile } from "./preview";
 import { getTheme, isDark, onThemeChange, terminalTheme, type Theme } from "./theme";
+import { getFontSizes, onFontSizesChange } from "./fontsize";
 import { beginPtyAttach, register, unregister } from "./ptybus";
 import { findAgent, reportError, subscribe } from "./store";
 
@@ -35,7 +36,7 @@ export class TerminalPanel implements IContentRenderer {
   private readonly term = new Terminal({
     // Maple Mono NF CN draws CJK at exactly two cells ; Menlo leaves gaps between 汉字.
     fontFamily: '"Maple Mono NF CN", Menlo, monospace',
-    fontSize: 14,
+    fontSize: getFontSizes().terminal,
     lineHeight: 1.1,
     cursorBlink: true,
     ...terminalAppearance(getTheme()),
@@ -74,6 +75,12 @@ export class TerminalPanel implements IContentRenderer {
   };
   private readonly unsubscribeTheme = onThemeChange((t) => {
     this.term.options = terminalAppearance(t);
+  });
+  /** A new size changes how many cells fit: refit, which tells tmux the new size. */
+  private readonly unsubscribeFontSize = onFontSizesChange((s) => {
+    if (this.term.options.fontSize === s.terminal) return;
+    this.term.options.fontSize = s.terminal;
+    this.fitAndAttach();
   });
 
   constructor() {
@@ -489,6 +496,7 @@ export class TerminalPanel implements IContentRenderer {
     this.outbox.invalidate();
     this.unsubscribe?.();
     this.unsubscribeTheme();
+    this.unsubscribeFontSize();
     this.resizeObserver?.disconnect();
     if (this.ptyId !== null) {
       unregister(this.ptyId);
