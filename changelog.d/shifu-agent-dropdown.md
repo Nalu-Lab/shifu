@@ -1,0 +1,2 @@
+- 新建对话时，「类型」改成一个下拉框：显示当前选的 agent，点开再选，不再是挤成两行的一排按钮。（还没装）
+- When creating a conversation, the agent type is now a dropdown showing the chosen agent, instead of a crowded two-row strip of buttons. (not installed yet)

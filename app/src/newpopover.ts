@@ -77,25 +77,75 @@ export function missingLine(missing: readonly AgentSpec[]): HTMLElement | null {
   return line;
 }
 
-/** Agent buttons (mark and name) for the agents installed here, then model and effort for the chosen one; the
- *  missing ones are named under them with their install pages. Choices are remembered per agent. */
+/** One button showing the chosen agent's mark and name; it drops down the others, each with its mark. Eight
+ *  agents no longer fit a row of buttons (Eddie 11-22: 下拉选择). */
+export function agentDropdown(specs: readonly AgentSpec[], current: string, onPick: (kind: string) => void): HTMLElement {
+  const box = document.createElement("div");
+  box.className = "agent-dropdown";
+  const toggle = button("", "agent-dropdown-button");
+  toggle.type = "button";
+  toggle.setAttribute("aria-haspopup", "listbox");
+  const list = document.createElement("div");
+  list.className = "agent-dropdown-list";
+  list.setAttribute("role", "listbox");
+  list.hidden = true;
+  let chosen = current;
+  const setOpen = (open: boolean) => {
+    list.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    if (open) list.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
+  };
+  const paint = () => {
+    const spec = specs.find((s) => s.kind === chosen) ?? specs[0];
+    toggle.replaceChildren(...(spec ? agentLabel(spec) : []));
+    list.replaceChildren(...specs.map((option) => {
+      const item = button("", "agent-dropdown-item");
+      item.type = "button";
+      item.setAttribute("role", "option");
+      item.setAttribute("aria-selected", String(option.kind === spec?.kind));
+      item.append(...agentLabel(option));
+      item.addEventListener("click", () => {
+        chosen = option.kind;
+        setOpen(false);
+        paint();
+        toggle.focus();
+        onPick(option.kind);
+      });
+      return item;
+    }));
+  };
+  toggle.addEventListener("click", () => setOpen(list.hidden));
+  box.addEventListener("keydown", (event) => {
+    if (list.hidden) return;
+    const items = Array.from(list.querySelectorAll<HTMLElement>(".agent-dropdown-item"));
+    const at = items.indexOf(document.activeElement as HTMLElement);
+    if (event.key === "Escape") {
+      // Closes the list only, not the popover around it.
+      event.stopPropagation();
+      setOpen(false);
+      toggle.focus();
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      items[(at + (event.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus();
+    }
+  });
+  box.addEventListener("focusout", (event) => {
+    if (!box.contains(event.relatedTarget as Node | null)) setOpen(false);
+  });
+  paint();
+  setOpen(false);
+  box.append(toggle, list);
+  return box;
+}
+
+/** The agent dropdown for the agents installed here, then model and effort for the chosen one; the missing ones are
+ *  named under them with their install pages. Choices are remembered per agent. */
 function agentPicker(): HTMLElement {
   const box = document.createElement("div");
-  const seg = document.createElement("div");
-  seg.className = "seg agent-seg";
   const picks = document.createElement("div");
   picks.className = "pick-row";
   const { installed, missing } = splitAgents(getClis());
   kind = defaultKind(getClis(), kind);
-  const buttons = installed.map((spec) => {
-    const b = button("", "seg-btn agent-btn");
-    b.append(...agentLabel(spec));
-    b.addEventListener("click", () => {
-      kind = spec.kind;
-      paint();
-    });
-    return [spec.kind, b] as const;
-  });
   const field = (text: string, control: HTMLElement) => {
     const f = document.createElement("label");
     f.className = "pick-field";
@@ -108,7 +158,6 @@ function agentPicker(): HTMLElement {
     return f;
   };
   const paint = () => {
-    buttons.forEach(([k, b]) => b.setAttribute("aria-pressed", String(k === kind)));
     const spec = specOf(kind) ?? AGENTS[0];
     picks.hidden = spec.kind === "terminal";
     if (picks.hidden) {
@@ -127,8 +176,13 @@ function agentPicker(): HTMLElement {
     );
   };
   paint();
-  seg.append(...buttons.map(([, b]) => b));
-  box.append(seg, picks);
+  const type = document.createElement("div");
+  type.className = "agent-type-row";
+  type.append(agentDropdown(installed, kind, (picked) => {
+    kind = picked;
+    paint();
+  }));
+  box.append(type, picks);
   const line = missingLine(missing);
   if (line) box.append(line);
   return box;
