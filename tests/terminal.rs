@@ -89,7 +89,8 @@ fn terminal_opens_in_project_accepts_input_and_restarts() {
     ])
     .unwrap();
     tmux.run(["send-keys", "-t", pane, "Enter"]).unwrap();
-    wait_for(|| output.exists());
+    // The shell creates the file before `pwd` writes into it: wait for the line, not the file.
+    wait_for(|| fs::read_to_string(&output).is_ok_and(|s| s.ends_with('\n')));
     assert_eq!(
         fs::read_to_string(&output).unwrap().trim(),
         cwd.to_str().unwrap()
