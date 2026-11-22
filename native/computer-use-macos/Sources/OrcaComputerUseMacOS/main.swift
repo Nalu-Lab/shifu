@@ -472,15 +472,6 @@ final class Provider {
         }
         snapshots[namespacedSnapshotKey(namespace, canonicalWindowKey)] = cachedSnapshot
         storedKeys.append(namespacedSnapshotKey(namespace, canonicalWindowKey))
-        if let windowIndex {
-            let canonicalWindowIndexKey = snapshotCanonicalWindowIndexKey(windowIndex)
-            if !isExplicitSnapshotNamespace(namespace) {
-                snapshots[canonicalWindowIndexKey.lowercased()] = cachedSnapshot
-                storedKeys.append(canonicalWindowIndexKey.lowercased())
-            }
-            snapshots[namespacedSnapshotKey(namespace, canonicalWindowIndexKey)] = cachedSnapshot
-            storedKeys.append(namespacedSnapshotKey(namespace, canonicalWindowIndexKey))
-        }
         for key in keys {
             if !isExplicitSnapshotNamespace(namespace) {
                 snapshots[key] = cachedSnapshot
@@ -569,13 +560,7 @@ final class Provider {
             return nil
         }
         if let targetWindowIndex = try requestedWindowIndex(params) {
-            let canonicalKey = snapshotCanonicalWindowIndexKey(targetWindowIndex)
-            if let cached = snapshots[namespacedSnapshotKey(namespace, canonicalKey)] {
-                return cached
-            }
-            if !isExplicitSnapshotNamespace(namespace), let cached = snapshots[canonicalKey.lowercased()] {
-                return cached
-            }
+            // Each application has its own window order within this caller's session.
             let windowKey = snapshotWindowIndexKey(query.lowercased(), targetWindowIndex)
             if let cached = snapshots[namespacedSnapshotKey(namespace, windowKey)] {
                 return cached
@@ -1875,10 +1860,6 @@ private func snapshotCanonicalWindowIdKey(_ windowId: CGWindowID) -> String {
 
 private func snapshotWindowIndexKey(_ query: String, _ windowIndex: Int) -> String {
     "\(query.lowercased())#windowIndex:\(windowIndex)"
-}
-
-private func snapshotCanonicalWindowIndexKey(_ windowIndex: Int) -> String {
-    "window-index:\(windowIndex)"
 }
 
 private func snapshotNamespace(_ params: [String: JSONValue]) -> String {

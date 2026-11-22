@@ -1,0 +1,2 @@
+- Computer Use 按应用保留窗口序号，切换读取不同应用后仍能找到原来的窗口。（还没装）
+- Computer Use keeps window indexes per app so interleaved reads preserve each target. (Not installed yet.)

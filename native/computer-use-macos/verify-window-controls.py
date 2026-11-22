@@ -95,11 +95,18 @@ try:
                         '--background-only', '--no-screenshot', ok=False)
         assert disabled['error']['code'] == 'postcondition_timeout'
 
+        # A second app can have the same window index in the same CLI session.
+        with launch() as other_app:
+            wait_windows(other_app, lambda windows: len(windows) == 1)
+            second = other_app('get-app-state', *by_index, '--background-only', '--no-screenshot')['result']['snapshot']
+            assert second['app']['pid'] != index_snapshot['app']['pid']
+
         increment = button(index_snapshot, '增加计数')
         old = call('click', *by_index, '--element-index', increment, '--wait-for-window', existing['title'],
                    '--timeout-ms', 0, '--no-screenshot', ok=False)
         assert old['error']['code'] == 'postcondition_timeout' and counter.read_text() == '1'
         assert old['result']['action']['targetWindowId'] == main['id']
+        checks['same_index_in_another_app_does_not_replace_the_original'] = True
         wait_windows(call, lambda windows: len(windows) == 2 and windows[0]['id'] == existing['id'])
         stale = call('click', *by_index, '--element-index', increment, '--no-screenshot', ok=False)
         assert stale['error']['code'] == 'window_stale' and counter.read_text() == '1'
