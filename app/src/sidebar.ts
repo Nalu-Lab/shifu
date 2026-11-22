@@ -5,8 +5,9 @@ import { findAgents, type Found, highlight, type Hit } from "./search";
 import { type AgentView, agentLabel, ageText, displayKey, statusHint, statusLabel, statusLine } from "./format";
 import { type Mark, vendorIcon } from "./vendoricons";
 import { type MenuItem, showMenu } from "./menu";
-import { getAgentOrder, getAgents, getCurrentId, getProjectOrder, getTaskOrder, getTasks, getWaitingList, onError, reportError, subscribe } from "./store";
+import { getAgentOrder, getAgents, getCurrentId, getPinnedTasks, getProjectOrder, getTaskOrder, getTasks, getWaitingList, onError, reportError, subscribe } from "./store";
 import { ENDS } from "./tab";
+import { pinItem, unreadItem } from "./marks";
 import { bindSidebarReorder } from "./sidebarreorder";
 import {
   type Project,
@@ -228,6 +229,7 @@ class Row {
       { label: "在下面打开", run: () => this.actions.openBelow(name) },
       { label: "在 Finder 中显示", run: () => this.actions.revealAgent(name) },
     ];
+    items.push(...unreadItem(this.agent()));
     if (this.agent()?.exited) items.push({ label: "恢复会话", run: () => this.actions.resume(name) });
     const who = KIND_NAMES[this.agent()?.kind ?? ""] ?? "它";
     items.push({ label: `结束 ${who}`, hint: ENDS, confirmLabel: "确认结束", confirmHint: ENDS, danger: true, run: () => this.actions.killAgent(name) });
@@ -304,6 +306,9 @@ function draggedAgent(e: DragEvent): string | null {
 }
 
 /** A task with one agent uses its agent's row. A task with several agents can disclose them underneath. */
+const GRIP_ICON = '<svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1"/><circle cx="7" cy="3" r="1"/><circle cx="3" cy="7" r="1"/><circle cx="7" cy="7" r="1"/><circle cx="3" cy="11" r="1"/><circle cx="7" cy="11" r="1"/></svg>';
+const PIN_ICON = '<svg width="10" height="14" viewBox="0 0 10 14" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 1.5h4M3.5 1.5v4L2 8h6L6.5 5.5v-4M5 8v4.5"/></svg>';
+
 class TaskView {
   readonly element = el("div", "task");
   private readonly head = el("div", "task-row");
@@ -330,7 +335,6 @@ class TaskView {
     this.element.dataset.taskId = task.id;
     this.grip.type = "button";
     this.grip.title = "拖动调整任务顺序";
-    this.grip.innerHTML = '<svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1"/><circle cx="7" cy="3" r="1"/><circle cx="3" cy="7" r="1"/><circle cx="7" cy="7" r="1"/><circle cx="3" cy="11" r="1"/><circle cx="7" cy="11" r="1"/></svg>';
     this.agentBox.id = `task-agents-${task.id}`;
     this.disclosure.type = "button";
     this.disclosure.innerHTML = chevron;
@@ -426,10 +430,13 @@ class TaskView {
   }
 
   private menuItems(): MenuItem[] {
-    const count = taskAgents(this.task, getAgents()).length;
+    const mine = taskAgents(this.task, getAgents());
+    const count = mine.length;
     const id = this.task.id;
     return [
       { label: "重命名", run: () => this.startEdit(this.currentNameElement()) },
+      ...(mine.length === 1 ? unreadItem(mine[0]) : []),
+      ...pinItem(id),
       { label: "在 Finder 中显示", run: () => this.actions.revealPath(this.task.project) },
       {
         label: "删除任务",
@@ -516,6 +523,13 @@ class TaskView {
     this.progressBox.classList.toggle("attention", progress?.attention === true);
     this.element.classList.toggle("unread", taskNeedsYou(task, agents));
     this.grip.setAttribute("aria-label", `调整「${label}」的顺序，使用上下方向键`);
+    // A pinned task shows a pin where the drag handle sits: it stays first however the rest is dragged.
+    const pinned = getPinnedTasks().has(task.id);
+    if (this.grip.dataset.pinned !== String(pinned)) {
+      this.grip.dataset.pinned = String(pinned);
+      this.grip.innerHTML = pinned ? PIN_ICON : GRIP_ICON;
+      this.grip.title = pinned ? "已置顶，右键可取消" : "拖动调整任务顺序";
+    }
 
     // One agent: the task line is the agent's line.
     const single = mine.length === 1;
@@ -785,7 +799,7 @@ export class Sidebar {
   /** Project folders with their tasks in the order the sidebar shows them; the pinned role folders left out. */
   shownProjects(): Project[] {
     const pinnedDirs = new Set([this.pinned.pm.dir, this.pinned.daily.dir]);
-    return projectsOf(getTasks().filter((t) => !pinnedDirs.has(t.project)), getProjectOrder(), getTaskOrder());
+    return projectsOf(getTasks().filter((t) => !pinnedDirs.has(t.project)), getProjectOrder(), getTaskOrder(), getPinnedTasks());
   }
 
   private toggle(path: string): void {

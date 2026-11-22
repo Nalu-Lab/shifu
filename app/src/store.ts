@@ -21,6 +21,10 @@ let windowFocused = true;
  *  its task's layout, whose front panel may be another conversation waiting for the user (Eddie 11-22). */
 const VIEW_SETTLE_MS = 1500;
 let viewSettled = false;
+/** Marked unread while in front: stays unread until the user switches away and back. */
+let unreadHold: string | null = null;
+let pinnedTasks: ReadonlySet<string> = new Set();
+let savePinned: (ids: string[]) => void = () => {};
 let settleTimer: ReturnType<typeof setTimeout> | undefined;
 let lastAttention = -1;
 const listeners = new Set<Listener>();
@@ -43,7 +47,8 @@ export const findAgent = (name: string) => agents.find((a) => a.name === name);
 
 /** Marks the agents, first recording the one in front of the user as seen, then tells whoever listens. */
 function refresh(): void {
-  const next = recordViewed(seen, rawAgents, viewSettled ? activeAgent : null, windowFocused);
+  const viewed = viewSettled && activeAgent !== unreadHold ? activeAgent : null;
+  const next = recordViewed(seen, rawAgents, viewed, windowFocused);
   if (next !== seen) {
     seen = next;
     seenListeners.forEach((l) => l(seen));
@@ -82,11 +87,44 @@ export function dismissWaitingFor(name: string): void {
   emit();
 }
 
+/** 标为未读: the reply counts as new again and returns to 在等你. */
+export function markUnread(name: string): void {
+  const { [name]: _seen, ...restSeen } = seen;
+  const { [name]: _opened, ...restOpened } = waitingOpened;
+  seen = restSeen;
+  waitingOpened = restOpened;
+  unreadHold = name;
+  seenListeners.forEach((l) => l(seen));
+  waitingOpenedListeners.forEach((listener) => listener(waitingOpened));
+  refresh();
+}
+
+export const getPinnedTasks = () => pinnedTasks;
+
+/** What was pinned when the app last ran, and where to save changes. */
+export function initPinnedTasks(ids: readonly string[], save: (ids: string[]) => void): void {
+  pinnedTasks = new Set(ids);
+  savePinned = save;
+}
+
+/** 置顶: the task stays first in its project. */
+export function setTaskPinned(id: string, pinned: boolean): void {
+  const next = new Set(pinnedTasks);
+  if (pinned) next.add(id);
+  else next.delete(id);
+  pinnedTasks = next;
+  savePinned([...next]);
+  emit();
+}
+
 export const onWaitingOpenedChange = (listener: (seen: WaitingSeen) => void) => waitingOpenedListeners.add(listener);
 
 /** The panel in front (null when there is none). */
 export function setActiveAgent(name: string | null): void {
-  if (name !== activeAgent) settle();
+  if (name !== activeAgent) {
+    settle();
+    unreadHold = null;
+  }
   activeAgent = name;
   refresh();
 }

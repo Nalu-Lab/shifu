@@ -5,7 +5,9 @@ import { agentRename, agentsList } from "./api";
 import { type AgentView, agentLabel, displayKey, STARTUP_CHECK_SECS, statusHint, statusLabel } from "./format";
 import { type MenuItem, showMenu } from "./menu";
 import { specOf } from "./models";
-import { findAgent, reportError, setAgents, subscribe } from "./store";
+import { pinItem, unreadItem } from "./marks";
+import { findAgent, getTasks, reportError, setAgents, subscribe } from "./store";
+import { taskOfAgent } from "./tasks";
 
 /** What ending does, said the same way here and in the sidebar. */
 export const ENDS = "5 秒后结束并移除，期间可撤销";
@@ -65,14 +67,8 @@ export class AgentTab implements ITabRenderer {
       const items: MenuItem[] = [{ label: "重命名", run: () => this.startEdit(name) }];
       if (agent?.kind === "claude" || agent?.kind === "codex") items.push({ label: "消息送达状态", run: () => showReceipts(name, this.element, agent.label || name) });
       if (agent?.label) items.push({ label: "用回话题名", run: () => void rename(name, "") });
-      // Split this tab off its group; with only one tab there is nothing to split from (the group's 分屏 button
-      // opens a new agent instead).
-      const group = params.api.group;
-      if (group.panels.length > 1)
-        items.push(
-          { label: "移到下面", run: () => params.api.moveTo({ group, position: "bottom" }) },
-          { label: "移到右边", run: () => params.api.moveTo({ group, position: "right" }) },
-        );
+      // Splitting a tab off is done by dragging it (Eddie 11-22 dropped 移到下面/移到右边 from this menu).
+      items.push(...unreadItem(agent), ...pinItem(taskOfAgent(getTasks(), name)?.id));
       items.push(...(agent ? endItems(agent) : [closeOnly]));
       showMenu(e.clientX, e.clientY, items);
     });
@@ -167,3 +163,4 @@ async function rename(name: string, label: string): Promise<void> {
     reportError(e);
   }
 }
+

@@ -23,6 +23,12 @@ describe("projectsOf", () => {
     expect(projectsOf([])).toEqual([]);
   });
 
+  it("puts pinned tasks first in their project, keeping the dragged order among the rest", () => {
+    const tasks = [task("t1", "/w/a", 10), task("t2", "/w/a", 20), task("t3", "/w/a", 30)];
+    const got = projectsOf(tasks, [], { "/w/a": ["t3", "t2", "t1"] }, new Set(["t1"]));
+    expect(got[0].tasks.map((t) => t.id)).toEqual(["t1", "t3", "t2"]);
+  });
+
   it("a dragged order comes first, and folders it does not name follow newest-first", () => {
     const tasks = [task("t1", "/w/a", 10), task("t2", "/w/b", 20), task("t3", "/w/c", 30)];
     expect(projectsOf(tasks, ["/w/a", "/w/b"]).map((p) => p.path)).toEqual(["/w/a", "/w/b", "/w/c"]);
