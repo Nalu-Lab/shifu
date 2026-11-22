@@ -14,6 +14,7 @@ pub mod browser;
 pub mod web;
 pub mod commands;
 pub mod computer;
+pub mod find;
 pub mod hook;
 pub mod inbox;
 pub mod launch;
