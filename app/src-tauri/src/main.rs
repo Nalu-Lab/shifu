@@ -590,14 +590,27 @@ fn layout_load(cfg: State<Config>, task_id: String) -> Result<Option<String>, St
     layout::load(&cfg, &task_id)
 }
 
+/// The first language in System Settings → Language & Region, e.g. "en-US" or "zh-Hans-CN".
+fn preferred_language() -> Option<String> {
+    objc2_foundation::NSLocale::preferredLanguages().firstObject().map(|l| l.to_string())
+}
+
+/// The menu bar follows the system language, as macOS's own items (About, Hide, Quit) do: Chinese for a Chinese
+/// system, English for anything else. The page itself is Chinese either way for now.
+fn menu_in_chinese(preferred: Option<&str>) -> bool {
+    preferred.is_some_and(|l| l.starts_with("zh"))
+}
+
 /// Cmd+N / Cmd+T / Cmd+W / Cmd+J (and Cmd+K, Cmd+B, Cmd+D, Shift+Cmd+D) live in the native menu: macOS handles menu shortcuts before the page sees the key,
 /// and the stock menu would make Cmd+W close the whole window.
 fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
+    let chinese = menu_in_chinese(preferred_language().as_deref());
+    let tr = |zh: &'static str, en: &'static str| if chinese { zh } else { en };
     let item = |id: &str, text: &str, accel: &str| MenuItemBuilder::with_id(id, text).accelerator(accel).build(app);
     let app_menu = SubmenuBuilder::new(app, "Shifu")
         .about(None)
         .separator()
-        .item(&item("appearance", "外观…", "CmdOrCtrl+,")?)
+        .item(&item("appearance", tr("外观…", "Appearance…"), "CmdOrCtrl+,")?)
         .separator()
         .hide()
         .hide_others()
@@ -605,15 +618,15 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         .separator()
         .quit()
         .build()?;
-    let file_menu = SubmenuBuilder::new(app, "文件")
-        .item(&item("new-task", "新建任务", "CmdOrCtrl+N")?)
-        .item(&item("new", "在当前任务里加 agent", "CmdOrCtrl+T")?)
-        .item(&item("close", "关闭面板", "CmdOrCtrl+W")?)
-        .item(&item("reopen-closed", "重新打开关闭的标签", "CmdOrCtrl+Shift+T")?)
+    let file_menu = SubmenuBuilder::new(app, tr("文件", "File"))
+        .item(&item("new-task", tr("新建任务", "New Task"), "CmdOrCtrl+N")?)
+        .item(&item("new", tr("在当前任务里加 agent", "Add Agent to Current Task"), "CmdOrCtrl+T")?)
+        .item(&item("close", tr("关闭面板", "Close Panel"), "CmdOrCtrl+W")?)
+        .item(&item("reopen-closed", tr("重新打开关闭的标签", "Reopen Closed Tab"), "CmdOrCtrl+Shift+T")?)
         .separator()
-        .item(&item("jump", "跳到等你最久的 agent", "CmdOrCtrl+J")?)
+        .item(&item("jump", tr("跳到等你最久的 agent", "Jump to Longest-Waiting Agent"), "CmdOrCtrl+J")?)
         .build()?;
-    let edit_menu = SubmenuBuilder::new(app, "编辑")
+    let edit_menu = SubmenuBuilder::new(app, tr("编辑", "Edit"))
         .undo()
         .redo()
         .separator()
@@ -622,18 +635,18 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         .paste()
         .select_all()
         .build()?;
-    let view_menu = SubmenuBuilder::new(app, "显示")
-        .item(&item("search", "搜索对话", "CmdOrCtrl+K")?)
-        .item(&item("sidebar", "显示或隐藏侧栏", "CmdOrCtrl+B")?)
+    let view_menu = SubmenuBuilder::new(app, tr("显示", "View"))
+        .item(&item("search", tr("搜索对话", "Search Conversations"), "CmdOrCtrl+K")?)
+        .item(&item("sidebar", tr("显示或隐藏侧栏", "Show or Hide Sidebar"), "CmdOrCtrl+B")?)
         .separator()
-        .item(&item("font-bigger", "终端字号放大", "CmdOrCtrl+=")?)
-        .item(&item("font-smaller", "终端字号缩小", "CmdOrCtrl+-")?)
-        .item(&item("font-default", "终端默认字号", "CmdOrCtrl+0")?)
+        .item(&item("font-bigger", tr("终端字号放大", "Bigger Terminal Text"), "CmdOrCtrl+=")?)
+        .item(&item("font-smaller", tr("终端字号缩小", "Smaller Terminal Text"), "CmdOrCtrl+-")?)
+        .item(&item("font-default", tr("终端默认字号", "Default Terminal Text Size"), "CmdOrCtrl+0")?)
         .separator()
-        .item(&item("split-down", "上下分屏", "CmdOrCtrl+Shift+D")?)
-        .item(&item("split-right", "左右分屏", "CmdOrCtrl+D")?)
+        .item(&item("split-down", tr("上下分屏", "Split Down"), "CmdOrCtrl+Shift+D")?)
+        .item(&item("split-right", tr("左右分屏", "Split Right"), "CmdOrCtrl+D")?)
         .build()?;
-    let window_menu = SubmenuBuilder::new(app, "窗口").minimize().maximize().build()?;
+    let window_menu = SubmenuBuilder::new(app, tr("窗口", "Window")).minimize().maximize().build()?;
     MenuBuilder::new(app).items(&[&app_menu, &file_menu, &edit_menu, &view_menu, &window_menu]).build()
 }
 
@@ -792,8 +805,14 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::cli_notice;
+    use super::{cli_notice, menu_in_chinese};
     use std::process::Command;
+
+    #[test]
+    fn the_menu_is_chinese_only_on_a_chinese_system() {
+        assert!(menu_in_chinese(Some("zh-Hans-CN")) && menu_in_chinese(Some("zh-Hant-TW")));
+        assert!(!menu_in_chinese(Some("en-US")) && !menu_in_chinese(Some("ja-JP")) && !menu_in_chinese(None));
+    }
 
     #[test]
     fn only_a_cli_built_from_this_source_passes_without_a_notice() {

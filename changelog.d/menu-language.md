@@ -1,0 +1,2 @@
+- 菜单栏跟随系统语言：系统是英文时，「外观…」「新建任务」等 Shifu 自己的菜单项也显示英文，不再和 macOS 自带的英文项（About、Hide、Quit）混在一起；中文系统不变。窗口内的界面暂时仍是中文。只需更新 App。
+- The menu bar follows the system language. On an English system, Shifu's own items (Appearance…, New Task and so on) are now in English like macOS's own (About, Hide, Quit); a Chinese system is unchanged. The window's own UI is still Chinese for now. App update only.
