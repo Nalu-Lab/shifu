@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { limitsGet, limitsRefresh } from "./api";
-import { codebuddySegments, fullTime, resetText, type LimitLine, type LimitSegment, type Limits, type Vendor, limitLines } from "./limits";
+import { codebuddySegments, fullTime, resetCountdown, resetText, type LimitLine, type LimitSegment, type Limits, type Vendor, limitLines } from "./limits";
 import { mascot } from "./mascots";
 import { vendorIcon } from "./vendoricons";
 import { antigravityLines } from "./antigravity";
@@ -203,7 +203,7 @@ function row(kind: Vendor | "codebuddy" | null, label: string, busy: boolean, ba
     if (resets.length > 0) {
       const times = el("div", "limit-resets");
       times.append(el("span", "", "重置"));
-      for (const reset of resets) times.append(el("span", "", `${reset.label} ${resetText(reset.at, now)}`));
+      for (const reset of resets) times.append(el("span", "", `${reset.label} ${resetCountdown(reset.at, now)}`));
       block.append(times);
     }
     return block;
@@ -214,10 +214,7 @@ function row(kind: Vendor | "codebuddy" | null, label: string, busy: boolean, ba
     values.append(el("span", bar.hot ? "limit-num hot" : "limit-num", `${SHORT[bar.label] ?? bar.label} ${bar.value}`));
   });
   const next = resets.sort((a, b) => a.at - b.at)[0];
-  if (next) {
-    const prefix = bars.length > 1 ? `${SHORT[next.label] ?? next.label} ` : "";
-    values.append(el("span", "limit-next-reset", `${prefix}${resetText(next.at, now)} 重置`));
-  }
+  if (next) values.append(el("span", "limit-next-reset", `${resetCountdown(next.at, now)} 重置`));
   line.append(name, values);
   block.append(line);
   return block;

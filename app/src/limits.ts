@@ -96,6 +96,14 @@ export function resetText(resetsAt: number, now: number): string {
   return at.toDateString() === today.toDateString() ? clock(at) : `${at.getMonth() + 1}/${at.getDate()} ${clock(at)}`;
 }
 
+/** The compact display rounds up so an upcoming reset never appears to be due already. */
+export function resetCountdown(resetsAt: number, now: number): string {
+  const left = resetsAt - now;
+  if (left >= 86400) return `${Math.ceil(left / 86400)}d`;
+  if (left >= 3600) return `${Math.ceil(left / 3600)}h`;
+  return `${Math.ceil(left / 60)}m`;
+}
+
 export const fullTime = (secs: number) => {
   const d = new Date(secs * 1000);
   return `${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]} ${clock(d)}`;

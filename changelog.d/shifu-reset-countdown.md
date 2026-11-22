@@ -1,0 +1,2 @@
+- 套餐额度重置时间用简短倒计时显示，例如「2d 重置」（还没装）。
+- Quota resets are shown as compact countdowns, such as 2d.
