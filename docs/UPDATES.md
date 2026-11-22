@@ -2,6 +2,23 @@
 
 [回到 Shifu](../README.md)　[English](#english)
 
+## 0.4.2 预发布 · 2026-11-22
+
+下载包现已包含 0.4.1 之后的改动，App、CLI 和可选电脑操作组件配套提供：
+
+- 重启以后改为点开才恢复：Shifu 启动时不再一次把所有对话拉起来，点开哪个对话（包括项目经理、每日分析），哪个接回原来的会话；没点开的显示「已退出」，悬停或右键可看到「恢复会话」。
+- 「在等你」：打开同组里的一个对话，不会再把另一个在等你的对话一起消掉，只有在眼前停留一会儿的才算看过。右键菜单新增「标为未读」，看过的回复重新加粗、回到「在等你」；新增「置顶」，任务固定排在本项目最上面。对话标签的右键菜单去掉「移到下面」「移到右边」，直接拖动标签即可。
+- 新建对话：类型改成下拉框，只列出这台 Mac 上真正装了的 Agent（按终端的 PATH 找，nvm、volta、bun 装的也算），没装的点名字打开安装说明。新建任务时可选权限：默认免确认，或改用各 Agent 自己的设置。
+- 用量：左下角显示下一次额度重置的倒计时，按整天整小时往下取，例如「6d6h」；展开后每个周期的重置时间排在「周」「5h」两列下面。
+- 外观：终端字号 10–24、侧栏 80%–150% 可调，终端也能用 ⌘= ⌘- ⌘0。菜单栏跟随系统语言。
+- Codex：后台整理记忆时不再把对话误标成已退出，Word 等文件链接照常从 Shifu 打开；全屏和分屏里的文件标题、分行路径都能点开。
+- 新命令 `shifu find`：按“我发你的那张截图”“微信里这周收到的文件”这类描述，列出拖进 Shifu、贴进 Codex、微信收到、下载文件夹和 Spotlight 里的候选文件。
+- 电脑操作：能读隐藏和最小化的窗口，窗口序号按应用区分，动作后核对新窗口和控件状态。
+- 修复同一个对话同时出现在两个任务里的问题。
+- 0.4.1 及更早的包继续保留。
+
+本包由 GitHub 云端从公开源码构建，用 Shifu 自己的固定证书签名、未公证；构建来源见包内 BUILD-INFO.json。从 0.4.1 升级不用重新授权电脑操作。
+
 ## 0.4.1 预发布 · 2026-11-21
 
 - 电脑操作的授权在升级后保留：下载包从这一版起都用同一张 Shifu 证书签名，macOS 认得是同一个程序，给 Shifu Computer Use 打开的辅助功能和屏幕录制，之后升级不用再开。从 0.4.0 或更早升到这一版还要再授权最后一次。证书是 Shifu 自己的，不是 Apple 颁发的，首次打开仍会看到 macOS 的提示。
@@ -132,6 +149,23 @@
 Finder 的独立改名输入框现已可读取、输入并提交；操作结果仍应核对文件路径。浏览器后台可能只有工具栏，等待文字时应选正文中的明确片段；目前没有 DOM 操作通道。
 
 ## English
+
+### 0.4.2 preview · November 22, 2026
+
+The download now includes the changes since 0.4.1, with a matching app, CLI and optional Computer Use helper:
+
+- After a restart, a conversation comes back when you open it: Shifu no longer relaunches every conversation at startup. The one you open (including 项目经理 and 每日分析) resumes its own session; the rest show 已退出, with 恢复会话 on hover and in the right-click menu.
+- Waiting for you: opening one conversation in a group no longer clears another conversation's row; only the one that stays in front for a moment counts as seen. The right-click menu gains 标为未读 (a seen reply turns bold and returns to the list) and 置顶 (the task stays first in its project). The tab menu drops 移到下面 and 移到右边; drag the tab instead.
+- New conversations: the agent type is a dropdown listing only the agents installed on this Mac (found on your terminal's PATH, including nvm, volta and bun installs); a missing one links to its install page. New tasks offer a permission choice: no approvals (the default) or each agent's own settings.
+- Usage: the bottom-left shows a countdown to the next quota reset in whole days and hours, such as 6d6h; expanded, each window's reset sits under the week and 5h columns.
+- Appearance: terminal text 10–24 pt and sidebar 80%–150%, with ⌘= ⌘- ⌘0 for the terminal. The menu bar follows the system language.
+- Codex: background memory consolidation no longer marks the conversation exited, and Word and other file links keep opening from Shifu; file titles and wrapped paths open in full screen and split panes.
+- New `shifu find` command: from a description such as "the screenshot I sent you" or "files I got on WeChat this week", it lists candidates from files dropped into Shifu, images pasted into Codex, WeChat downloads, Downloads and Spotlight.
+- Computer Use reads hidden and minimized windows, keeps window indexes per app, and checks new windows and controls after actions.
+- Fixed a conversation showing up in two tasks.
+- 0.4.1 and earlier packages remain available.
+
+Built by GitHub Actions from the public source; signed with Shifu's own fixed certificate and not notarized. The build source is recorded in BUILD-INFO.json inside the package. Upgrading from 0.4.1 keeps the Computer Use permissions.
 
 ### 0.4.1 preview · November 21, 2026
 
