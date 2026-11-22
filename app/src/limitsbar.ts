@@ -192,6 +192,18 @@ function row(kind: Vendor | "codebuddy" | null, label: string, busy: boolean, ba
       for (const [className, bar] of [["limit-week", week], ["limit-five", five]] as const) {
         line.append(el("span", `${className}${bar?.hot ? " hot" : ""}${bar ? "" : " limit-empty"}`, bar?.value ?? "—"));
       }
+      block.append(line);
+      // Each countdown sits under its own 周 / 5h column, so no window name is needed: "7天 11h" read as a
+      // duration (Eddie 11-22).
+      if (resets.length > 0) {
+        const times = el("div", "limit-reset-cols");
+        times.append(el("span", "", "重置"));
+        for (const bar of [week, five]) {
+          times.append(el("span", "", bar?.resetsAt === undefined ? "" : resetCountdown(bar.resetsAt, now)));
+        }
+        block.append(times);
+      }
+      return block;
     } else {
       const other = el("span", "limit-other");
       line.classList.toggle("limit-row-many", bars.length > 1);
@@ -203,7 +215,10 @@ function row(kind: Vendor | "codebuddy" | null, label: string, busy: boolean, ba
     if (resets.length > 0) {
       const times = el("div", "limit-resets");
       times.append(el("span", "", "重置"));
-      for (const reset of resets) times.append(el("span", "", `${reset.label} ${resetCountdown(reset.at, now)}`));
+      for (const reset of resets) {
+        const countdown = resetCountdown(reset.at, now);
+        times.append(el("span", "", resets.length === 1 ? countdown : `${SHORT[reset.label] ?? reset.label} ${countdown}`));
+      }
       block.append(times);
     }
     return block;
