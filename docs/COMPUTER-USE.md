@@ -53,7 +53,11 @@ shifu computer click --app com.apple.TextEdit --window-id 123 --element-index N 
 shifu computer set-value --app com.apple.TextEdit --element-index N --value '文字' --json
 ```
 
-其余操作见 `shifu computer help`：输入/粘贴、单键/快捷键、滚动（`--pages`）、拖动，以及控件提供的次级动作。坐标是所选窗口的局部坐标；截图像素须除以返回的 `scale`。文字可用 `--text-stdin` / `--value-stdin` 从标准输入传入，避免进入命令历史。
+其余操作见 `shifu computer help`，包括输入/粘贴、单键/快捷键、滚动（`--pages`）、拖动，以及控件提供的次级动作。坐标是所选窗口的局部坐标。截图上的横纵像素分别除以返回的 `scaleX` 和 `scaleY` 后再用于操作，旧字段 `scale` 仍报告横向比例。文字可用 `--text-stdin` / `--value-stdin` 从标准输入传入，避免进入命令历史。
+
+`list-windows` 和 `get-app-state` 都返回 `visibility`。`on_screen` 是在屏窗口，`minimized` 是最小化窗口，`app_hidden` 是随应用隐藏的窗口，`offscreen` 是其余可读的离屏窗口。离屏窗口必须能按真实窗口 ID 在辅助功能接口中匹配，某些其他桌面上的窗口因此可能缺席。列表保留在屏窗口的排序，并在末尾补离屏窗口。用 ID 可直接后台读取离屏窗口的控件。离屏截图会单独报告失败，后台合成键鼠输入要求目标窗口在屏。
+
+截图默认 PNG。`--screenshot-format jpeg` 可减少照片类窗口的文件体积，`--screenshot-scale 0.5` 限制每个窗口点对应的像素数，`--screenshot-max-edge 800` 限制长边为 800 像素。两个上限可以并用，最小尺寸为一个像素，辅助程序不会放大原图。结果包含实际尺寸、比例和匹配格式的本地文件路径。带等待条件的命令只保存最终响应的截图。
 
 动作回读可返回增量控件树：`snapshot.treeDiff:true` 表示 `treeText` 只列 `~` 变化行、`-` 删除行或 `No change`，并保留窗口头和焦点摘要；`baselineSnapshotId` 指向可重建的前次状态。未列出的控件及索引沿用基线。没有 `treeDiff` 时按完整树读取；`get-app-state` 始终完整，动作加 `--full-tree` 也可强制完整。出现新增、移动、结构/几何变化、截断或无可靠基线时自动回退完整树。
 
@@ -80,6 +84,10 @@ shifu computer get-app-state --app com.apple.TextEdit --within 12 --role button 
 shifu computer get-app-state --app com.apple.Safari --wait-for 'text We provide a web service' --timeout-ms 5000 --foreground-fallback --match 'We provide'
 # 等待当前窗口中的“正在保存”消失；也可与 --wait-for 一起要求结果出现。
 shifu computer get-app-state --app com.apple.TextEdit --wait-for-gone 正在保存 --timeout-ms 5000 --no-screenshot
+# 等原窗口里的保存按钮可用；从控件行选能唯一识别它的文字。
+shifu computer get-app-state --app com.apple.TextEdit --window-id 123 --wait-for-enabled 'button Save' --no-screenshot
+# 单次操作后核对同一进程里新出现的窗口。
+shifu computer click --app com.apple.TextEdit --window-id 123 --element-index N --wait-for-window 'Save' --no-screenshot
 # 操作后核对新路径出现、旧路径消失。路径必须是绝对路径。
 shifu computer press-key --app com.apple.finder --window-id 123 --key Return --expect-path /tmp/after.txt --expect-missing-path /tmp/before.txt --timeout-ms 3000
 ```
@@ -90,7 +98,9 @@ shifu computer press-key --app com.apple.finder --window-id 123 --key Return --e
 
 动作的 `verification.scope: element` 仅表示控件层面的核对；`taskCompletion: not_checked` 不宣称业务任务完成。显式提供的条件另记在 `result.postcondition`，超时令 `ok: false`，但保留原动作回执。文件条件只核对路径存在性，不证明内容、保存成功或变化由本次动作造成。
 
-显式指定 `--window-id` 或 `--window-index` 时，文字条件只核对实际接收动作的窗口；该窗口关闭后，即使返回了其他窗口的快照，也会报 `observation_failed`，不会用其他窗口已有的文字判成功。仅文件条件仍可在输入窗口关闭后核对。若要查看应用随后出现的窗口，应另行读取并选择新目标；未显式指定窗口的文字条件沿用按应用观察的范围。
+显式指定 `--window-id` 或 `--window-index` 时，文字条件只核对实际接收动作的窗口。该窗口关闭后若只能读取其他窗口，则报 `observation_failed`。未显式指定窗口的文字条件沿用按应用观察的范围。`--wait-for-enabled` 根据匹配控件的辅助功能可用状态判断，返回匹配的窗口 ID 与控件索引。
+
+`--wait-for-window` 用区分大小写的标题片段匹配同一应用的窗口。用于读取时等待任一匹配窗口。用于动作时先记录该进程已列出的窗口 ID，再要求出现一个匹配的新 ID，返回命中的窗口和可见状态。文件与窗口条件可在原窗口关闭后独立核对。组合条件要全部满足。动作前窗口顺序发生变化时，使用旧序号的动作会要求重新读取和选择目标。
 
 ## 弹出的输入窗口与多窗口操作
 
@@ -133,6 +143,8 @@ Finder 等应用可能把临时编辑框作为独立的小窗口暴露，而不�
 
 原生实现来自 [stablyai/orca](https://github.com/stablyai/orca/tree/d1466f6017c4bb6006b77eb46f2fc0f461ef021e/native/computer-use-macos)，固定提交 `d1466f6017c4bb6006b77eb46f2fc0f461ef021e`（2026-11-10）。保留 `native/computer-use-macos/LICENSE` 中的 MIT 许可与 Lovecast 版权；辅助程序包也包含该许可。Swift 包及模块名保留上游名字以便比较，但运行不连接 Orca。
 
+离屏发现与截图设置参考 Orca 后续的窗口枚举与编码实现。Shifu 用 WindowServer 和目标应用公开给辅助功能的窗口验证 ID。 [Orca 窗口枚举](https://github.com/stablyai/orca/blob/9394077842b1093bc578d8ef6a2a59b0b8752184/native/computer-use-macos/Sources/OrcaComputerUseMacOS/main.swift#L455-L492) · [Orca 截图编码](https://github.com/stablyai/orca/blob/9394077842b1093bc578d8ef6a2a59b0b8752184/native/computer-use-macos/Sources/OrcaComputerUseMacOSCore/ScreenshotEncoding.swift)
+
 保留上游 AX、截图、后台输入、窗口/控件身份验证、输入取消和快照缓存机制。Shifu 的适配是：独立 CLI/本地转接进程、自己的签名应用与权限入口、通过 LaunchServices 启动并校验 `--owner-pid` 指定的转接进程、截图落文件、中文使用说明。没有移植 Orca 的 Electron 桌面、账号管理、远程运行或浏览器。
 
 
@@ -145,6 +157,8 @@ swift test --package-path native/computer-use-macos
 ```
 
 `native/computer-use-macos/Fixture.swift` 是无外部副作用的 AppKit 测试窗口：计数按钮和文字框，用于真实窗口的点击、输入、截图及回读。用 `swiftc -swift-version 6` 编译；只操作该测试窗口，不接管其他工作窗口。
+
+使用 `verify-window-controls.py NEW_RESULT_DIR COMPILED_FIXTURE` 验证离屏发现、截图设置和结果条件。将 `SHIFU_CLI`、`SHIFU_COMPUTER_HELPER` 和 `SHIFU_COMPUTER_HOME` 指向候选 CLI、已签名且已获系统许可的候选辅助程序和隔离的本地目录。
 
 需要复查真实窗口行为时，可手动运行：
 

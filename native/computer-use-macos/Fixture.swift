@@ -7,12 +7,16 @@ final class Fixture: NSObject, NSApplicationDelegate {
     let countLabel = NSTextField(labelWithString: "点击次数：0")
     var count = 0
     var otherWindow: NSWindow?
+    var resultWindow: NSWindow?
+    let delayedButton = NSButton(title: "延迟完成", target: nil, action: nil)
     let observationMode = ProcessInfo.processInfo.environment["SHIFU_FIXTURE_OBSERVATION"] == "1"
+    let windowControlsMode = ProcessInfo.processInfo.environment["SHIFU_FIXTURE_WINDOW_CONTROLS"] == "1"
+    let visibility = ProcessInfo.processInfo.environment["SHIFU_FIXTURE_VISIBILITY"]
     let counterPath = ProcessInfo.processInfo.environment["SHIFU_FIXTURE_COUNTER_PATH"]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         window = NSWindow(contentRect: NSRect(x: 80, y: 120, width: 460, height: 240),
-                          styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                          styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = "Shifu Computer Use 测试窗口"
         let button = NSButton(title: "增加计数", target: self, action: #selector(increment))
         button.frame = NSRect(x: 24, y: 155, width: 120, height: 32)
@@ -27,9 +31,16 @@ final class Fixture: NSObject, NSApplicationDelegate {
             let close = NSButton(title: "关闭测试窗口", target: self, action: #selector(closeTestWindows))
             close.frame = NSRect(x: 24, y: 58, width: 140, height: 28)
             window.contentView!.addSubview(close)
-            let delayed = NSButton(title: "延迟完成", target: self, action: #selector(completeLater))
-            delayed.frame = NSRect(x: 200, y: 58, width: 120, height: 28)
-            window.contentView!.addSubview(delayed)
+            delayedButton.target = self
+            delayedButton.action = #selector(completeLater)
+            delayedButton.frame = NSRect(x: 200, y: 58, width: 120, height: 28)
+            delayedButton.isEnabled = !windowControlsMode
+            window.contentView!.addSubview(delayedButton)
+            if windowControlsMode {
+                let open = NSButton(title: "打开结果", target: self, action: #selector(openResult))
+                open.frame = NSRect(x: 24, y: 190, width: 120, height: 32)
+                window.contentView!.addSubview(open)
+            }
             let other = NSWindow(contentRect: NSRect(x: 600, y: 120, width: 460, height: 240),
                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
             other.title = "Shifu Computer Use 另一个测试窗口"
@@ -44,6 +55,16 @@ final class Fixture: NSObject, NSApplicationDelegate {
             recordCount()
         } else {
             window.orderBack(nil)
+        }
+        if let visibility {
+            DispatchQueue.main.async {
+                if visibility == "minimized" {
+                    self.window.miniaturize(nil)
+                } else if visibility == "app_hidden" {
+                    NSApp.hide(nil)
+                }
+                self.recordCount()
+            }
         }
     }
 
@@ -68,6 +89,20 @@ final class Fixture: NSObject, NSApplicationDelegate {
         recordCount()
         otherWindow?.close()
         window.close()
+    }
+
+    @objc func openResult() {
+        count += 1
+        recordCount()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+            guard let self else { return }
+            delayedButton.isEnabled = true
+            let result = NSWindow(contentRect: NSRect(x: 600, y: 380, width: 460, height: 240),
+                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            result.title = "Shifu Computer Use 另一个测试窗口"
+            result.orderBack(nil)
+            resultWindow = result
+        }
     }
 
     private func recordCount() {

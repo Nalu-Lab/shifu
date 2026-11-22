@@ -123,12 +123,15 @@ pub fn call(request: Value) -> Result<Value, String> {
         }
         Err(e) => return Err(e.to_string()),
     };
-    let mut response = exchange(&mut stream, &request)?;
-    if let Err(e) = save_screenshot(&mut response, &home) {
+    exchange(&mut stream, &request)
+}
+
+pub fn persist_screenshot(response: &mut Value) {
+    if response["result"]["screenshot"]["data"].is_null() { return; }
+    if let Err(e) = home().and_then(|home| save_screenshot(response, &home)) {
         response["result"]["screenshot"] = Value::Null;
         response["result"]["screenshotStatus"] = json!({"state":"failed","reason":e});
     }
-    Ok(response)
 }
 
 /// A small local broker keeps the native connection alive between CLI calls. Only this
@@ -286,10 +289,15 @@ fn exchange(stream: &mut UnixStream, request: &Value) -> Result<Value, String> {
 
 fn save_screenshot(response: &mut Value, home: &Path) -> Result<(), String> {
     let Some(encoded) = response["result"]["screenshot"]["data"].as_str() else { return Ok(()); };
+    let extension = match response["result"]["screenshot"]["format"].as_str() {
+        None | Some("png") => "png",
+        Some("jpeg") => "jpg",
+        Some(_) => return Err("截图格式无法识别".into()),
+    };
     let directory = home.join("screenshots");
     private_dir(&directory)?;
     let stamp = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|e| e.to_string())?.as_nanos();
-    let path = directory.join(format!("{stamp}.png"));
+    let path = directory.join(format!("{stamp}.{extension}"));
     let file = private_file(&path).map_err(|e| e.to_string())?;
     let mut decode = Command::new("/usr/bin/base64").arg("-D").stdin(Stdio::piped()).stdout(file).stderr(Stdio::piped())
         .spawn().map_err(|e| e.to_string())?;
