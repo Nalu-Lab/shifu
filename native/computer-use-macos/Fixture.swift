@@ -41,7 +41,7 @@ final class Fixture: NSObject, NSApplicationDelegate {
                 open.frame = NSRect(x: 24, y: 190, width: 120, height: 32)
                 window.contentView!.addSubview(open)
             }
-            let other = NSWindow(contentRect: NSRect(x: 600, y: 120, width: 460, height: 240),
+            let other = NSWindow(contentRect: NSRect(x: 600, y: 120, width: windowControlsMode ? 400 : 460, height: 240),
                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
             other.title = "Shifu Computer Use 另一个测试窗口"
             other.isReleasedWhenClosed = false
@@ -73,6 +73,9 @@ final class Fixture: NSObject, NSApplicationDelegate {
         countLabel.stringValue = "点击次数：\(count)"
         if observationMode {
             recordCount()
+            // The inventory sorts by size. Resize to make the index change
+            // independent of WindowServer's ordering of background windows.
+            if windowControlsMode { otherWindow?.setContentSize(NSSize(width: 540, height: 240)) }
             otherWindow?.orderFront(nil)
         }
     }
