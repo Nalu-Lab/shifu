@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACCENT_AT, codebuddySegments, creditsText, isHot, isReset, limitLine, limitLines, resetText, windowName, type CodeBuddyUse, type VendorLimits } from "./limits";
+import { ACCENT_AT, codebuddySegments, creditsText, isHot, isReset, limitLine, limitLines, resetCountdown, resetText, windowName, type CodeBuddyUse, type VendorLimits } from "./limits";
 
 /** Local-time seconds, so the tests do not depend on the machine's time zone. */
 const at = (y: number, mo: number, d: number, h: number, mi: number) => new Date(y, mo - 1, d, h, mi).getTime() / 1000;
@@ -24,6 +24,18 @@ describe("resetText", () => {
     expect(resetText(at(2026, 11, 13, 13, 11), now)).toBe("11/13 13:11");
     expect(resetText(at(2026, 11, 7, 0, 5), now)).toBe("11/7 00:05");
     expect(resetText(at(2026, 12, 6, 13, 11), now)).toBe("12/6 13:11");
+  });
+});
+
+describe("resetCountdown", () => {
+  it("counts at the largest applicable unit and rounds up", () => {
+    const now = at(2026, 11, 22, 10, 30);
+    expect(resetCountdown(now + 45 * 3600, now)).toBe("2d");
+    expect(resetCountdown(now + 86400, now)).toBe("1d");
+    expect(resetCountdown(now + 3601, now)).toBe("2h");
+    expect(resetCountdown(now + 3600, now)).toBe("1h");
+    expect(resetCountdown(now + 3599, now)).toBe("60m");
+    expect(resetCountdown(now + 1, now)).toBe("1m");
   });
 });
 
