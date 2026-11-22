@@ -1,2 +1,2 @@
-- 展开用量后，重置倒计时排在「周」「5h」两列下面，不再写「7天 11h」这种容易看成时长的标签。（还没装）
-- In the expanded usage list, reset countdowns sit under the week and 5h columns instead of reading "7天 11h". (not installed yet)
+- 展开用量后，重置倒计时排在「周」「5h」两列下面，不再写「7天 11h」这种容易看成时长的标签。
+- In the expanded usage list, reset countdowns sit under the week and 5h columns instead of reading "7天 11h".
