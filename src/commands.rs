@@ -76,7 +76,7 @@ pub fn cmd_new(args: &[String]) -> Res<()> {
     let name = make_name(&parsed.agent, &dir, &taken);
 
     let settings_path = write_claude_hooks(kind, &shifu_str)?;
-    let launch = agent_command(kind, &parsed.agent, &shifu_str, &settings_path, &parsed.extra);
+    let launch = agent_command(kind, &parsed.agent, &shifu_str, &settings_path, &parsed.extra, crate::launch::permissions());
 
     let now = now_secs();
     let record = Agent {

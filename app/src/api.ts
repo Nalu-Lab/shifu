@@ -172,3 +172,9 @@ export interface CliReport {
 }
 /** Which agent CLIs (and tmux) are installed here: file checks only, nothing is started. */
 export const clisDetect = () => invoke<CliReport>("clis_detect");
+
+/** How agents start: "bypass" adds each CLI's no-approval flag (the default), "own" leaves it to the agent's own
+ *  settings. Mirrors `launch::Permissions`; applies to every new or resumed agent. */
+export type Permissions = "bypass" | "own";
+export const permissionsGet = () => invoke<Permissions>("permissions_get");
+export const permissionsSet = (mode: Permissions) => invoke<void>("permissions_set", { mode });

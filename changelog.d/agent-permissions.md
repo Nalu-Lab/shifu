@@ -1,0 +1,2 @@
+- 新建任务窗口多了「权限（所有对话）」：默认「免确认（全权）」，和以前一样；改成「用 Agent 自己的设置」后，新开或恢复的 Claude、Codex、CodeBuddy、Kimi、Qwen Code 不再加免确认参数，按各家自己的配置决定何时问你。已经在跑的对话不受影响。需要同时更新 App 和 `shifu` 命令行。
+- The new-task popover has a 权限 (all conversations) choice. 免确认（全权）, the default, works as before. 用 Agent 自己的设置 starts and resumes Claude, Codex, CodeBuddy, Kimi and Qwen Code without their no-approval flags, so each agent's own settings decide when it asks. Conversations already running are unchanged. Needs both the app and the `shifu` CLI updated.

@@ -1,6 +1,6 @@
 use shifu::agent::{Agent, Kind};
 use shifu::hook::{apply_event, parse_input};
-use shifu::launch::{agent_command, model_flags, resume_command};
+use shifu::launch::{Permissions, agent_command, model_flags, resume_command};
 use shifu::status::Status;
 
 #[test]
@@ -9,13 +9,13 @@ fn antigravity_launch_and_resume_keep_the_exact_conversation_and_model() {
     assert_eq!(serde_json::to_value(kind).unwrap(), "antigravity");
     assert_eq!(kind, Kind::of_command("agy"));
     let pick = model_flags(kind, Some("gemini-3.8-flash-low"), Some("low"));
-    let launch = agent_command(kind, "antigravity", "/opt/shifu", "", &pick);
+    let launch = agent_command(kind, "antigravity", "/opt/shifu", "", &pick, Permissions::Bypass);
     assert_eq!(launch, "'agy' '--model' 'gemini-3.8-flash-low' '--effort' 'low'");
-    let resumed = resume_command(kind, "antigravity", "/opt/shifu", "", Some("conversation-a"), &pick);
+    let resumed = resume_command(kind, "antigravity", "/opt/shifu", "", Some("conversation-a"), &pick, Permissions::Bypass);
     assert!(resumed.contains("'--conversation' 'conversation-a'"));
     assert!(resumed.contains("'--model' 'gemini-3.8-flash-low'"));
     // A never-started conversation has no ID. Do not resume some other task's latest conversation.
-    let fresh = resume_command(kind, "agy", "/opt/shifu", "", None, &pick);
+    let fresh = resume_command(kind, "agy", "/opt/shifu", "", None, &pick, Permissions::Bypass);
     assert_eq!(fresh, launch);
 }
 

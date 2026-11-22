@@ -37,12 +37,13 @@
   - 空白页说明这台 Mac 上找到了哪些 Agent；没有 tmux 时先提示 `brew install tmux`。
   - 回到窗口时重新检查一次，所以刚装的 CLI 能直接出现。
 
-## 第 2 阶段：权限用预设还是用 Agent 自己的设置
+## 第 2 阶段：权限用预设还是用 Agent 自己的设置（已完成）
 
 - 加一个设置项：「免确认（全权）」或「用 Agent 自己的设置」。
 - 默认保持免确认，这是 11-09 的决定：和 Orca 一样默认全权。
 - 选「用 Agent 自己的设置」时，`launch.rs` 不加免确认参数，模型也照旧不传，交给各家的配置。
-- 设置放在 App 的偏好里，CLI 的 `shifu new` 读同一个文件。
+- 设置存在 `<SHIFU_HOME>/settings.json` 的 `agent_permissions`（`bypass` 或 `own`）。App（`~/.shifu/app`）和终端版（`~/.shifu`）各有一份；App 在新建任务窗口的「权限」里改。
+- 每次新开和恢复对话时读取，改了之后对已经在跑的对话不生效。Qwen 选 `own` 时传 `--approval-mode default`。
 
 ## 第 3 阶段：首次引导
 

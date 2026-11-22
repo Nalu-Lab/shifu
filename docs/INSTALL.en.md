@@ -6,7 +6,7 @@ Shifu provides an [Apple Silicon preview package](https://github.com/Nalu-Lab/sh
 
 Use the download for ordinary sessions; source-build instructions are in the developer section below.
 
-Claude, Codex, CodeBuddy and Kimi start in no-confirmation mode by default, using flags such as `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox` and `--yolo`. They can edit files and run commands without individual approval. Review `src/launch.rs` before building if you want different defaults.
+Claude, Codex, CodeBuddy, Kimi and Qwen Code start in no-confirmation mode by default, using flags such as `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox` and `--yolo`. They can edit files and run commands without individual approval. To change this, set 权限 in the new-task popover to 用 Agent 自己的设置 (use the agent's own settings). Conversations started or resumed after that get none of these flags, and each agent's own configuration decides when it asks.
 
 The app is signed with Shifu's own fixed certificate (not one issued by Apple) and is not notarized. If macOS blocks it the first time, confirm its source and follow the app-specific prompt in System Settings → Privacy & Security.
 

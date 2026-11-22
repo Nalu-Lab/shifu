@@ -374,7 +374,7 @@ pub fn create_agent(cfg: &Config, command: &str, cwd: &str, model: Option<&str>,
     taken.extend(names_in_tasks(&cfg.home));
     let name = make_name(command, &dir, &taken);
     let settings = write_settings(cfg, kind)?;
-    let launch = agent_command(kind, command, &cfg.shifu_bin, &settings, &model_flags(kind, model, effort));
+    let launch = agent_command(kind, command, &cfg.shifu_bin, &settings, &model_flags(kind, model, effort), crate::launch::permissions());
     let now = now_secs();
     let record = Agent {
         name: name.clone(),
@@ -419,7 +419,7 @@ fn resume_for_recovery(cfg: &Config, name: &str) -> (Res<()>, Option<RecoveryAtt
         }
         let settings = write_settings(cfg, record.kind)?;
         let pick = model_flags(record.kind, record.model.as_deref(), record.effort.as_deref());
-        let launch = resume_command(record.kind, &record.command, &cfg.shifu_bin, &settings, record.session_id.as_deref(), &pick);
+        let launch = resume_command(record.kind, &record.command, &cfg.shifu_bin, &settings, record.session_id.as_deref(), &pick, crate::launch::permissions());
         // Reattaching a saved Codex conversation need not emit SessionStart, and does not submit a turn.
         // Write before launch so a prompt/tool hook during startup can still replace this idle state.
         let status = if record.kind == Kind::Codex && record.session_id.is_some() { Status::Idle } else { Status::Starting };

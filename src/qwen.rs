@@ -91,9 +91,12 @@ pub fn run(args: &[String]) -> Res<()> {
     cmd.env("QWEN_HOME", &home)
         .env("QWEN_RUNTIME_DIR", &home)
         .env("QWEN_CODE_SYSTEM_SETTINGS_PATH", &config)
-        .env("OPENAI_BASE_URL", BASE_URL)
-        .arg("--approval-mode").arg("yolo")
-        .args(args);
+        .env("OPENAI_BASE_URL", BASE_URL);
+    // No-approval unless the launch asked for another mode (`launch::Permissions::Own`).
+    if !args.iter().any(|a| a == "--approval-mode" || a.starts_with("--approval-mode=")) {
+        cmd.args(["--approval-mode", "yolo"]);
+    }
+    cmd.args(args);
     if !args.iter().any(|a| a == "--model" || a == "-m" || a.starts_with("--model=")) {
         cmd.args(["--model", "auto"]);
     }

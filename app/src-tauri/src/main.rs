@@ -157,6 +157,17 @@ async fn power_lid_setup(power: State<'_, power::Power>) -> Result<power::Status
     power.authorize_lid()
 }
 
+/// How new and resumed agents start: "bypass" (no-approval flags) or "own" (each agent's own settings).
+#[tauri::command]
+fn permissions_get() -> shifu::launch::Permissions {
+    shifu::launch::permissions()
+}
+
+#[tauri::command]
+fn permissions_set(mode: shifu::launch::Permissions) -> Result<(), String> {
+    shifu::launch::save_permissions(mode)
+}
+
 /// Models each agent CLI offers here (Claude, Codex, CodeBuddy). Starts two CLIs briefly, so off the main thread.
 #[tauri::command]
 async fn models_list(cfg: State<'_, Config>) -> Result<Vec<models::AgentModels>, String> {
@@ -724,6 +735,8 @@ fn main() {
             daily_dir,
             daily_open,
             models_list,
+            permissions_get,
+            permissions_set,
             clis::clis_detect,
             agent_new,
             agent_kill,

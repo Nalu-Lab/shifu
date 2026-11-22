@@ -238,7 +238,7 @@ fn resume(tmux: &Tmux, shifu: &str, agent: &Agent, panes: &HashMap<String, PaneI
     }
     let settings = write_claude_hooks(agent.kind, shifu)?;
     let pick = model_flags(agent.kind, agent.model.as_deref(), agent.effort.as_deref());
-    let launch = resume_command(agent.kind, &agent.command, shifu, &settings, agent.session_id.as_deref(), &pick);
+    let launch = resume_command(agent.kind, &agent.command, shifu, &settings, agent.session_id.as_deref(), &pick, crate::launch::permissions());
     // 先写文件再起进程：新进程的第一个 hook 不能被这次写入盖掉
     let restarted = Agent { status: Status::Starting, status_since: now_secs(), ..agent.clone() };
     agent::save(&restarted)?;
