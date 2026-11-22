@@ -6,7 +6,7 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 
 普通会话优先使用下载包；源码构建方式收在下方开发者说明。
 
-Shifu 默认用免确认模式启动 Claude、Codex、CodeBuddy 和 Kimi（如 `--dangerously-skip-permissions`、`--dangerously-bypass-approvals-and-sandbox`、`--yolo`）。它们执行文件修改和命令时不会逐项请求批准；如需调整，先检查 `src/launch.rs`。
+Shifu 默认用免确认模式启动 Claude、Codex、CodeBuddy、Kimi 和 Qwen Code（如 `--dangerously-skip-permissions`、`--dangerously-bypass-approvals-and-sandbox`、`--yolo`）。它们执行文件修改和命令时不会逐项请求批准。新建任务窗口里的「权限」可改成「用 Agent 自己的设置」：之后新开或恢复的对话不再加这些参数，按各家自己的配置决定何时询问。
 
 应用用 Shifu 自己的固定证书签名（不是 Apple 颁发的），尚未公证。首次打开若被 macOS 拦截，确认来源后按「系统设置 → 隐私与安全性」中的对应提示处理。
 

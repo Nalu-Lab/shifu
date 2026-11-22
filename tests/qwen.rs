@@ -1,5 +1,5 @@
 use shifu::agent::Kind;
-use shifu::launch::{agent_command, model_flags, resume_command};
+use shifu::launch::{Permissions, agent_command, model_flags, resume_command};
 use serde_json::{Value, json};
 use std::{fs, io::Write, process::{Command, Stdio}};
 
@@ -10,12 +10,12 @@ fn launch_and_resume_pin_the_qwen_conversation_and_chosen_model() {
     assert_eq!(serde_json::to_value(Kind::Qwen).unwrap(), "qwen");
     let pick = model_flags(Kind::Qwen, Some("qwen3.8-flash"), Some("high"));
     assert_eq!(pick, ["--model", "qwen3.8-flash"]);
-    let launch = agent_command(Kind::Qwen, "qwen", "/a path/shifu", "", &pick);
+    let launch = agent_command(Kind::Qwen, "qwen", "/a path/shifu", "", &pick, Permissions::Bypass);
     assert_eq!(launch, "'/a path/shifu' qwen '--model' 'qwen3.8-flash'");
-    let resumed = resume_command(Kind::Qwen, "qwen", "/shifu", "", Some("session-a"), &pick);
+    let resumed = resume_command(Kind::Qwen, "qwen", "/shifu", "", Some("session-a"), &pick, Permissions::Bypass);
     assert!(resumed.contains("'--resume' 'session-a'"));
     assert!(!resumed.contains("--continue"));
-    assert_eq!(resume_command(Kind::Qwen, "qwen", "/a path/shifu", "", None, &pick), launch);
+    assert_eq!(resume_command(Kind::Qwen, "qwen", "/a path/shifu", "", None, &pick, Permissions::Bypass), launch);
 }
 
 #[test]

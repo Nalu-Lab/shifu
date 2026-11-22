@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { pathOpen, recentDirs } from "./api";
+import { type Permissions, pathOpen, permissionsGet, permissionsSet, recentDirs } from "./api";
 import { projectName } from "./tasks";
 import { shortPath } from "./format";
 import { reportError } from "./store";
@@ -171,6 +171,43 @@ export function present(anchor: HTMLElement, which: string, pop: HTMLElement, bl
   return true;
 }
 
+const PERMISSION_OPTIONS: { id: Permissions; label: string; hint: string }[] = [
+  { id: "bypass", label: "免确认（全权）", hint: "改文件、跑命令都不逐项问你。只在信任的项目里用。" },
+  { id: "own", label: "用 Agent 自己的设置", hint: "不加免确认参数，按各家自己的配置决定何时问你。" },
+];
+
+/** 权限: one choice for every agent started or resumed from now on (`launch::Permissions`). Filled in once the
+ *  saved choice is read; a change is saved at once. */
+function permissionPicker(): HTMLElement {
+  const box = document.createElement("div");
+  box.className = "perm-picker";
+  const sel = document.createElement("select");
+  sel.className = "pick-select";
+  sel.disabled = true;
+  for (const o of PERMISSION_OPTIONS) sel.append(new Option(o.label, o.id));
+  const wrap = document.createElement("span");
+  wrap.className = "select-wrap";
+  wrap.append(sel);
+  const hint = document.createElement("div");
+  hint.className = "perm-hint";
+  const paint = () => {
+    hint.textContent = PERMISSION_OPTIONS.find((o) => o.id === sel.value)?.hint ?? "";
+  };
+  sel.addEventListener("change", () => {
+    paint();
+    permissionsSet(sel.value as Permissions).catch(reportError);
+  });
+  permissionsGet()
+    .then((mode) => {
+      sel.value = mode;
+      sel.disabled = false;
+      paint();
+    })
+    .catch(reportError);
+  box.append(wrap, hint);
+  return box;
+}
+
 type AddAgent = (kind: string) => Promise<void>;
 
 /** Cmd+T / the "+" on a group: the supported agent CLIs, started in the current task's folder. */
@@ -283,7 +320,18 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
   const foot = document.createElement("div");
   foot.className = "pop-foot";
   foot.append(submit);
-  pop.append(label("项目"), list, choose, label("任务名"), nameForm, label("类型"), agentPicker(), foot);
+  pop.append(
+    label("项目"),
+    list,
+    choose,
+    label("任务名"),
+    nameForm,
+    label("类型"),
+    agentPicker(),
+    label("权限（所有对话）"),
+    permissionPicker(),
+    foot,
+  );
 
   paintList();
   if (!present(anchor, "new-task", pop, guard)) return;

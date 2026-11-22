@@ -185,9 +185,11 @@ pub fn codex_overrides(shifu: &str) -> Vec<String> {
 
 /// 每条覆盖一对 `-c '<值>'`，已做 shell 转义；最后是不问批准、不进沙箱（用户 11-09：和 Orca 一样默认 bypass）。
 /// 只加在 hook 覆盖后面，覆盖本身的顺序和文本不变，Codex 已记下的 hooks 信任不受影响。
-fn codex_flags(shifu: &str) -> Vec<String> {
+fn codex_flags(shifu: &str, perms: Permissions) -> Vec<String> {
     let mut flags: Vec<String> = codex_overrides(shifu).iter().flat_map(|o| ["-c".to_string(), sh_quote(o)]).collect();
-    flags.push(CODEX_BYPASS.to_string());
+    if perms == Permissions::Bypass {
+        flags.push(CODEX_BYPASS.to_string());
+    }
     flags
 }
 
@@ -197,11 +199,58 @@ const CLAUDE_BYPASS: &str = "--dangerously-skip-permissions";
 const CODEX_BYPASS: &str = "--dangerously-bypass-approvals-and-sandbox";
 const KIMI_YOLO: &str = "--yolo";
 
+/// How agents are started: with their no-approval flag (`Bypass`, the default since 11-09, as Orca does), or with
+/// none, so each agent's own settings decide what it asks (`Own`). Kept in `<SHIFU_HOME>/settings.json`, so the
+/// app (`~/.shifu/app`) and the terminal edition (`~/.shifu`) each have their own. Read at every start and resume.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Permissions {
+    #[default]
+    Bypass,
+    Own,
+}
+
+fn settings_path() -> std::path::PathBuf {
+    crate::agent::shifu_home().join("settings.json")
+}
+
+/// The saved choice; `Bypass` when nothing (or nothing readable) is saved.
+pub fn permissions() -> Permissions {
+    permissions_in(&settings_path())
+}
+
+fn permissions_in(path: &std::path::Path) -> Permissions {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+        .and_then(|v| serde_json::from_value(v["agent_permissions"].clone()).ok())
+        .unwrap_or_default()
+}
+
+/// Saves the choice, keeping any other setting in the file.
+pub fn save_permissions(perms: Permissions) -> Result<(), String> {
+    save_permissions_in(&settings_path(), perms)
+}
+
+fn save_permissions_in(path: &std::path::Path, perms: Permissions) -> Result<(), String> {
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| format!("create {} failed: {e}", dir.display()))?;
+    }
+    let mut settings = std::fs::read_to_string(path)
+        .ok()
+        .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+        .filter(Value::is_object)
+        .unwrap_or_else(|| json!({}));
+    settings["agent_permissions"] = serde_json::to_value(perms).map_err(|e| e.to_string())?;
+    let text = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
+    crate::app_session::write_atomic(path, &text)
+}
+
 /// Kimi Code 的 --yolo 是「Ask When Needed」：平常的改动和命令自己跑，危险命令、敏感文件、提问还会问。
 /// --auto 连问题都不问，不用。
 /// 交给 tmux（再交给 shell）的完整启动命令。
 /// `claude_settings` is the settings file `write_claude_hooks` wrote for this kind (Kimi takes none).
-pub fn agent_command(kind: Kind, command: &str, shifu: &str, claude_settings: &str, extra: &[String]) -> String {
+pub fn agent_command(kind: Kind, command: &str, shifu: &str, claude_settings: &str, extra: &[String], perms: Permissions) -> String {
     if kind == Kind::Other && command == "terminal" {
         let shell = std::env::var("SHELL").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| "/bin/zsh".into());
         return format!("{} -l", sh_quote(&shell));
@@ -213,6 +262,10 @@ pub fn agent_command(kind: Kind, command: &str, shifu: &str, claude_settings: &s
     }
     if kind == Kind::Qwen {
         let mut words = vec![sh_quote(shifu), "qwen".to_string()];
+        // `shifu qwen` adds `--approval-mode yolo` unless a mode is given.
+        if perms == Permissions::Own {
+            words.extend(["--approval-mode".to_string(), "default".to_string()]);
+        }
         words.extend(extra.iter().map(|a| sh_quote(a)));
         return words.join(" ");
     }
@@ -226,10 +279,16 @@ pub fn agent_command(kind: Kind, command: &str, shifu: &str, claude_settings: &s
         Kind::Claude | Kind::CodeBuddy => {
             words.push("--settings".to_string());
             words.push(sh_quote(claude_settings));
-            words.push(CLAUDE_BYPASS.to_string());
+            if perms == Permissions::Bypass {
+                words.push(CLAUDE_BYPASS.to_string());
+            }
         }
-        Kind::Codex => words.extend(codex_flags(shifu)),
-        Kind::Kimi => words.push(KIMI_YOLO.to_string()),
+        Kind::Codex => words.extend(codex_flags(shifu, perms)),
+        Kind::Kimi => {
+            if perms == Permissions::Bypass {
+                words.push(KIMI_YOLO.to_string());
+            }
+        }
         Kind::Antigravity | Kind::StepFun | Kind::Qwen | Kind::Other => {}
     }
     words.extend(extra.iter().map(|a| sh_quote(a)));
@@ -271,21 +330,29 @@ pub fn model_flags(kind: Kind, model: Option<&str>, effort: Option<&str>) -> Vec
 /// 恢复已退出的会话：Claude 用 `--resume <id>`（没有 id 用 `--continue`），
 /// Kimi 用 `--session <id>`，Codex 用 `resume` 子命令（没有 id 用 `--last`），其他命令原样重开。
 /// `pick` 是 `model_flags` 的结果，恢复时照原样再带上。
-pub fn resume_command(kind: Kind, command: &str, shifu: &str, claude_settings: &str, session_id: Option<&str>, pick: &[String]) -> String {
+pub fn resume_command(
+    kind: Kind,
+    command: &str,
+    shifu: &str,
+    claude_settings: &str,
+    session_id: Option<&str>,
+    pick: &[String],
+    perms: Permissions,
+) -> String {
     match (kind, session_id) {
         (Kind::Qwen, id) => {
             let mut extra = pick.to_vec();
             if let Some(id) = id {
                 extra.extend(["--resume".to_string(), id.to_string()]);
             }
-            agent_command(kind, command, shifu, claude_settings, &extra)
+            agent_command(kind, command, shifu, claude_settings, &extra, perms)
         }
         (Kind::StepFun, id) => {
             let mut extra = pick.to_vec();
             if let Some(id) = id {
                 extra.extend(["--session".to_string(), id.to_string()]);
             }
-            agent_command(kind, command, shifu, claude_settings, &extra)
+            agent_command(kind, command, shifu, claude_settings, &extra, perms)
         }
         (Kind::Antigravity, id) => {
             let mut extra = pick.to_vec();
@@ -293,7 +360,7 @@ pub fn resume_command(kind: Kind, command: &str, shifu: &str, claude_settings: &
                 extra.extend(["--conversation".to_string(), id.to_string()]);
             }
             // Without an ID this task has not started a conversation yet. --continue could open another task.
-            agent_command(kind, command, shifu, claude_settings, &extra)
+            agent_command(kind, command, shifu, claude_settings, &extra, perms)
         }
         (Kind::Claude | Kind::CodeBuddy | Kind::Kimi, id) => {
             let mut extra = pick.to_vec();
@@ -302,16 +369,16 @@ pub fn resume_command(kind: Kind, command: &str, shifu: &str, claude_settings: &
                 Some(id) => extra.extend([by_id.to_string(), id.to_string()]),
                 None => extra.push("--continue".to_string()),
             }
-            agent_command(kind, command, shifu, claude_settings, &extra)
+            agent_command(kind, command, shifu, claude_settings, &extra, perms)
         }
         (Kind::Codex, id) => {
             let mut words = vec![sh_quote(command), sh_quote("resume")];
-            words.extend(codex_flags(shifu));
+            words.extend(codex_flags(shifu, perms));
             words.extend(pick.iter().map(|w| sh_quote(w)));
             words.push(sh_quote(id.unwrap_or("--last")));
             words.join(" ")
         }
-        (Kind::Other, _) => agent_command(kind, command, shifu, claude_settings, &[]),
+        (Kind::Other, _) => agent_command(kind, command, shifu, claude_settings, &[], perms),
     }
 }
 
@@ -320,13 +387,44 @@ mod tests {
     use super::*;
 
     #[test]
+    fn own_settings_start_every_agent_without_its_no_approval_flag() {
+        let own = Permissions::Own;
+        assert_eq!(agent_command(Kind::Claude, "claude", "/s", "/h/claude-hooks.json", &[], own), "'claude' --settings '/h/claude-hooks.json'");
+        assert_eq!(agent_command(Kind::CodeBuddy, "codebuddy", "/s", "/h/c.json", &[], own), "'codebuddy' --settings '/h/c.json'");
+        assert_eq!(agent_command(Kind::Kimi, "kimi", "/s", "", &[], own), "'kimi'");
+        let codex = agent_command(Kind::Codex, "codex", "/s", "", &[], own);
+        assert!(codex.contains("hooks.Stop") && !codex.contains("--dangerously"), "{codex}");
+        let resumed = resume_command(Kind::Codex, "codex", "/s", "", Some("id-1"), &[], own);
+        assert!(resumed.ends_with("'id-1'") && !resumed.contains("--dangerously"), "{resumed}");
+        assert_eq!(resume_command(Kind::Claude, "claude", "/s", "/h.json", None, &[], own), "'claude' --settings '/h.json' '--continue'");
+        assert_eq!(agent_command(Kind::Qwen, "qwen", "/s", "", &[], own), "'/s' qwen --approval-mode default");
+        assert_eq!(agent_command(Kind::Qwen, "qwen", "/s", "", &[], Permissions::Bypass), "'/s' qwen");
+    }
+
+    #[test]
+    fn the_choice_is_saved_beside_other_settings_and_defaults_to_bypass() {
+        let dir = std::env::temp_dir().join(format!("shifu-perms-{}", std::process::id()));
+        let path = dir.join("settings.json");
+        assert_eq!(permissions_in(&path), Permissions::Bypass);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(&path, r#"{"other": 1}"#).unwrap();
+        save_permissions_in(&path, Permissions::Own).unwrap();
+        assert_eq!(permissions_in(&path), Permissions::Own);
+        let saved: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(saved, json!({"other": 1, "agent_permissions": "own"}));
+        std::fs::write(&path, "not json").unwrap();
+        assert_eq!(permissions_in(&path), Permissions::Bypass);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
     fn stepfun_uses_the_shifu_launcher_and_resumes_the_exact_session() {
         assert_eq!(Kind::of_command("stepfun"), Kind::StepFun);
         let pick = model_flags(Kind::StepFun, Some("step-5-preview"), Some("high"));
         assert_eq!(pick, ["--model", "step-5-preview"]);
-        assert_eq!(agent_command(Kind::StepFun, "stepfun", "/a path/shifu", "", &pick),
+        assert_eq!(agent_command(Kind::StepFun, "stepfun", "/a path/shifu", "", &pick, Permissions::Bypass),
             "'/a path/shifu' stepfun '--model' 'step-5-preview'");
-        assert_eq!(resume_command(Kind::StepFun, "stepfun", "/shifu", "", Some("/sessions/one task.jsonl"), &pick),
+        assert_eq!(resume_command(Kind::StepFun, "stepfun", "/shifu", "", Some("/sessions/one task.jsonl"), &pick, Permissions::Bypass),
             "'/shifu' stepfun '--model' 'step-5-preview' '--session' '/sessions/one task.jsonl'");
     }
 
@@ -431,13 +529,13 @@ mod tests {
 
     #[test]
     fn claude_command_has_settings() {
-        let c = agent_command(Kind::Claude, "claude", "/opt/shifu", "/h/claude-hooks.json", &["--resume".to_string()]);
+        let c = agent_command(Kind::Claude, "claude", "/opt/shifu", "/h/claude-hooks.json", &["--resume".to_string()], Permissions::Bypass);
         assert_eq!(c, "'claude' --settings '/h/claude-hooks.json' --dangerously-skip-permissions '--resume'");
     }
 
     #[test]
     fn codex_command_has_seven_c_flags_in_order() {
-        let c = agent_command(Kind::Codex, "codex", "/opt/shifu", "", &[]);
+        let c = agent_command(Kind::Codex, "codex", "/opt/shifu", "", &[], Permissions::Bypass);
         assert!(c.starts_with("'codex' -c 'hooks.SessionStart="));
         assert_eq!(c.matches(" -c ").count(), 7);
         assert!(c.ends_with("hook codex SessionEnd\"}]}]' --dangerously-bypass-approvals-and-sandbox"));
@@ -446,23 +544,23 @@ mod tests {
 
     #[test]
     fn other_command_is_plain_with_quoted_args() {
-        let c = agent_command(Kind::Other, "sh", "/opt/shifu", "", &["-c".to_string(), "sleep 600".to_string()]);
+        let c = agent_command(Kind::Other, "sh", "/opt/shifu", "", &["-c".to_string(), "sleep 600".to_string()], Permissions::Bypass);
         assert_eq!(c, "'sh' '-c' 'sleep 600'");
     }
 
     #[test]
     fn claude_resume_with_and_without_session_id() {
-        let with = resume_command(Kind::Claude, "claude", "/opt/shifu", "/h/claude-hooks.json", Some("abc-123"), &[]);
+        let with = resume_command(Kind::Claude, "claude", "/opt/shifu", "/h/claude-hooks.json", Some("abc-123"), &[], Permissions::Bypass);
         assert_eq!(with, "'claude' --settings '/h/claude-hooks.json' --dangerously-skip-permissions '--resume' 'abc-123'");
-        let without = resume_command(Kind::Claude, "claude", "/opt/shifu", "/h/claude-hooks.json", None, &[]);
+        let without = resume_command(Kind::Claude, "claude", "/opt/shifu", "/h/claude-hooks.json", None, &[], Permissions::Bypass);
         assert_eq!(without, "'claude' --settings '/h/claude-hooks.json' --dangerously-skip-permissions '--continue'");
     }
 
     #[test]
     fn codebuddy_runs_like_claude_with_its_own_hooks_label() {
-        let c = agent_command(Kind::CodeBuddy, "codebuddy", "/opt/shifu", "/h/codebuddy-hooks.json", &[]);
+        let c = agent_command(Kind::CodeBuddy, "codebuddy", "/opt/shifu", "/h/codebuddy-hooks.json", &[], Permissions::Bypass);
         assert_eq!(c, "'codebuddy' --settings '/h/codebuddy-hooks.json' --dangerously-skip-permissions");
-        let with = resume_command(Kind::CodeBuddy, "codebuddy", "/opt/shifu", "/h/codebuddy-hooks.json", Some("s-1"), &[]);
+        let with = resume_command(Kind::CodeBuddy, "codebuddy", "/opt/shifu", "/h/codebuddy-hooks.json", Some("s-1"), &[], Permissions::Bypass);
         assert_eq!(with, "'codebuddy' --settings '/h/codebuddy-hooks.json' --dangerously-skip-permissions '--resume' 's-1'");
         let hooks = codebuddy_hooks_json("/opt/shifu").to_string();
         assert!(hooks.contains("hook codebuddy PermissionRequest"));
@@ -509,11 +607,11 @@ model = "k3"
 
     #[test]
     fn kimi_starts_kimi_code_in_yolo_and_resumes_by_session() {
-        let c = agent_command(Kind::Kimi, "kimi-cli", "/opt/shifu", "/h/kimi.toml", &model_flags(Kind::Kimi, Some("kimi-code/k3"), Some("high")));
+        let c = agent_command(Kind::Kimi, "kimi-cli", "/opt/shifu", "/h/kimi.toml", &model_flags(Kind::Kimi, Some("kimi-code/k3"), Some("high")), Permissions::Bypass);
         assert_eq!(c, "'kimi' --yolo '--model' 'kimi-code/k3'");
-        let r = resume_command(Kind::Kimi, "kimi", "/opt/shifu", "/h/kimi.toml", Some("session_1377-abc"), &[]);
+        let r = resume_command(Kind::Kimi, "kimi", "/opt/shifu", "/h/kimi.toml", Some("session_1377-abc"), &[], Permissions::Bypass);
         assert_eq!(r, "'kimi' --yolo '--session' 'session_1377-abc'");
-        let last = resume_command(Kind::Kimi, "kimi", "/opt/shifu", "/h/kimi.toml", None, &[]);
+        let last = resume_command(Kind::Kimi, "kimi", "/opt/shifu", "/h/kimi.toml", None, &[], Permissions::Bypass);
         assert!(last.ends_with("--yolo '--continue'"), "{last}");
         assert!(model_flags(Kind::Kimi, None, Some("max")).is_empty());
         assert_eq!(Kind::of_command("kimi"), Kind::Kimi);
@@ -523,11 +621,11 @@ model = "k3"
     fn picked_model_and_effort_reach_each_cli_and_survive_resume() {
         let claude = model_flags(Kind::Claude, Some("claude-sonnet-5-5"), Some("high"));
         assert_eq!(claude, ["--model", "claude-sonnet-5-5", "--effort", "high"]);
-        let c = resume_command(Kind::Claude, "claude", "/opt/shifu", "/h/c.json", Some("abc"), &claude);
+        let c = resume_command(Kind::Claude, "claude", "/opt/shifu", "/h/c.json", Some("abc"), &claude, Permissions::Bypass);
         assert!(c.ends_with("'--model' 'claude-sonnet-5-5' '--effort' 'high' '--resume' 'abc'"), "{c}");
         let codex = model_flags(Kind::Codex, Some("gpt-6-luna"), Some("low"));
         assert_eq!(codex, ["-m", "gpt-6-luna", "-c", "model_reasoning_effort=\"low\""]);
-        let r = resume_command(Kind::Codex, "codex", "/opt/shifu", "", Some("019a"), &codex);
+        let r = resume_command(Kind::Codex, "codex", "/opt/shifu", "", Some("019a"), &codex, Permissions::Bypass);
         assert!(r.ends_with("'-m' 'gpt-6-luna' '-c' 'model_reasoning_effort=\"low\"' '019a'"), "{r}");
         assert!(model_flags(Kind::Claude, None, None).is_empty());
         assert!(model_flags(Kind::Other, Some("x"), Some("y")).is_empty());
@@ -535,11 +633,11 @@ model = "k3"
 
     #[test]
     fn codex_resume_keeps_the_seven_overrides_in_order() {
-        let fresh = agent_command(Kind::Codex, "codex", "/opt/shifu", "", &[]);
+        let fresh = agent_command(Kind::Codex, "codex", "/opt/shifu", "", &[], Permissions::Bypass);
         let overrides = fresh.strip_prefix("'codex' ").unwrap();
-        let with = resume_command(Kind::Codex, "codex", "/opt/shifu", "", Some("019a-xyz"), &[]);
+        let with = resume_command(Kind::Codex, "codex", "/opt/shifu", "", Some("019a-xyz"), &[], Permissions::Bypass);
         assert_eq!(with, format!("'codex' 'resume' {overrides} '019a-xyz'"));
-        let without = resume_command(Kind::Codex, "codex", "/opt/shifu", "", None, &[]);
+        let without = resume_command(Kind::Codex, "codex", "/opt/shifu", "", None, &[], Permissions::Bypass);
         assert_eq!(without, format!("'codex' 'resume' {overrides} '--last'"));
         assert!(with.contains(" --dangerously-bypass-approvals-and-sandbox '019a-xyz'"));
         assert!(!with.contains("bypass-hook-trust"));
@@ -547,6 +645,6 @@ model = "k3"
 
     #[test]
     fn other_resume_reopens_plain_command() {
-        assert_eq!(resume_command(Kind::Other, "gemini", "/opt/shifu", "", Some("ignored"), &[]), "'gemini'");
+        assert_eq!(resume_command(Kind::Other, "gemini", "/opt/shifu", "", Some("ignored"), &[], Permissions::Bypass), "'gemini'");
     }
 }
