@@ -223,6 +223,19 @@ button {
   white-space: nowrap;
 }
 
+.limit-reset-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px 36px;
+  gap: 8px;
+  padding-left: 26px;
+  font-variant-numeric: tabular-nums;
+}
+
+.limit-reset-cols > :not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+}
+
 .limits.unfolded .limit-label {
   color: var(--text);
 }
