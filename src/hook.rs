@@ -28,6 +28,8 @@ pub struct HookInput {
     pub from_sub_agent: bool,
     /// Antigravity can emit Stop while its background tasks are still running.
     pub background_work: bool,
+    /// The folder the thread works in.
+    pub cwd: Option<String>,
 }
 
 pub fn parse_input(raw: &str) -> HookInput {
@@ -44,7 +46,17 @@ pub fn parse_input(raw: &str) -> HookInput {
         tool_detail: tool_detail(&v["tool_input"]),
         from_sub_agent: field("agent_id").is_some_and(|id| id != "main"),
         background_work: v.get("fullyIdle").and_then(Value::as_bool) == Some(false),
+        cwd: field("cwd"),
     }
+}
+
+/// Codex runs background threads of its own (memory consolidation in `~/.codex/memories`) in the same process, so
+/// their hooks carry the conversation's SHIFU_ID. A Codex thread keeps the folder it started in, so another folder
+/// means another thread; its events must not replace the conversation's session or mark it exited.
+pub fn foreign_thread(kind: &str, agent_cwd: &str, input: &HookInput) -> bool {
+    let Some(cwd) = input.cwd.as_deref() else { return false };
+    let same = |a: &str, b: &str| a == b || matches!((std::fs::canonicalize(a), std::fs::canonicalize(b)), (Ok(x), Ok(y)) if x == y);
+    kind == "codex" && !agent_cwd.is_empty() && !same(cwd, agent_cwd)
 }
 
 fn tool_detail(input: &Value) -> Option<String> {
@@ -191,6 +203,7 @@ fn handle(kind: &str, event: &str) -> Res<()> {
     if kind == "antigravity" && agent.kind != crate::agent::Kind::Antigravity { return Ok(()); }
     if kind == "stepfun" && agent.kind != crate::agent::Kind::StepFun { return Ok(()); }
     if kind == "qwen" && (agent.kind != crate::agent::Kind::Qwen || input.from_sub_agent) { return Ok(()); }
+    if foreign_thread(kind, &agent.cwd, &input) { return Ok(()); }
     let updated = apply_event(&agent, event, &input, now_secs());
     agent::save(&updated)?;
     drop(lock);
@@ -530,6 +543,21 @@ mod tests {
         let sub = parse_input(r#"{"tool_name":"Bash","agent_id":"child"}"#);
         assert_eq!(apply_event(&ended, "PostToolUse", &sub, 300).status, Status::Exited);
         assert_eq!(apply_event(&active, "Stop", &HookInput::default(), 400).status, Status::NeedsReply);
+    }
+
+    #[test]
+    fn codex_background_thread_in_another_folder_leaves_the_conversation_alone() {
+        // 11-22: Codex's memory consolidation ran in ~/.codex/memories under the conversation's SHIFU_ID; its events
+        // replaced the session ID and its end marked the live conversation exited.
+        let memories = parse_input(r#"{"session_id":"memory","cwd":"/Users/x/.codex/memories","hook_event_name":"SessionEnd"}"#);
+        assert_eq!(memories.cwd.as_deref(), Some("/Users/x/.codex/memories"));
+        assert!(foreign_thread("codex", "/tmp", &memories));
+        // The conversation itself, also when macOS names the same folder through its symlink.
+        let own = parse_input(r#"{"session_id":"chat","cwd":"/private/tmp"}"#);
+        assert!(!foreign_thread("codex", "/tmp", &own));
+        assert!(!foreign_thread("codex", "/tmp", &parse_input(r#"{"session_id":"chat"}"#)));
+        // Claude's hook cwd follows `cd` inside the conversation, so it says nothing about which thread it is.
+        assert!(!foreign_thread("claude", "/tmp", &memories));
     }
 
     #[test]

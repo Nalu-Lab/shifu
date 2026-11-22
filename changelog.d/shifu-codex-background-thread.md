@@ -1,0 +1,2 @@
+- Codex 在后台整理记忆时，Shifu 不再把对话误标成「已退出」，对话里的 Word 等文件链接也能照常点开，不会落到 Codex 自带的文本查看器里报 UTF-8 错误。（还没装）
+- While Codex consolidates memories in the background, Shifu no longer marks the conversation exited, and file links such as Word documents keep opening from Shifu instead of falling through to Codex's text viewer and its UTF-8 error. (not installed yet)
