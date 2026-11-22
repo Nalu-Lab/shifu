@@ -652,8 +652,6 @@ fn main() {
     let cfg = config::init();
     std::fs::create_dir_all(&cfg.home).unwrap_or_else(|e| panic!("cannot create {}: {e}", cfg.home.display()));
     // Read before the window can start an agent: one new session and the tmux server no longer looks gone.
-    let lost = session::lost_sessions();
-    let reopen_cfg = cfg.clone();
     let power = power::Power::new(&cfg.home);
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -678,10 +676,8 @@ fn main() {
             agents::spawn_watcher(app.handle().clone());
             limits::spawn_watcher(app.handle().clone());
             fullscreen::spawn_watcher(app.handle().clone());
-            // After a restart of the Mac the conversations come back on their own, as they were before it.
-            std::thread::spawn(move || {
-                session::recover_sessions(&reopen_cfg, &lost, std::thread::sleep);
-            });
+            // After a restart of the Mac nothing is reopened here: a conversation comes back when it is opened
+            // (Eddie 11-22), so starting up does not relaunch every agent at once.
             // Read the open conversations once now, so the first search does not wait (about a second for 150 MB).
             let handle = app.handle().clone();
             std::thread::spawn(move || {

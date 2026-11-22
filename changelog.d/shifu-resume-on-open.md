@@ -1,0 +1,2 @@
+- 关机或重启后，Shifu 打开时不再一次把所有对话都拉起来：点开哪个对话，哪个自动恢复原来的会话；没点开的显示「已退出」，悬停提示点开即恢复，右键也有「恢复会话」。（还没装）
+- After a shutdown or restart, Shifu no longer relaunches every conversation at startup: the one you open resumes its own session; the rest show 已退出, with a hover hint that opening resumes them and 恢复会话 in the right-click menu. (not installed yet)

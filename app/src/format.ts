@@ -146,7 +146,8 @@ export const statusLabel = (key: ViewKey): string => LABELS[key];
 
 export const statusHint = (key: ViewKey): string =>
   key === "unready" ? "尚未收到就绪状态，打开终端查看提示。"
-    : key === "asked" ? "打开会话回复追问。" : "";
+    : key === "asked" ? "打开会话回复追问。"
+    : key === "exited" ? "点开会自动恢复，也可右键选「恢复会话」。" : "";
 
 export const viewRank = (agent: Waits): number => RANK[viewKey(agent)];
 

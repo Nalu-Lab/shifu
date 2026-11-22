@@ -163,11 +163,17 @@ async function main() {
     // The sidebar selects immediately, but its saved layout may still be loading.
     else await showingTask;
   };
+  /** The conversation the user just opened from the sidebar. One whose process is gone (Mac restarted, tmux quit)
+   *  comes back on its own here; the others wait until they are opened (Eddie 11-22). */
+  const openedByUser = (name: string) => {
+    dismissWaitingFor(name);
+    if (findAgent(name)?.exited) agentResume(name).catch(reportError);
+  };
   const focusAgent = async (taskId: string, name: string) => {
     hideProgress();
     await selectTask(taskId);
     workspace.open(name);
-    if (getCurrentId() === taskId && workspace.activeAgent() === name) dismissWaitingFor(name);
+    if (getCurrentId() === taskId && workspace.activeAgent() === name) openedByUser(name);
   };
 
   const createTask = async (project: string, name: string, kind: string) => {
@@ -245,7 +251,7 @@ async function main() {
       hideProgress();
       void selectTask(id).then(() => {
         const active = workspace.activeAgent();
-        if (getCurrentId() === id && active) dismissWaitingFor(active);
+        if (getCurrentId() === id && active) openedByUser(active);
       }).catch(reportError);
     },
     focusAgent: (taskId, name) => void focusAgent(taskId, name).catch(reportError),
