@@ -186,13 +186,22 @@ pub fn ensure_links(tmux: &Tmux) -> Res<()> {
 
 /// `new-session` arguments; prints `<pane_id> <window_id>`.
 pub fn new_session_args(agent_name: &str, cwd: &str, launch: &str) -> Vec<String> {
-    [
+    let mut args: Vec<String> = [
         "new-session", "-d", "-P", "-F", "#{pane_id} #{window_id}", "-s", &session_name(agent_name), "-c", cwd, "-e",
-        &format!("SHIFU_ID={agent_name}"), "-x", NEW_COLS, "-y", NEW_ROWS, launch,
+        &format!("SHIFU_ID={agent_name}"), "-x", NEW_COLS, "-y", NEW_ROWS,
     ]
     .iter()
     .map(|s| s.to_string())
-    .collect()
+    .collect();
+    args.extend(path_env());
+    args.push(launch.to_string());
+    args
+}
+
+/// `-e PATH=…`: the PATH the app found the agents in (see `clis`), so a CLI installed through nvm, volta and the
+/// like starts too. Empty before the app sets one: the tmux server's own PATH is used.
+fn path_env() -> Vec<String> {
+    crate::clis::agent_path().map(|path| vec!["-e".to_string(), format!("PATH={path}")]).unwrap_or_default()
 }
 
 fn write_conf(cfg: &Config) -> Res<()> {
@@ -405,7 +414,11 @@ fn resume_for_recovery(cfg: &Config, name: &str) -> (Res<()>, Option<RecoveryAtt
         let launched = match live_pane {
             Some(pane) => {
                 let id = format!("SHIFU_ID={name}");
-                tmux.run(["respawn-pane", "-k", "-t", pane, "-c", &record.cwd, "-e", &id, &launch]).map(|_| ())
+                let mut args: Vec<String> =
+                    ["respawn-pane", "-k", "-t", pane.as_str(), "-c", record.cwd.as_str(), "-e", id.as_str()].map(String::from).to_vec();
+                args.extend(path_env());
+                args.push(launch.clone());
+                tmux.run(args).map(|_| ())
             }
             None => start_session(cfg, &restarted, &launch),
         };

@@ -1,5 +1,6 @@
 mod agents;
 mod antigravity;
+mod clis;
 mod config;
 mod files;
 mod fullscreen;
@@ -657,6 +658,7 @@ fn main() {
             }
         })
         .setup(|app| {
+            clis::spawn_shell_read(app.handle().clone(), app.state::<Config>().home.clone());
             power::spawn_watcher(app.handle().clone());
             agents::spawn_watcher(app.handle().clone());
             limits::spawn_watcher(app.handle().clone());
@@ -718,6 +720,7 @@ fn main() {
             daily_dir,
             daily_open,
             models_list,
+            clis::clis_detect,
             agent_new,
             agent_kill,
             seen_load,

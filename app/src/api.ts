@@ -156,3 +156,19 @@ export interface InboxReceipt {
 }
 export const inboxRecent = (agent: string) => invoke<InboxReceipt[]>("inbox_recent", { agent });
 export const inboxCancel = (agent: string, id: string) => invoke<InboxReceipt>("inbox_cancel", { agent, id });
+
+/** Mirrors `Found` in src/clis.rs and `Report` in app/src-tauri/src/clis.rs. */
+export interface CliFound {
+  kind: string;
+  name: string;
+  /** Full path of the program; null when it is not installed. */
+  path: string | null;
+  install_url: string;
+}
+export interface CliReport {
+  agents: CliFound[];
+  tmux: string | null;
+  shell_read: boolean;
+}
+/** Which agent CLIs (and tmux) are installed here: file checks only, nothing is started. */
+export const clisDetect = () => invoke<CliReport>("clis_detect");

@@ -1467,6 +1467,39 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   gap: 8px;
 }
 
+/* What was found on this Mac (clis.rs): a quiet line under the buttons. */
+.empty-note {
+  max-width: 420px;
+  color: var(--text-2);
+  font-size: 12px;
+  text-align: center;
+}
+
+.missing-agents {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.popup .missing-agents {
+  padding: 6px 10px 2px;
+}
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  color: var(--text);
+}
+
 .empty-buttons .btn {
   display: inline-flex;
   align-items: center;
