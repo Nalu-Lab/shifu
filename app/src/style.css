@@ -173,7 +173,6 @@ button {
   white-space: nowrap;
 }
 
-.status-usage .limits:not(.unfolded) .limit-more { display: none; }
 .status-usage .limits:not(.unfolded) .limit-label { width: auto; }
 .status-usage .limit-row { gap: 10px; }
 .status-usage .limit-antigravity .limit-label { width: auto; }
@@ -212,6 +211,18 @@ button {
   overflow-wrap: anywhere;
 }
 
+.limit-resets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  padding-left: 26px;
+  font-variant-numeric: tabular-nums;
+}
+
+.limit-resets span {
+  white-space: nowrap;
+}
+
 .limits.unfolded .limit-label {
   color: var(--text);
 }
@@ -240,6 +251,18 @@ button {
   grid-column: 2 / 4;
   color: var(--text-2);
   overflow-wrap: anywhere;
+}
+
+.limit-row-many .limit-other {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  padding-left: 26px;
+}
+
+.limit-other > span {
+  white-space: nowrap;
 }
 
 .limit-state,
@@ -1081,6 +1104,11 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   margin-left: 10px;
 }
 
+.limit-next-reset {
+  margin-left: 10px;
+  color: var(--text-2);
+}
+
 .limit-antigravity .limit-num + .limit-num { margin-left: 8px; }
 
 .limit-num.hot {
@@ -1105,7 +1133,7 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   }
 }
 
-/* Only under a window that is nearly used up: when it comes back, credits left. Starts under the name. */
+/* Credits balance in the expanded panel. Starts under the name. */
 .limit-more {
   padding-left: 26px;
   text-align: right;

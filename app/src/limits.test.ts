@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACCENT_AT, codebuddySegments, creditsText, isHot, isReset, limitLine, limitLines, resetText, untilText, windowName, type CodeBuddyUse, type VendorLimits } from "./limits";
+import { ACCENT_AT, codebuddySegments, creditsText, isHot, isReset, limitLine, limitLines, resetText, windowName, type CodeBuddyUse, type VendorLimits } from "./limits";
 
 /** Local-time seconds, so the tests do not depend on the machine's time zone. */
 const at = (y: number, mo: number, d: number, h: number, mi: number) => new Date(y, mo - 1, d, h, mi).getTime() / 1000;
@@ -17,25 +17,13 @@ describe("windowName", () => {
 });
 
 describe("resetText", () => {
-  const now = at(2026, 11, 6, 9, 30); // a Friday
-  it("is the clock time within today and weekday plus time otherwise", () => {
+  const now = at(2026, 11, 6, 9, 30);
+  it("includes the date beyond today, even for a reset on the same weekday", () => {
     expect(resetText(at(2026, 11, 6, 13, 11), now)).toBe("13:11");
     expect(resetText(at(2026, 11, 6, 23, 59), now)).toBe("23:59");
-    expect(resetText(at(2026, 11, 9, 13, 11), now)).toBe("周一 13:11");
-    expect(resetText(at(2026, 11, 7, 0, 5), now)).toBe("周六 00:05");
-  });
-});
-
-describe("untilText", () => {
-  it("counts down in days and hours, then hours and minutes, then minutes rounded up", () => {
-    const now = 1_000_000;
-    expect(untilText(now + 3 * 86400, now)).toBe("3天后重置");
-    expect(untilText(now + 86400 + 5 * 3600 + 1800, now)).toBe("1天5小时后重置");
-    expect(untilText(now + 3600, now)).toBe("1小时后重置");
-    expect(untilText(now + 3600 + 25 * 60 + 10, now)).toBe("1小时25分后重置");
-    expect(untilText(now + 59 * 60, now)).toBe("59分钟后重置");
-    expect(untilText(now + 90, now)).toBe("2分钟后重置");
-    expect(untilText(now + 1, now)).toBe("1分钟后重置");
+    expect(resetText(at(2026, 11, 13, 13, 11), now)).toBe("11/13 13:11");
+    expect(resetText(at(2026, 11, 7, 0, 5), now)).toBe("11/7 00:05");
+    expect(resetText(at(2026, 12, 6, 13, 11), now)).toBe("12/6 13:11");
   });
 });
 
@@ -72,9 +60,8 @@ describe("limitLine", () => {
     const line = limitLine("codex", codex, now);
     expect(line.label).toBe("Codex");
     expect(line.segments).toEqual([
-      { label: "本周", value: "100%", hot: true, fill: 100 },
+      { label: "本周", value: "100%", hot: true, fill: 100, resetsAt: codex.windows[0].resets_at },
       { label: "credits", value: "29,855", credits: true },
-      { label: "2天15小时后重置" },
     ]);
     expect(line.title).toContain("本周：已用 100%，11月9日 周一 13:11 重置");
     expect(line.title).toContain("credits 余额 29,855");
@@ -84,14 +71,13 @@ describe("limitLine", () => {
   it("keeps the reported credits balance visible before the quota is near its limit", () => {
     const line = limitLine("codex", { ...codex, windows: [{ ...codex.windows[0], used_percent: 36 }] }, now);
     expect(line.segments).toEqual([
-      { label: "本周", value: "36%", hot: false, fill: 36 },
+      { label: "本周", value: "36%", hot: false, fill: 36, resetsAt: codex.windows[0].resets_at },
       { label: "credits", value: "29,855", credits: true },
-      { label: "2天15小时后重置" },
     ]);
     expect(line.title).toContain("credits 余额 29,855");
     expect(limitLine("codex", { ...codex, credits: "0" }, now).title).toContain("credits 余额 0");
     const none = limitLine("codex", { ...codex, credits: null }, now);
-    expect(none.segments.map((s) => s.label)).toEqual(["本周", "2天15小时后重置"]);
+    expect(none.segments.map((s) => s.label)).toEqual(["本周"]);
   });
 
   it("a past reset time waits for a new reading, with no old percentage or inferred recovery", () => {
@@ -103,7 +89,7 @@ describe("limitLine", () => {
     expect(line.label).toContain("旧数据");
   });
 
-  it("the nearest reset among the live windows is written; a reset window is skipped", () => {
+  it("preserves each live window's reset and skips elapsed times", () => {
     const claude: VendorLimits = {
       windows: [
         { used_percent: 42.4, window_minutes: 300, resets_at: at(2026, 11, 6, 23, 30) },
@@ -113,15 +99,13 @@ describe("limitLine", () => {
       updated_at: at(2026, 11, 6, 21, 0),
     };
     expect(limitLine("claude", claude, now).segments).toEqual([
-      { label: "5小时", value: "42%", hot: false, fill: 42.4 },
-      { label: "7天", value: "63%", hot: false, fill: 63 },
-      { label: "1小时30分后重置" },
+      { label: "5小时", value: "42%", hot: false, fill: 42.4, resetsAt: claude.windows[0].resets_at },
+      { label: "7天", value: "63%", hot: false, fill: 63, resetsAt: claude.windows[1].resets_at },
     ]);
     const later = limitLine("claude", claude, at(2026, 11, 7, 0, 0));
     expect(later.segments).toEqual([
       { label: "5小时", value: "待更新", fill: 0 },
-      { label: "7天", value: "63%", hot: false, fill: 63 },
-      { label: "2天9小时后重置" },
+      { label: "7天", value: "63%", hot: false, fill: 63, resetsAt: claude.windows[1].resets_at },
     ]);
   });
 
@@ -153,11 +137,20 @@ describe("limitLines", () => {
     const quota: VendorLimits = { windows: [{ used_percent: 1.5592, window_minutes: 43200, resets_at: 5000 }], credits: null, updated_at: 100 };
     const [line] = limitLines({ ...none, qwen_quota: quota }, 0);
     expect(line.label).toBe("Qwen");
-    expect(line.segments[0]).toEqual({ label: "30天", value: "2%", hot: false, fill: 1.5592 });
+    expect(line.segments[0]).toEqual({ label: "30天", value: "2%", hot: false, fill: 1.5592, resetsAt: 5000 });
     expect(line.title).not.toContain("tokens");
     const today = { calls: 3, input: 100, output: 20, cached: 80, total: 120 };
     const spent = limitLines({ ...none, qwen_quota: quota, qwen: { today, week: today, updated_at: 100 } }, 0)[0];
     expect(spent.title).toContain("今天 120 tokens（3 次调用）");
+  });
+
+  it("keeps Qwen's usage when the Token Plan did not report a reset time", () => {
+    const quota: VendorLimits = { windows: [{ used_percent: 12, window_minutes: 43200, resets_at: 0 }], credits: null, updated_at: 100 };
+    const [line] = limitLines({ ...none, qwen_quota: quota }, 100);
+    expect(line.label).toBe("Qwen");
+    expect(line.segments[0].value).toBe("12%");
+    expect(line.segments[0].resetsAt).toBeUndefined();
+    expect(line.title).toContain("暂无重置时间");
   });
 
   it("a plan it could not read keeps the row and says why", () => {
@@ -177,7 +170,7 @@ describe("codebuddySegments", () => {
   it("adds up only today's credits and shows the free quota until it resets", () => {
     const use: CodeBuddyUse = { spends: [[ms(0) - 60_000, 9], [ms(9), 15.06], [ms(11), 1.28]], free: { used_percent: 9, resets_at: now + 3600 } };
     expect(codebuddySegments(use, now)).toEqual([
-      { label: "免费", value: "9%", hot: false, fill: 9 },
+      { label: "免费", value: "9%", hot: false, fill: 9, resetsAt: now + 3600 },
       { label: "今天", value: "16.3 积分", credits: true },
     ]);
   });
