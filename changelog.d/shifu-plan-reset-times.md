@@ -1,0 +1,2 @@
+- 左下角用量条显示套餐下一次额度重置时间，点开可看每个周期的重置时间（还没装）。
+- The usage bar shows the next quota reset. Expand it to see the reset time for each allowance window.

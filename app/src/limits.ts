@@ -5,7 +5,7 @@ import type { AntigravityUsage } from "./antigravity";
 export interface LimitWindow {
   used_percent: number;
   window_minutes: number;
-  /** Unix seconds. */
+  /** Unix seconds, or zero if the provider did not report a reset time. */
   resets_at: number;
 }
 export interface VendorLimits {
@@ -54,8 +54,10 @@ export interface LimitSegment {
   /** Shown after the label; drawn in the accent colour when `hot`. */
   value?: string;
   hot?: boolean;
-  /** Set on a window's segment (0..100, 0 once reset): drawn as a bar. Notes like the reset time have none. */
+  /** Set on a window's segment (0..100, 0 once reset). */
   fill?: number;
+  /** Next reported reset in Unix seconds, while still ahead. */
+  resetsAt?: number;
   /** Credits shown as a note instead of a usage bar. */
   credits?: true;
 }
@@ -81,33 +83,20 @@ export function windowName(minutes: number, vendor: Vendor): string {
   return `${minutes}分钟`;
 }
 
-export const isReset = (w: LimitWindow, now: number) => w.resets_at <= now;
+export const isReset = (w: LimitWindow, now: number) => w.resets_at > 0 && w.resets_at <= now;
 export const isHot = (w: LimitWindow) => w.used_percent >= ACCENT_AT;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const clock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-/** "13:11" within today (local time), otherwise "周一 13:11". Both are Unix seconds. */
+/** "13:11" today, otherwise "11/9 13:11", using the local date and time. */
 export function resetText(resetsAt: number, now: number): string {
   const at = new Date(resetsAt * 1000);
   const today = new Date(now * 1000);
-  const sameDay = at.getFullYear() === today.getFullYear() && at.getMonth() === today.getMonth() && at.getDate() === today.getDate();
-  return sameDay ? clock(at) : `${WEEKDAYS[at.getDay()]} ${clock(at)}`;
+  return at.toDateString() === today.toDateString() ? clock(at) : `${at.getMonth() + 1}/${at.getDate()} ${clock(at)}`;
 }
 
-/** How long until a reset: "2天15小时后重置", "1小时25分后重置", "20分钟后重置" . The exact time is in the
- *  hover title. */
-export function untilText(resetsAt: number, now: number): string {
-  const left = Math.max(0, resetsAt - now);
-  const days = Math.floor(left / 86400);
-  const hours = Math.floor((left % 86400) / 3600);
-  const minutes = Math.floor((left % 3600) / 60);
-  if (days > 0) return hours > 0 ? `${days}天${hours}小时后重置` : `${days}天后重置`;
-  if (hours > 0) return minutes > 0 ? `${hours}小时${minutes}分后重置` : `${hours}小时后重置`;
-  return `${Math.max(1, Math.ceil(left / 60))}分钟后重置`;
-}
-
-const fullTime = (secs: number) => {
+export const fullTime = (secs: number) => {
   const d = new Date(secs * 1000);
   return `${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]} ${clock(d)}`;
 };
@@ -133,19 +122,16 @@ export function limitLine(vendor: Vendor, data: VendorLimits, now: number): Limi
         value: `${Math.round(w.used_percent)}%`,
         hot: isHot(w),
         fill: Math.max(0, Math.min(100, w.used_percent)),
+        resetsAt: w.resets_at || undefined,
       });
-      details.push(`${name}：已用 ${Math.round(w.used_percent)}%，${fullTime(w.resets_at)} 重置`);
+      const reset = w.resets_at ? `${fullTime(w.resets_at)} 重置` : "暂无重置时间";
+      details.push(`${name}：已用 ${Math.round(w.used_percent)}%，${reset}`);
     }
   }
-  const live = data.windows.filter((w) => !isReset(w, now));
   const credits = data.credits === null ? null : creditsText(data.credits);
   if (credits !== null) {
     segments.push({ label: "credits", value: credits, credits: true });
     details.push(`credits 余额 ${credits}`);
-  }
-  if (live.length > 0) {
-    const next = Math.min(...live.map((w) => w.resets_at));
-    segments.push({ label: untilText(next, now) });
   }
   if (data.updated_at > 0) details.push(`数据记于 ${resetText(data.updated_at, now)}`);
   const stale = !!data.error || now - data.updated_at > 600 || data.windows.some((w) => isReset(w, now));
@@ -161,7 +147,8 @@ export function codebuddySegments(use: CodeBuddyUse, now: number): LimitSegment[
   const segments: LimitSegment[] = [];
   const free = use.free;
   if (free && free.resets_at > now) {
-    segments.push({ label: "免费", value: `${Math.round(free.used_percent)}%`, hot: free.used_percent >= ACCENT_AT, fill: Math.max(0, Math.min(100, free.used_percent)) });
+    segments.push({ label: "免费", value: `${Math.round(free.used_percent)}%`, hot: free.used_percent >= ACCENT_AT,
+      fill: Math.max(0, Math.min(100, free.used_percent)), resetsAt: free.resets_at });
   }
   const midnight = new Date(now * 1000);
   midnight.setHours(0, 0, 0, 0);

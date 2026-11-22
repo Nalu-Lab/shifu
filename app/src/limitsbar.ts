@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { limitsGet, limitsRefresh } from "./api";
-import { codebuddySegments, resetText, type LimitLine, type LimitSegment, type Limits, type Vendor, limitLines } from "./limits";
+import { codebuddySegments, fullTime, resetText, type LimitLine, type LimitSegment, type Limits, type Vendor, limitLines } from "./limits";
 import { mascot } from "./mascots";
 import { vendorIcon } from "./vendoricons";
 import { antigravityLines } from "./antigravity";
@@ -78,13 +78,13 @@ export class LimitsBar {
   private render(turned = false): void {
     const now = Math.floor(Date.now() / 1000);
     const running = (kind: string) => getAgents().some((a) => a.kind === kind && a.status === "running");
-    const blocks = limitLines(this.limits, now).map((line) => vendorBlock(line, running(line.vendor), this.unfolded,
+    const blocks = limitLines(this.limits, now).map((line) => vendorBlock(line, running(line.vendor), now, this.unfolded,
       line.vendor === "kimi" && this.limits.kimi?.error?.startsWith("Kimi 登录已过期") ? "待登录" : undefined));
     const codebuddy = this.limits.codebuddy ? codebuddySegments(this.limits.codebuddy, now) : [];
-    blocks.push({ ...agentsBlock("codebuddy", "CodeBuddy", codebuddy, this.unfolded), empty: codebuddy.length === 0 });
-    if (!this.limits.kimi) blocks.push({ ...agentsBlock("kimi", "Kimi", [], this.unfolded), empty: true });
+    blocks.push({ ...agentsBlock("codebuddy", "CodeBuddy", codebuddy, now, this.unfolded), empty: codebuddy.length === 0 });
+    if (!this.limits.kimi) blocks.push({ ...agentsBlock("kimi", "Kimi", [], now, this.unfolded), empty: true });
     for (const line of antigravityLines(this.limits.antigravity, now)) {
-      const element = row(null, line.label, false, line.segments, line.message, this.unfolded);
+      const element = row(null, line.label, false, line.segments, now, line.message, this.unfolded);
       element.classList.add("limit-antigravity");
       element.title = `${line.label.replace("（旧数据）", "")}\n${line.title}`;
       if (this.unfolded) element.setAttribute("aria-label", element.title);
@@ -137,26 +137,26 @@ interface Block {
   empty?: boolean;
 }
 
-function vendorBlock(line: LimitLine, busy: boolean, table: boolean, status?: string): Block {
+function vendorBlock(line: LimitLine, busy: boolean, now: number, table: boolean, status?: string): Block {
   // The week first, then the 5 hours if the plan has them : the data lists the short window first.
   const bars = line.segments.filter((s) => s.fill !== undefined).reverse();
-  const hot = bars.some((b) => b.hot);
-  const block = row(line.vendor, line.label, busy, bars, line.message, table, status);
+  const block = row(line.vendor, line.label, busy, bars, now, line.message, table, status);
   block.title = line.title;
   if (table) block.setAttribute("aria-label", line.title);
-  const notes = line.segments.filter((s) => s.fill === undefined && (hot || (table && s.credits)))
-    .sort((a, b) => Number(!!a.credits) - Number(!!b.credits));
-  for (const s of notes) block.append(el("div", "limit-more", s.credits ? `${s.label} 余额 ${s.value}` : s.label));
+  const credits = line.segments.find((s) => s.credits);
+  if (table && credits) block.append(el("div", "limit-more", `${credits.label} 余额 ${credits.value}`));
   return { key: line.vendor, element: block };
 }
 
 /** CodeBuddy has no plan limit: its free model's quota as the bar, or else the credits spent today. Kimi before its
  *  first answer has neither. */
-function agentsBlock(kind: "codebuddy" | "kimi", label: string, segments: LimitSegment[], table: boolean): Block {
+function agentsBlock(kind: "codebuddy" | "kimi", label: string, segments: LimitSegment[], now: number, table: boolean): Block {
   const bar = segments.find((s) => s.fill !== undefined) ?? null;
   const spent = segments.find((s) => s.credits);
-  const block = row(kind, label, getAgents().some((a) => a.kind === kind && a.status === "running"), bar ? [bar] : [], spent ? `${spent.label} ${spent.value}` : "暂无数据", table);
-  block.title = segments.map((s) => `${s.label} ${s.value ?? ""}`).join("\n") || `还没有 ${label} 的用量`;
+  const block = row(kind, label, getAgents().some((a) => a.kind === kind && a.status === "running"),
+    bar ? [bar] : [], now, spent ? `${spent.label} ${spent.value}` : "暂无数据", table);
+  block.title = segments.map((s) => `${s.label} ${s.value ?? ""}${s.resetsAt ? `，${fullTime(s.resetsAt)} 重置` : ""}`)
+    .join("\n") || `还没有 ${label} 的用量`;
   if (table) block.setAttribute("aria-label", block.title);
   return { key: kind, element: block };
 }
@@ -166,7 +166,8 @@ const SHORT: Record<string, string> = { "7天": "周", 本周: "周", "5小时":
 
 /** "[mark] Claude      周 13%  5h 35%" ; with no window, the text
  *  alone. A window at ACCENT_AT or more is in the accent colour. */
-function row(kind: Vendor | "codebuddy" | null, label: string, busy: boolean, bars: LimitSegment[], text = "", table = false, status?: string): HTMLElement {
+function row(kind: Vendor | "codebuddy" | null, label: string, busy: boolean, bars: LimitSegment[], now: number,
+  text = "", table = false, status?: string): HTMLElement {
   const block = el("div", "limit-vendor");
   if (table) {
     block.tabIndex = 0;
@@ -182,6 +183,7 @@ function row(kind: Vendor | "codebuddy" | null, label: string, busy: boolean, ba
   name.append(el("span", "limit-name", table ? label.replace("（旧数据）", "") : label));
   if (table && (status || stale)) name.append(el("span", "limit-state", status || "旧数据"));
   block.classList.toggle("limit-stale", stale);
+  const resets = bars.flatMap(({ label, resetsAt }) => resetsAt === undefined ? [] : [{ label, at: resetsAt }]);
   if (table) {
     line.append(name);
     const week = bars.find((bar) => ["周", "本周", "7天"].includes(bar.label));
@@ -191,9 +193,19 @@ function row(kind: Vendor | "codebuddy" | null, label: string, busy: boolean, ba
         line.append(el("span", `${className}${bar?.hot ? " hot" : ""}${bar ? "" : " limit-empty"}`, bar?.value ?? "—"));
       }
     } else {
-      line.append(el("span", "limit-other", bars.length ? bars.map((bar) => `${bar.label} ${bar.value ?? ""}`).join("  ") : kind === "codebuddy" ? text : "—"));
+      const other = el("span", "limit-other");
+      line.classList.toggle("limit-row-many", bars.length > 1);
+      for (const bar of bars) other.append(el("span", bar.hot ? "hot" : "", `${bar.label} ${bar.value ?? ""}`));
+      if (!bars.length) other.textContent = kind === "codebuddy" ? text : "—";
+      line.append(other);
     }
     block.append(line);
+    if (resets.length > 0) {
+      const times = el("div", "limit-resets");
+      times.append(el("span", "", "重置"));
+      for (const reset of resets) times.append(el("span", "", `${reset.label} ${resetText(reset.at, now)}`));
+      block.append(times);
+    }
     return block;
   }
   const values = el("span", "limit-text");
@@ -201,6 +213,11 @@ function row(kind: Vendor | "codebuddy" | null, label: string, busy: boolean, ba
   bars.forEach((bar) => {
     values.append(el("span", bar.hot ? "limit-num hot" : "limit-num", `${SHORT[bar.label] ?? bar.label} ${bar.value}`));
   });
+  const next = resets.sort((a, b) => a.at - b.at)[0];
+  if (next) {
+    const prefix = bars.length > 1 ? `${SHORT[next.label] ?? next.label} ` : "";
+    values.append(el("span", "limit-next-reset", `${prefix}${resetText(next.at, now)} 重置`));
+  }
   line.append(name, values);
   block.append(line);
   return block;
