@@ -226,7 +226,12 @@ async function main() {
   const openRole = async (role: Role, anchor: HTMLElement) => {
     const dir = await ROLES[role].dir();
     const running = getTasks().find((t) => t.project === dir && t.agents.length > 0);
-    if (running) return selectTask(running.id);
+    if (running) {
+      await selectTask(running.id);
+      const active = workspace.activeAgent();
+      if (getCurrentId() === running.id && active) openedByUser(active);
+      return;
+    }
     const kind = localStorage.getItem(ROLES[role].kindKey);
     if (kind) return startRole(role, kind);
     showAddAgentPopover(anchor, async (picked) => {
