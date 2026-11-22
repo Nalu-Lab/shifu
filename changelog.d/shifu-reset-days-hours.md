@@ -1,0 +1,2 @@
+- 一天以上的重置倒计时带上小时：Codex 显示「6d6h」，不再只写「6d」。（还没装）
+- Reset countdowns of a day or more keep their hours: Codex reads "6d6h" instead of just "6d". (not installed yet)

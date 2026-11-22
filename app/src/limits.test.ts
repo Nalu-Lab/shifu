@@ -31,10 +31,12 @@ describe("resetCountdown", () => {
   it("counts whole days and hours left, so the reset never looks further away than it is", () => {
     const now = at(2026, 11, 22, 14, 27);
     // Codex on 11-22: the week resets 11-28 21:05, 6 days 6 hours away.
-    expect(resetCountdown(at(2026, 11, 28, 21, 5), now)).toBe("6d");
+    expect(resetCountdown(at(2026, 11, 28, 21, 5), now)).toBe("6d6h");
     // Claude on 11-22: the week resets 11-23 03:00, 12 hours 33 minutes away.
     expect(resetCountdown(at(2026, 11, 23, 3, 0), now)).toBe("12h");
     expect(resetCountdown(now + 86400, now)).toBe("1d");
+    // A day or more keeps its hours (Eddie 11-22: Codex showed only "6d").
+    expect(resetCountdown(now + 2 * 86400 + 5 * 3600 + 59 * 60, now)).toBe("2d5h");
     expect(resetCountdown(now + 86399, now)).toBe("23h");
     expect(resetCountdown(now + 3600, now)).toBe("1h");
     expect(resetCountdown(now + 3599, now)).toBe("59m");
