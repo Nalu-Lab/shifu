@@ -17,6 +17,11 @@ let seen: Seen = {};
 let waitingOpened: WaitingSeen = {};
 let activeAgent: string | null = null;
 let windowFocused = true;
+/** The front panel counts as seen only once it has stayed there this long: opening a conversation first restores
+ *  its task's layout, whose front panel may be another conversation waiting for the user (Eddie 11-22). */
+const VIEW_SETTLE_MS = 1500;
+let viewSettled = false;
+let settleTimer: ReturnType<typeof setTimeout> | undefined;
 let lastAttention = -1;
 const listeners = new Set<Listener>();
 const seenListeners = new Set<(seen: Seen) => void>();
@@ -38,7 +43,7 @@ export const findAgent = (name: string) => agents.find((a) => a.name === name);
 
 /** Marks the agents, first recording the one in front of the user as seen, then tells whoever listens. */
 function refresh(): void {
-  const next = recordViewed(seen, rawAgents, activeAgent, windowFocused);
+  const next = recordViewed(seen, rawAgents, viewSettled ? activeAgent : null, windowFocused);
   if (next !== seen) {
     seen = next;
     seenListeners.forEach((l) => l(seen));
@@ -81,13 +86,25 @@ export const onWaitingOpenedChange = (listener: (seen: WaitingSeen) => void) => 
 
 /** The panel in front (null when there is none). */
 export function setActiveAgent(name: string | null): void {
+  if (name !== activeAgent) settle();
   activeAgent = name;
   refresh();
 }
 
 export function setWindowFocused(focused: boolean): void {
+  if (focused && !windowFocused) settle();
   windowFocused = focused;
   refresh();
+}
+
+/** Restart the wait before the panel in front counts as seen. */
+function settle(): void {
+  viewSettled = false;
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(() => {
+    viewSettled = true;
+    refresh();
+  }, VIEW_SETTLE_MS);
 }
 
 /** The task list from the backend. The current task is only changed by `setCurrent`, so a reply that was

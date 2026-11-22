@@ -1,0 +1,2 @@
+- 打开同一组里的一个对话时，另一个在等你的对话不会再从「在等你」里消失：只有真正停在眼前一会儿的对话才算看过。（还没装）
+- Opening one conversation in a group no longer clears another conversation's 在等你 row: only the conversation that stays in front for a moment counts as seen. (not installed yet)
