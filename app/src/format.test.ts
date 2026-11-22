@@ -69,7 +69,7 @@ describe("statusLabel / statusLine", () => {
     for (const status of ["running", "idle", "needs_approval", "needs_reply", "exited"] as const) {
       const a = agent("a", status, 1000);
       expect(displayKey(a, 100_000)).toBe(viewKey(a));
-      expect(statusHint(displayKey(a, 100_000))).toBe("");
+      expect(statusHint(displayKey(a, 100_000))).toBe(status === "exited" ? "点开会自动恢复，也可右键选「恢复会话」。" : "");
     }
     expect(displayKey(agent("a", "needs_reply", 1000, "parked"), 100_000)).toBe("parked");
     expect(displayKey(agent("a", "needs_reply", 1000, "new", null, "继续吗？"), 100_000)).toBe("asked");
