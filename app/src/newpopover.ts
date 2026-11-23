@@ -316,30 +316,31 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
 
   const folders = [...opts.projects];
   let selected = opts.preselect ?? folders[0] ?? null;
-  const list = document.createElement("div");
-  list.className = "dir-list";
+  // A dropdown, not a list: the list of recent folders pushed the rest of the form down (Eddie 11-23).
+  const CHOOSE = "\u0000choose";
+  const list = document.createElement("select");
+  list.className = "pick-select";
+  list.setAttribute("aria-label", "项目");
   const paintList = () => {
-    list.replaceChildren();
-    for (const dir of folders) {
-      const row = button("", "popup-item dir");
-      row.setAttribute("aria-pressed", String(dir === selected));
-      const name = document.createElement("span");
-      name.textContent = projectName(dir);
-      const full = document.createElement("span");
-      full.className = "dir-path";
-      full.textContent = shortPath(dir);
-      full.title = dir;
-      row.append(name, full);
-      row.addEventListener("click", () => {
-        selected = dir;
-        paintList();
-      });
-      list.append(row);
-    }
+    const names = folders.map(projectName);
+    list.replaceChildren(
+      ...folders.map((dir, i) => {
+        // Two folders with one name are told apart by their path.
+        const clash = names.indexOf(names[i]) !== names.lastIndexOf(names[i]);
+        const option = new Option(clash ? `${names[i]}（${shortPath(dir)}）` : names[i], dir, false, dir === selected);
+        option.title = dir;
+        return option;
+      }),
+      new Option("选择文件夹…", CHOOSE),
+    );
+    list.value = selected ?? CHOOSE;
+    list.title = selected ?? "";
   };
+  const listWrap = document.createElement("span");
+  listWrap.className = "select-wrap dir-select";
+  listWrap.append(list);
 
-  const choose = button("选择文件夹…", "popup-item");
-  choose.addEventListener("click", async () => {
+  const chooseFolder = async () => {
     // The system dialog takes focus, which would close the popover through the blur handler.
     guard.suspended = true;
     try {
@@ -347,13 +348,20 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
       if (typeof dir === "string") {
         if (!folders.includes(dir)) folders.push(dir);
         selected = dir;
-        paintList();
       }
     } catch (e) {
       reportError(e);
     } finally {
       guard.suspended = false;
+      paintList();
       input.focus();
+    }
+  };
+  list.addEventListener("change", () => {
+    if (list.value === CHOOSE) chooseFolder();
+    else {
+      selected = list.value;
+      list.title = selected;
     }
   });
 
@@ -386,8 +394,7 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
   foot.append(submit);
   pop.append(
     label("项目"),
-    list,
-    choose,
+    listWrap,
     label("任务名"),
     nameForm,
     label("类型"),
