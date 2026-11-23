@@ -151,7 +151,7 @@ npm run build:desktop -- --debug
 
 ## 隐私
 
-- Shifu 不提供公共托管账号，不收集遥测。状态、任务、布局保存在本机 `~/.shifu/app`（命令行版在 `~/.shifu`）。本机手机入口监听 `127.0.0.1`；新远程模块可连接本人配置的 HTTPS 中继，端到端通道传输终端数据与操作请求，中继网页也应来自自己信任的服务器。[连接说明](docs/REMOTE-RELAY.md)。
+- 本机使用无需联网或注册。内测版可选用 Google 登录「我的 Mac」，首次加入需要邀请码。账号服务保存 Google 核实的账号 ID、邮箱、已登记 Mac 的名称和随机 ID。[内测账号说明](accounts/README.md)。Shifu 不收集遥测。状态、任务、布局保存在本机 `~/.shifu/app`（命令行版在 `~/.shifu`）。本机手机入口监听 `127.0.0.1`；新远程模块可连接本人配置的 HTTPS 中继，端到端通道传输终端数据与操作请求，中继网页也应来自自己信任的服务器。[连接说明](docs/REMOTE-RELAY.md)。
 - Claude Code、Codex、CodeBuddy 的 hooks 通过启动参数挂在 Shifu 开的那个进程上，**不改**你的 `~/.claude/settings.json`、`~/.codex/config.toml`。
 - **Kimi**：Kimi 只认自己的配置文件，Shifu 会把 hooks 写进 `~/.kimi-code/config.toml`，你自己的 hook 原样保留，第一次写之前备份成 `config.toml.before-shifu`。在 Shifu 外面开的 Kimi 也会调用这些 hook，但它们发现不是 Shifu 开的就什么都不做。
 - **Qwen Code**：使用独立的 `SHIFU_HOME/qwen` 配置与会话；密钥从环境、本人准备的本地文件或兼容密钥库取得，Shifu 不把密钥值写入生成设置。[配置说明](docs/QWEN.md)。

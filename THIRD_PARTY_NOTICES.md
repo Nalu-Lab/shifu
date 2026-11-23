@@ -29,3 +29,7 @@ Closed-lid power controls and recovery behavior in `app/src-tauri/src/lid.rs`, `
 ## Browser control
 
 `browser/package-lock.json` pins Microsoft's official [Playwright CLI](https://github.com/microsoft/playwright-cli), Playwright and Playwright Core, licensed under Apache-2.0. The browser installer retains the packages' licenses and notices inside the installed runtime. It also copies the selected Node.js executable and its distribution LICENSE into `runtime/licenses/Node-LICENSE`. Node.js and its bundled components retain their original licenses; they are not relicensed under Shifu's MIT license. No browser executable is redistributed by this installer; it uses the user's installed Chrome by default.
+
+## Google sign-in mark
+
+The Google “G” in the optional account sign-in button is a trademark of Google LLC. Asset from [Google Identity](https://developers.google.com/static/identity/images/g-logo.png), used with the [Sign in with Google branding guidelines](https://developers.google.com/identity/branding-guidelines).

@@ -13,6 +13,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  accounts:
+    name: Invite-only accounts
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: accounts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: accounts/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - name: Test the local pilot in Chromium
+        working-directory: .
+        run: |
+          npm --prefix app ci
+          npm --prefix web ci --ignore-scripts
+          web/node_modules/.bin/playwright-core install --with-deps chromium
+          npm --prefix accounts run test:preview
+
   supervision:
     name: Background supervision with local fixtures
     runs-on: ubuntu-latest

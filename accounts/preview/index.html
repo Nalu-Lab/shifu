@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shifu · Local account pilot</title>
+  <style>
+    #pilot { max-width: 620px; margin: max(28px, 10vh) auto 0; padding: 24px; }
+    #pilot h1 { font-size: 27px; margin: 0 0 12px; }
+    #pilot p { color: var(--text-2); line-height: 1.6; margin: 0 0 24px; }
+    #pilot label { display: inline-grid; gap: 6px; margin: 0 12px 16px 0; }
+    #pilot select { font: inherit; color: inherit; background: var(--bg-side); border: 1px solid var(--line-strong); padding: 6px; border-radius: 4px; }
+    #pilot button { display: block; }
+  </style>
+</head>
+<body>
+  <main id="pilot">
+    <h1>Local account pilot</h1>
+    <p>This preview uses sample identities. Choose a Mac and open My Macs. The sample identity is used the next time you sign in. A new user needs an invite printed by the preview server.</p>
+    <label>Simulated Mac<select id="mac"><option value="a">Studio</option><option value="b">Laptop</option></select></label>
+    <label>Sample identity<select id="user"><option value="alex">Alex</option><option value="sam">Sam</option></select></label>
+    <button class="btn" id="open" type="button">Open My Macs</button>
+  </main>
+  <script type="module" src="/desktop.mjs"></script>
+</body>
+</html>

@@ -20,6 +20,7 @@ mod power;
 mod lid;
 mod pty;
 mod resources;
+mod accounts;
 mod remote;
 mod remotecontrol;
 mod search;
@@ -594,10 +595,11 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let chinese = menu_in_chinese(preferred_language().as_deref());
     let tr = |zh: &'static str, en: &'static str| if chinese { zh } else { en };
     let item = |id: &str, text: &str, accel: &str| MenuItemBuilder::with_id(id, text).accelerator(accel).build(app);
-    let app_menu = SubmenuBuilder::new(app, "Shifu")
-        .about(None)
-        .separator()
-        .item(&item("appearance", tr("外观…", "Appearance…"), "CmdOrCtrl+,")?)
+    let mut app_menu = SubmenuBuilder::new(app, "Shifu").about(None).separator();
+    if accounts::configured().is_some() {
+        app_menu = app_menu.item(&MenuItemBuilder::with_id("my-macs", tr("我的 Mac…", "My Macs…")).build(app)?);
+    }
+    let app_menu = app_menu.item(&item("appearance", tr("外观…", "Appearance…"), "CmdOrCtrl+,")?)
         .separator()
         .hide()
         .hide_others()
@@ -664,6 +666,7 @@ fn main() {
         .manage(search::SearchCache::default())
         .manage(power)
         .manage(remotecontrol::RemoteMacs::default())
+        .manage(accounts::Accounts::default())
         .menu(build_menu)
         .on_menu_event(|app, event| {
             if let Err(e) = app.emit("menu", event.id().as_ref()) {
@@ -701,6 +704,7 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            accounts::account_action,
             remotecontrol::remote_macs_load,
             remotecontrol::remote_macs_save,
             remotecontrol::remote_macs_forget,
