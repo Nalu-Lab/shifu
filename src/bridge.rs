@@ -378,7 +378,7 @@ pub fn cmd_ask(args: &[String]) -> Res<()> {
         return Err("不能问自己".into());
     }
     let asker_title = asker.as_deref()
-        .map(|n| rows.iter().find(|r| r.name == n).map_or(n.to_string(), |r| format!("{}[{n}]", r.title)))
+        .map(|n| rows.iter().find(|r| r.name == n && r.title != n).map_or(n.to_string(), |r| format!("{n}（{}）", r.title)))
         .unwrap_or_else(|| "Shifu 外的程序".into());
     let id = new_id("ask");
     let (record, reply) = ask_files(&id)?;
