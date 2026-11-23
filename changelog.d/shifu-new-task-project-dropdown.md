@@ -1,0 +1,2 @@
+- 新建任务窗口里的「项目」改成下拉框：不再列一长串文件夹把下面的选项挤下去；同名文件夹会带上路径区分，「选择文件夹…」放在下拉最后一项。（还没装）
+- The 项目 (Project) field in the new-task popover is now a dropdown instead of a long folder list; folders with the same name show their path, and 选择文件夹… (Choose folder…) is the last item. (not installed yet)

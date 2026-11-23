@@ -1408,22 +1408,9 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   color: var(--text);
 }
 
-.dir-list {
-  max-height: 180px;
-  overflow-y: auto;
-}
-
-.popup-item.dir {
-  flex-direction: column;
-}
-
-.dir-path {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-  font-size: 12px;
-  color: var(--text-3);
+/* Same inset as the agent dropdown under 类型. */
+.dir-select {
+  margin: 2px 10px 4px;
 }
 
 /* ---------- dockview ---------- */
