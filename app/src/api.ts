@@ -148,14 +148,6 @@ export const remoteMacsLoad = () => invoke<RemoteMac[]>("remote_macs_load");
 export const remoteMacsSave = (mac: RemoteMac) => invoke<void>("remote_macs_save", {mac});
 export const remoteMacsForget = (relay: string, host: string) => invoke<void>("remote_macs_forget", {relay, host});
 
-export interface InboxReceipt {
-  id: string;
-  summary: string;
-  created_at: number;
-  phase: "queued" | "delivering" | "written" | "received" | "unknown" | "cancelled";
-}
-export const inboxRecent = (agent: string) => invoke<InboxReceipt[]>("inbox_recent", { agent });
-export const inboxCancel = (agent: string, id: string) => invoke<InboxReceipt>("inbox_cancel", { agent, id });
 
 /** Mirrors `Found` in src/clis.rs and `Report` in app/src-tauri/src/clis.rs. */
 export interface CliFound {

@@ -1,4 +1,3 @@
-import { showReceipts } from "./inboxview";
 import { createCloseButton, DefaultTab } from "dockview";
 import type { ITabRenderer, TabPartInitParameters } from "dockview";
 import { agentRename, agentsList } from "./api";
@@ -65,7 +64,6 @@ export class AgentTab implements ITabRenderer {
       e.preventDefault();
       const agent = findAgent(name);
       const items: MenuItem[] = [{ label: "重命名", run: () => this.startEdit(name) }];
-      if (agent?.kind === "claude" || agent?.kind === "codex") items.push({ label: "消息送达状态", run: () => showReceipts(name, this.element, agent.label || name) });
       if (agent?.label) items.push({ label: "用回话题名", run: () => void rename(name, "") });
       // Splitting a tab off is done by dragging it (Eddie 11-22 dropped 移到下面/移到右边 from this menu).
       items.push(...unreadItem(agent), ...pinItem(taskOfAgent(getTasks(), name)?.id));
