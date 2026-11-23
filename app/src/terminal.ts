@@ -318,7 +318,11 @@ export class TerminalPanel implements IContentRenderer {
       items.push({ label: "复制", run: () => copy(selection) });
     }
     const session = findAgent(this.name)?.session_id;
-    if (session) items.push({ label: "复制会话 ID", run: () => copy(session) });
+    // Antigravity starts its conversation, and so sends its ID, only with the first message; say so rather than
+    // leave the item out.
+    items.push(session
+      ? { label: "复制会话 ID", run: () => copy(session) }
+      : { label: "复制会话 ID", hint: "发出第一条消息后才有", run: () => {} });
     const name = this.name;
     items.push({ label: "复制终端 ID", run: () => copy(name) });
     showMenu(e.clientX, e.clientY, items);
