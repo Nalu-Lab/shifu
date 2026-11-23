@@ -12,7 +12,6 @@ import { pickArgs, pickFor, refreshClis, refreshModels, setClis } from "./models
 import {
   agentKill,
   agentResume,
-  agentReveal,
   agentsList,
   goalsGet,
   jevLogTail,
@@ -275,10 +274,7 @@ async function main() {
       }).catch(reportError);
     },
     focusAgent: (taskId, name) => void focusAgent(taskId, name).catch(reportError),
-    openRight: (name) => workspace.open(name, { direction: "right" }),
-    openBelow: (name) => workspace.open(name, { direction: "below" }),
-    revealAgent: (name) => void agentReveal(name).catch(reportError),
-    resume: (name) => void agentResume(name).catch(reportError),
+    putAway: (name) => (workspace.api.getPanel(name) ? () => workspace.closeTab(name) : undefined),
     moveAgent: (name, toId) =>
       void taskMoveAgent(name, toId)
         .then((file) => {
