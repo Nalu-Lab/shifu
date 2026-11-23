@@ -1,2 +1,2 @@
-- 对话标签的右键菜单去掉「消息送达状态」。排队消息的送达情况仍可用 `shifu inbox <对话名>` 查看和撤回。（还没装）
-- The tab menu drops 消息送达状态. Queued-message delivery can still be checked and withdrawn with `shifu inbox <conversation>`. (not installed yet)
+- 对话标签的右键菜单去掉「消息送达状态」。排队消息的送达情况仍可用 `shifu inbox <对话名>` 查看和撤回。
+- The tab menu drops 消息送达状态. Queued-message delivery can still be checked and withdrawn with `shifu inbox <conversation>`.
