@@ -11,6 +11,39 @@ import { taskOfAgent } from "./tasks";
 /** What ending does, said the same way here and in the sidebar. */
 export const ENDS = "5 秒后结束并移除，期间可撤销";
 
+/** 收起 is offered only where the agent has an open panel. */
+export interface AgentMenuHooks {
+  rename(): void;
+  putAway?: () => void;
+  end(): void;
+}
+
+/** A working agent takes two clicks to end; putting a panel away never ends it. */
+function endItems(agent: AgentView, putAway: (() => void) | undefined, end: () => void): MenuItem[] {
+  const who = specOf(agent.kind)?.name ?? "它";
+  const working = agent.status === "running" || agent.status === "needs_approval";
+  const endIt: MenuItem = working
+    ? { label: `结束 ${who}`, hint: "它还在干活", confirmLabel: "确认结束", confirmHint: ENDS, danger: true, run: end }
+    : { label: `结束 ${who}`, hint: ENDS, danger: true, run: end };
+  return putAway ? [putAwayItem(putAway), endIt] : [endIt];
+}
+
+function putAwayItem(run: () => void): MenuItem {
+  return { label: "收起，继续运行", hint: "会话留在原任务中，可以撤销收起", run };
+}
+
+/** One right-click menu for an agent, the same on its tab and its sidebar row (Eddie 11-23).
+ *  Splitting a tab off is done by dragging it (Eddie 11-22 dropped 移到下面/移到右边). */
+export function agentMenuItems(name: string, hooks: AgentMenuHooks): MenuItem[] {
+  const agent = findAgent(name);
+  const items: MenuItem[] = [{ label: "重命名", run: hooks.rename }];
+  if (agent?.label) items.push({ label: "用回话题名", run: () => void renameAgent(name, "") });
+  items.push(...unreadItem(agent), ...pinItem(taskOfAgent(getTasks(), name)?.id));
+  if (agent) items.push(...endItems(agent, hooks.putAway, hooks.end));
+  else if (hooks.putAway) items.push(putAwayItem(hooks.putAway));
+  return items;
+}
+
 /** Closing always offers to put the panel away or end its agent .
  *  Cmd+W only drops the panel.
  *  Right-click or double-click renames it; the name is kept on the agent, so the sidebar shows it too. */
@@ -42,33 +75,18 @@ export class AgentTab implements ITabRenderer {
     const close = this.element.querySelector(".dv-default-tab-action")!;
     close.addEventListener("pointerdown", (e) => e.preventDefault());
     const end = () => this.endAgent(name);
-    const closeOnly: MenuItem = { label: "收起，继续运行", hint: "会话留在原任务中，可以撤销收起", run: () => this.closePanel(name) };
-    /** A working agent takes two clicks to end; putting a panel away never ends it. */
-    const endItems = (agent: AgentView): MenuItem[] => {
-      const who = specOf(agent.kind)?.name ?? "它";
-      const working = agent.status === "running" || agent.status === "needs_approval";
-      const endIt: MenuItem = working
-        ? { label: `结束 ${who}`, hint: "它还在干活", confirmLabel: "确认结束", confirmHint: ENDS, danger: true, run: end }
-        : { label: `结束 ${who}`, hint: ENDS, danger: true, run: end };
-      return [closeOnly, endIt];
-    };
+    const putAway = () => this.closePanel(name);
     close.addEventListener("click", (event) => {
       const e = event as MouseEvent;
       e.preventDefault();
       const agent = findAgent(name);
       if (!agent) return params.api.close();
-      showMenu(e.clientX, e.clientY, endItems(agent));
+      showMenu(e.clientX, e.clientY, endItems(agent, putAway, end));
     });
     this.element.addEventListener("dblclick", () => this.startEdit(name));
     this.element.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      const agent = findAgent(name);
-      const items: MenuItem[] = [{ label: "重命名", run: () => this.startEdit(name) }];
-      if (agent?.label) items.push({ label: "用回话题名", run: () => void rename(name, "") });
-      // Splitting a tab off is done by dragging it (Eddie 11-22 dropped 移到下面/移到右边 from this menu).
-      items.push(...unreadItem(agent), ...pinItem(taskOfAgent(getTasks(), name)?.id));
-      items.push(...(agent ? endItems(agent) : [closeOnly]));
-      showMenu(e.clientX, e.clientY, items);
+      showMenu(e.clientX, e.clientY, agentMenuItems(name, { rename: () => this.startEdit(name), putAway, end }));
     });
     const paint = () => {
       window.clearTimeout(this.startupTimer);
@@ -117,7 +135,7 @@ export class AgentTab implements ITabRenderer {
       form.replaceWith(this.title);
       if (save && label && label !== shown) {
         this.title.textContent = label;
-        void rename(name, label);
+        void renameAgent(name, label);
       }
     };
     form.addEventListener("submit", (e) => {
@@ -153,7 +171,7 @@ export class FileTab extends DefaultTab {
 }
 
 /** Saves the name on the agent and reloads the list, so every place that shows the agent changes at once. */
-async function rename(name: string, label: string): Promise<void> {
+export async function renameAgent(name: string, label: string): Promise<void> {
   try {
     await agentRename(name, label);
     setAgents(await agentsList());

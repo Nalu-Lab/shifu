@@ -6,7 +6,7 @@ import { type AgentView, agentLabel, ageText, displayKey, statusHint, statusLabe
 import { type Mark, vendorIcon } from "./vendoricons";
 import { type MenuItem, showMenu } from "./menu";
 import { getAgentOrder, getAgents, getCurrentId, getPinnedTasks, getProjectOrder, getTaskOrder, getTasks, getWaitingList, onError, reportError, subscribe } from "./store";
-import { ENDS } from "./tab";
+import { agentMenuItems, renameAgent } from "./tab";
 import { pinItem, unreadItem } from "./marks";
 import { bindSidebarReorder } from "./sidebarreorder";
 import {
@@ -26,10 +26,8 @@ export interface SidebarActions {
   selectTask(id: string): void;
   /** A "在等你" row: show its task and focus the agent. */
   focusAgent(taskId: string, name: string): void;
-  openRight(name: string): void;
-  openBelow(name: string): void;
-  revealAgent(name: string): void;
-  resume(name: string): void;
+  /** Put the agent's open panel away, as its tab's 收起 does; undefined when it has no panel open. */
+  putAway(name: string): (() => void) | undefined;
   killAgent(name: string): void;
   /** An agent's tab or row was dropped on another task: it now belongs there. */
   moveAgent(name: string, taskId: string): void;
@@ -212,28 +210,55 @@ class Row {
     });
   }
 
-  private agent(): AgentView | undefined {
-    return getAgents().find((a) => a.name === this.agentName);
-  }
-
   private open(): void {
     if (this.taskHooks) this.actions.selectTask(this.taskId);
     else this.actions.focusAgent(this.taskId, this.agentName);
   }
 
+  /** The same menu as the agent's tab. */
   private menuItems(): MenuItem[] {
     const name = this.agentName;
-    const items: MenuItem[] = [
-      { label: "打开", run: () => this.open() },
-      { label: "在右边打开", run: () => this.actions.openRight(name) },
-      { label: "在下面打开", run: () => this.actions.openBelow(name) },
-      { label: "在 Finder 中显示", run: () => this.actions.revealAgent(name) },
-    ];
-    items.push(...unreadItem(this.agent()));
-    if (this.agent()?.exited) items.push({ label: "恢复会话", run: () => this.actions.resume(name) });
-    const who = KIND_NAMES[this.agent()?.kind ?? ""] ?? "它";
-    items.push({ label: `结束 ${who}`, hint: ENDS, confirmLabel: "确认结束", confirmHint: ENDS, danger: true, run: () => this.actions.killAgent(name) });
-    return items;
+    return agentMenuItems(name, {
+      rename: () => this.startEdit(),
+      putAway: this.actions.putAway(name),
+      end: () => this.actions.killAgent(name),
+    });
+  }
+
+  /** Rename in place, as on the tab. Enter confirms, Esc cancels; the form lets WebKit tell a Pinyin pick from Enter. */
+  private startEdit(): void {
+    if (!this.name.isConnected) return;
+    const shown = this.name.textContent ?? "";
+    const form = el("form", "inline-form");
+    const input = el("input", "task-edit");
+    input.value = shown;
+    form.append(input);
+    const wasDraggable = this.element.draggable;
+    this.element.draggable = false;
+    this.name.replaceWith(form);
+    input.focus();
+    input.select();
+    let done = false;
+    const finish = (save: boolean) => {
+      if (done) return;
+      done = true;
+      this.element.draggable = wasDraggable;
+      const label = input.value.trim();
+      form.replaceWith(this.name);
+      if (save && label && label !== shown) {
+        this.name.textContent = label;
+        void renameAgent(this.agentName, label);
+      }
+    };
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      finish(true);
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !e.isComposing) finish(false);
+    });
+    input.addEventListener("blur", () => finish(true));
+    for (const type of ["click", "dblclick", "contextmenu"]) input.addEventListener(type, (e) => e.stopPropagation());
   }
 
   /** `highlight`: the active panel (agent row) or the current task (task line). `label`: the name to show. */

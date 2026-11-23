@@ -296,7 +296,7 @@ export class Workspace {
   }
 
   /** Only explicit panel closes enter history; task switches, moves and ending an agent do not. */
-  private closeTab(id: string): void {
+  closeTab(id: string): void {
     const panel = this.api.getPanel(id);
     const taskId = this.taskDock.shown;
     if (!panel || !taskId) return;
