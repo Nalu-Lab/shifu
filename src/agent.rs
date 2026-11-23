@@ -21,21 +21,17 @@ pub enum Kind {
     Antigravity,
     StepFun,
     Qwen,
+    /// opencode (`opencode-ai`): status through a plugin named in `OPENCODE_CONFIG_CONTENT`, the user's config untouched.
+    OpenCode,
+    /// Pi (`@mariozechner/pi-coding-agent`): the user's own `pi`, with Shifu's status extension added by `--extension`.
+    Pi,
     Other,
 }
 
 impl Kind {
+    /// The kind of the row in `agents_spec::AGENTS` that lists `command`; anything else is a plain command.
     pub fn of_command(command: &str) -> Kind {
-        match command {
-            "claude" => Kind::Claude,
-            "codex" => Kind::Codex,
-            "codebuddy" => Kind::CodeBuddy,
-            "kimi" | "kimi-cli" => Kind::Kimi,
-            "agy" | "antigravity" => Kind::Antigravity,
-            "stepfun" => Kind::StepFun,
-            "qwen" | "qwen-code" => Kind::Qwen,
-            _ => Kind::Other,
-        }
+        crate::agents_spec::of_command(command).map_or(Kind::Other, |spec| spec.kind)
     }
 
     pub fn as_str(self) -> &'static str {
@@ -47,6 +43,8 @@ impl Kind {
             Kind::Antigravity => "antigravity",
             Kind::StepFun => "stepfun",
             Kind::Qwen => "qwen",
+            Kind::OpenCode => "opencode",
+            Kind::Pi => "pi",
             Kind::Other => "other",
         }
     }

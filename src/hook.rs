@@ -59,6 +59,16 @@ pub fn foreign_thread(kind: &str, agent_cwd: &str, input: &HookInput) -> bool {
     kind == "codex" && !agent_cwd.is_empty() && !same(cwd, agent_cwd)
 }
 
+/// Kinds whose hooks only ever touch a record of their own kind.
+const OWN_RECORDS_ONLY: [&str; 5] = ["antigravity", "stepfun", "qwen", "opencode", "pi"];
+
+/// An agy, StepFun, Qwen, opencode or Pi process started by another kind's agent (from its shell tool) inherits that
+/// agent's SHIFU_ID; its events must not overwrite the parent's conversation ID or status. Qwen also ignores its
+/// sub-agents.
+pub fn foreign_caller(kind: &str, agent: &Agent, input: &HookInput) -> bool {
+    (OWN_RECORDS_ONLY.contains(&kind) && agent.kind.as_str() != kind) || (kind == "qwen" && input.from_sub_agent)
+}
+
 fn tool_detail(input: &Value) -> Option<String> {
     let questions = input["questions"].as_array().map_or(0, Vec::len);
     let text = if let Some(question) = input["questions"][0]["question"].as_str().or_else(|| input["question"].as_str()) {
@@ -199,10 +209,7 @@ fn handle(kind: &str, event: &str) -> Res<()> {
     let Some(agent) = agent::load(&name)? else {
         return Ok(());
     };
-    // An agy subprocess launched by another CLI must not overwrite that parent's conversation ID/status.
-    if kind == "antigravity" && agent.kind != crate::agent::Kind::Antigravity { return Ok(()); }
-    if kind == "stepfun" && agent.kind != crate::agent::Kind::StepFun { return Ok(()); }
-    if kind == "qwen" && (agent.kind != crate::agent::Kind::Qwen || input.from_sub_agent) { return Ok(()); }
+    if foreign_caller(kind, &agent, &input) { return Ok(()); }
     if foreign_thread(kind, &agent.cwd, &input) { return Ok(()); }
     let updated = apply_event(&agent, event, &input, now_secs());
     agent::save(&updated)?;
@@ -389,6 +396,61 @@ mod tests {
             effort: None,
             label: None,
         }
+    }
+
+    #[test]
+    fn opencode_and_pi_hooks_touch_only_their_own_records() {
+        let none = HookInput::default();
+        let mut a = agent(Status::Running);
+        for kind in ["opencode", "pi", "antigravity", "stepfun", "qwen"] {
+            assert!(foreign_caller(kind, &a, &none), "{kind} must not touch a Claude record");
+        }
+        assert!(!foreign_caller("claude", &a, &none));
+        a.kind = Kind::OpenCode;
+        assert!(!foreign_caller("opencode", &a, &none));
+        assert!(foreign_caller("pi", &a, &none));
+        a.kind = Kind::Pi;
+        assert!(!foreign_caller("pi", &a, &none));
+        assert!(foreign_caller("opencode", &a, &none));
+        a.kind = Kind::Qwen;
+        assert!(!foreign_caller("qwen", &a, &none));
+        assert!(foreign_caller("qwen", &a, &HookInput { from_sub_agent: true, ..HookInput::default() }));
+    }
+
+    /// What Shifu's opencode plugin and Pi extension send (integrations/*/shifu-status.*), through the usual rules.
+    #[test]
+    fn opencode_plugin_events_walk_start_run_done_ask_and_approval() {
+        let mut a = agent(Status::Starting);
+        a.kind = Kind::OpenCode;
+        let step = |a: &Agent, event: &str, raw: &str| apply_event(a, event, &parse_input(raw), 200);
+        let a1 = step(&a, "SessionStart", "{}");
+        assert_eq!(a1.status, Status::Idle);
+        let a2 = step(&a1, "SessionStart", r#"{"session_id":"ses_1","source":"startup"}"#);
+        assert_eq!((a2.status, a2.session_id.as_deref()), (Status::Idle, Some("ses_1")));
+        let a3 = step(&a2, "UserPromptSubmit", r#"{"session_id":"ses_1"}"#);
+        assert_eq!(a3.status, Status::Running);
+        let a4 = step(&a3, "PermissionRequest", r#"{"session_id":"ses_1","tool_name":"bash","tool_input":{"command":"echo shifu-mock"}}"#);
+        assert_eq!((a4.status, a4.waiting_for.as_deref()), (Status::NeedsApproval, Some("bash：echo shifu-mock")));
+        let a5 = step(&a4, "PermissionResult", r#"{"session_id":"ses_1","tool_name":"permission"}"#);
+        assert_eq!(a5.status, Status::Running);
+        let a6 = step(&a5, "Stop", r#"{"session_id":"ses_1","last_assistant_message":"I can do either.\n\nWhich option do you prefer?"}"#);
+        assert_eq!(a6.status, Status::NeedsReply);
+        assert_eq!(a6.waiting_for.as_deref(), Some("Which option do you prefer?"));
+        let q = step(&a3, "PreToolUse", r#"{"session_id":"ses_1","tool_name":"ask_question","tool_input":{"questions":[{"question":"Which file?"}]}}"#);
+        assert_eq!((q.status, q.waiting_for.as_deref()), (Status::NeedsReply, Some("Which file?")));
+        assert_eq!(step(&q, "PostToolUse", r#"{"tool_name":"ask_question"}"#).status, Status::Running);
+        assert_eq!(step(&a3, "Interrupt", r#"{"session_id":"ses_1"}"#).status, Status::NeedsReply);
+    }
+
+    #[test]
+    fn pi_extension_reports_the_session_file_as_the_id() {
+        let mut a = agent(Status::Starting);
+        a.kind = Kind::Pi;
+        let file = "/Users/x/.pi/agent/sessions/--w--/2026-11-23T10-00-00_abc.jsonl";
+        let started = apply_event(&a, "SessionStart", &parse_input(&format!(r#"{{"session_id":"{file}"}}"#)), 1);
+        assert_eq!((started.status, started.session_id.as_deref()), (Status::Idle, Some(file)));
+        let done = apply_event(&started, "Stop", &parse_input(&format!(r#"{{"session_id":"{file}","last_assistant_message":"Done."}}"#)), 2);
+        assert_eq!((done.status, done.last_message.as_deref()), (Status::NeedsReply, Some("Done.")));
     }
 
     #[test]

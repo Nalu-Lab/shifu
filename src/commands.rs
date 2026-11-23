@@ -2,7 +2,7 @@
 
 use crate::actions::{self, Action};
 use crate::agent::{self, Agent, Kind, Res, make_name, now_secs, shifu_home};
-use crate::launch::{agent_command, antigravity_config, claude_hooks_json, codebuddy_hooks_json, kimi_config};
+use crate::launch::{OPENCODE_PLUGIN, PI_EXTENSION, agent_command, antigravity_config, claude_hooks_json, codebuddy_hooks_json, kimi_config, status_script};
 use crate::menu::record_recent;
 use crate::status::{Status, format_age};
 use crate::tabs::tally_text;
@@ -132,6 +132,7 @@ pub fn cmd_new(args: &[String]) -> Res<()> {
 
 /// Claude 的 hooks 文件（每次启动前重写，内容固定）；返回它的路径。其他 kind 不用，路径照给。
 /// Claude 和 CodeBuddy 各写一份自己的 hooks 文件（Claude 那份应用还会加 statusLine，不能给 CodeBuddy 用）。
+/// opencode 的插件、Pi 的扩展写在 `SHIFU_HOME` 下，返回那个文件。
 /// Kimi 的 hooks 写进用户自己的 `~/.kimi-code/config.toml`（见 `launch::kimi_config`），返回那个路径。
 pub fn write_claude_hooks(kind: Kind, shifu: &str) -> Res<String> {
     let (file, text) = match kind {
@@ -139,12 +140,25 @@ pub fn write_claude_hooks(kind: Kind, shifu: &str) -> Res<String> {
         Kind::Claude => ("claude-hooks.json", Some(pretty(&claude_hooks_json(shifu))?)),
         Kind::Kimi => return install_kimi_hooks(shifu),
         Kind::Antigravity => return install_antigravity_hooks(shifu),
+        Kind::OpenCode => return write_status_script("opencode/shifu-status.js", OPENCODE_PLUGIN, shifu),
+        Kind::Pi => return write_status_script("pi/shifu-status.mjs", PI_EXTENSION, shifu),
         _ => ("claude-hooks.json", None),
     };
     let path = shifu_home().join(file);
     if let Some(text) = text {
         std::fs::write(&path, text).map_err(|e| format!("写 {} 失败: {e}", path.display()))?;
     }
+    Ok(path.to_string_lossy().to_string())
+}
+
+/// opencode's plugin and Pi's extension live under `SHIFU_HOME`, rewritten at every start with this shifu's path.
+/// Written whole (temporary file, then rename) since other sessions may be loading it.
+fn write_status_script(file: &str, template: &str, shifu: &str) -> Res<String> {
+    let path = shifu_home().join(file);
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| format!("建 {} 失败: {e}", dir.display()))?;
+    }
+    crate::app_session::write_atomic(&path, &status_script(template, shifu))?;
     Ok(path.to_string_lossy().to_string())
 }
 

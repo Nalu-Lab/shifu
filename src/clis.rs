@@ -11,49 +11,7 @@ use std::process::{Command, Stdio};
 use std::sync::RwLock;
 use std::time::{Duration, Instant};
 
-/// An agent Shifu can start and how to recognise it on this Mac.
-pub struct CliSpec {
-    /// The kind the app and `shifu new` use.
-    pub kind: &'static str,
-    pub name: &'static str,
-    /// Program names, first match wins.
-    pub programs: &'static [&'static str],
-    /// Where to read how to install it.
-    pub install_url: &'static str,
-}
-
-/// In the order the picker shows them; the first installed one is the default for a new user.
-pub const CLIS: &[CliSpec] = &[
-    CliSpec { kind: "claude", name: "Claude", programs: &["claude"], install_url: "https://code.claude.com/docs" },
-    CliSpec { kind: "codex", name: "Codex", programs: &["codex"], install_url: "https://github.com/openai/codex" },
-    CliSpec { kind: "codebuddy", name: "CodeBuddy", programs: &["codebuddy"], install_url: "https://www.codebuddy.ai/cli" },
-    CliSpec {
-        kind: "kimi",
-        name: "Kimi",
-        programs: &["kimi"],
-        install_url: "https://www.kimi.com/code/docs/en/kimi-code-cli/getting-started.html",
-    },
-    CliSpec {
-        kind: "antigravity",
-        name: "Antigravity",
-        programs: &["agy", "antigravity"],
-        install_url: "https://antigravity.google/docs/cli-overview",
-    },
-    // StepFun runs Shifu's own Pi runtime under node; see `detect`.
-    CliSpec {
-        kind: "stepfun",
-        name: "StepFun",
-        programs: &["node"],
-        install_url: "https://github.com/Nalu-Lab/shifu/blob/main/docs/STEPFUN.md",
-    },
-    CliSpec { kind: "qwen", name: "Qwen Code", programs: &["qwen"], install_url: "https://github.com/QwenLM/qwen-code" },
-    CliSpec {
-        kind: "gemini",
-        name: "Gemini CLI",
-        programs: &["gemini"],
-        install_url: "https://geminicli.com/docs/get-started/installation/",
-    },
-];
+// Which agents exist, their names, programs and install pages: `agents_spec::AGENTS`, in the picker's order.
 
 /// What was found for one agent.
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
@@ -165,23 +123,24 @@ pub fn find_program(path: &str, names: &[&str]) -> Option<PathBuf> {
     })
 }
 
-/// Every agent in `CLIS` with where it was found in `path`. StepFun counts as installed when node is there and
-/// Shifu's Pi runtime is set up; Qwen honours `SHIFU_QWEN_BIN` as `shifu qwen` does.
+/// Every agent in `agents_spec::AGENTS` with where it was found in `path`. StepFun counts as installed when node is
+/// there and Shifu's Pi runtime is set up; Qwen honours `SHIFU_QWEN_BIN` as `shifu qwen` does.
 pub fn detect(path: &str) -> Vec<Found> {
-    CLIS.iter()
+    crate::agents_spec::AGENTS
+        .iter()
         .map(|spec| {
-            let found = match spec.kind {
-                "stepfun" => find_program(path, spec.programs).filter(|_| crate::stepfun::runtime_path().is_file()),
+            let found = match spec.id {
+                "stepfun" => find_program(path, spec.detect).filter(|_| crate::stepfun::runtime_path().is_file()),
                 "qwen" => std::env::var_os("SHIFU_QWEN_BIN")
                     .filter(|p| !p.is_empty())
                     .map(PathBuf::from)
                     .filter(|p| p.is_file())
-                    .or_else(|| find_program(path, spec.programs)),
-                _ => find_program(path, spec.programs),
+                    .or_else(|| find_program(path, spec.detect)),
+                _ => find_program(path, spec.detect),
             };
             Found {
-                kind: spec.kind.into(),
-                name: spec.name.into(),
+                kind: spec.id.into(),
+                name: spec.label.into(),
                 path: found.map(|p| p.to_string_lossy().into_owned()),
                 install_url: spec.install_url.into(),
             }
@@ -245,7 +204,7 @@ mod tests {
         }
         std::fs::write(first.join("codex"), "").unwrap(); // not executable
         std::fs::create_dir_all(first.join("claude")).unwrap(); // a folder
-        for (dir, name) in [(&second, "codex"), (&second, "claude"), (&second, "agy"), (&first, "gemini")] {
+        for (dir, name) in [(&second, "codex"), (&second, "claude"), (&second, "agy"), (&first, "gemini"), (&first, "opencode"), (&second, "pi")] {
             let p = dir.join(name);
             std::fs::write(&p, "#!/bin/sh\n").unwrap();
             std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
@@ -257,7 +216,11 @@ mod tests {
         assert_eq!(path_of("claude"), Some(second.join("claude").to_string_lossy().into_owned()));
         assert_eq!(path_of("antigravity"), Some(second.join("agy").to_string_lossy().into_owned()));
         assert_eq!(path_of("gemini"), Some(first.join("gemini").to_string_lossy().into_owned()));
+        assert_eq!(path_of("opencode"), Some(first.join("opencode").to_string_lossy().into_owned()));
+        assert_eq!(path_of("pi"), Some(second.join("pi").to_string_lossy().into_owned()));
         assert_eq!(path_of("kimi"), None);
+        let order: Vec<&str> = found.iter().map(|f| f.kind.as_str()).collect();
+        assert_eq!(order, ["claude", "codex", "codebuddy", "kimi", "antigravity", "stepfun", "qwen", "opencode", "pi", "gemini"]);
         std::fs::remove_dir_all(&root).unwrap();
     }
 

@@ -1,6 +1,7 @@
 //! 启动命令：shell 引号、Claude 的 hooks 文件、Codex 的 `-c` 覆盖。
 
 use crate::agent::Kind;
+use crate::agents_spec::{self, AgentSpec, Hooks, Launch};
 use serde_json::{Value, json};
 
 /// shell 单引号转义。
@@ -167,11 +168,6 @@ pub fn antigravity_config(user: &str, shifu: &str) -> Result<Option<String>, Str
     serde_json::to_string_pretty(&config).map(Some).map_err(|e| e.to_string())
 }
 
-/// Kimi Code CLI (the TypeScript successor; kimi-cli 1.52 only prints that it is no longer maintained). Its
-/// installer puts `kimi` in ~/.kimi-code/bin, which the app's PATH lists before ~/.local/bin, where uv's old
-/// kimi-cli may put a `kimi` of its own. Agents recorded as `kimi-cli` start this one too.
-const KIMI_PROGRAM: &str = "kimi";
-
 /// 每个事件一条 `-c` 的值：`hooks.Stop=[{hooks=[{type="command",command="..."}]}]`。
 pub fn codex_overrides(shifu: &str) -> Vec<String> {
     CODEX_EVENTS
@@ -193,11 +189,9 @@ fn codex_flags(shifu: &str, perms: Permissions) -> Vec<String> {
     flags
 }
 
-/// 用户 11-09 要 Claude、Codex、CodeBuddy 都像 Orca 那样默认 bypass 启动。CodeBuddy 用和 Claude 一样的参数；
-/// 它的 --help 写明高风险、极高风险的操作仍会问。
-const CLAUDE_BYPASS: &str = "--dangerously-skip-permissions";
+/// 用户 11-09 要 Claude、Codex、CodeBuddy 都像 Orca 那样默认 bypass 启动（各家的参数在 `agents_spec::AGENTS`）。
+/// CodeBuddy 用和 Claude 一样的参数；它的 --help 写明高风险、极高风险的操作仍会问。
 const CODEX_BYPASS: &str = "--dangerously-bypass-approvals-and-sandbox";
-const KIMI_YOLO: &str = "--yolo";
 
 /// How agents are started: with their no-approval flag (`Bypass`, the default since 11-09, as Orca does), or with
 /// none, so each agent's own settings decide what it asks (`Own`). Kept in `<SHIFU_HOME>/settings.json`, so the
@@ -246,90 +240,100 @@ fn save_permissions_in(path: &std::path::Path, perms: Permissions) -> Result<(),
     crate::app_session::write_atomic(path, &text)
 }
 
-/// Kimi Code 的 --yolo 是「Ask When Needed」：平常的改动和命令自己跑，危险命令、敏感文件、提问还会问。
-/// --auto 连问题都不问，不用。
-/// 交给 tmux（再交给 shell）的完整启动命令。
-/// `claude_settings` is the settings file `write_claude_hooks` wrote for this kind (Kimi takes none).
+/// Shifu's status plugin for opencode and extension for Pi; `status_script` puts the shifu path in.
+pub const OPENCODE_PLUGIN: &str = include_str!("../integrations/opencode/shifu-status.js");
+pub const PI_EXTENSION: &str = include_str!("../integrations/pi/shifu-status.mjs");
+
+/// `template` with `"__SHIFU_BIN__"` replaced by `shifu` as a JavaScript string.
+pub fn status_script(template: &str, shifu: &str) -> String {
+    let literal = serde_json::to_string(shifu).unwrap_or_else(|_| "\"shifu\"".into());
+    template.replace("\"__SHIFU_BIN__\"", &literal)
+}
+
+/// The `OPENCODE_CONFIG_CONTENT` that adds Shifu's status plugin. opencode loads it after the user's global and
+/// project configs and merges it in (its `plugin` list is appended to theirs), so nothing of theirs is replaced or
+/// written. Absolute paths are taken as local plugin files.
+pub fn opencode_config_content(plugin: &str) -> String {
+    json!({ "plugin": [plugin] }).to_string()
+}
+
+/// The words a row's hook style puts after the program. `hook_file` is what `write_claude_hooks` returned.
+fn hook_words(spec: &AgentSpec, shifu: &str, hook_file: &str, perms: Permissions) -> Vec<String> {
+    match spec.hooks {
+        Hooks::ClaudeSettings => vec!["--settings".to_string(), sh_quote(hook_file)],
+        Hooks::Codex => codex_flags(shifu, perms),
+        Hooks::PiExtension => vec!["--extension".to_string(), sh_quote(hook_file)],
+        Hooks::KimiConfig | Hooks::AntigravityHooksJson | Hooks::OpencodePlugin | Hooks::None => Vec::new(),
+    }
+}
+
+/// `NAME='value'` words before the program: opencode's plugin, and any environment the permission choice sets.
+fn env_words(spec: &AgentSpec, hook_file: &str, perms: Permissions) -> Vec<String> {
+    let mut words = Vec::new();
+    if spec.hooks == Hooks::OpencodePlugin {
+        words.push(format!("OPENCODE_CONFIG_CONTENT={}", sh_quote(&opencode_config_content(hook_file))));
+    }
+    if perms == Permissions::Bypass {
+        words.extend(spec.bypass_env.iter().map(|(name, value)| format!("{name}={}", sh_quote(value))));
+    }
+    words
+}
+
+fn permission_words(spec: &AgentSpec, perms: Permissions) -> impl Iterator<Item = String> {
+    let args = if perms == Permissions::Bypass { spec.bypass_args } else { spec.own_args };
+    args.iter().map(|a| sh_word(a))
+}
+
+/// 交给 tmux（再交给 shell）的完整启动命令。各家的参数来自 `agents_spec::AGENTS`；Codex 自己拼（见 `codex_flags`）。
+/// `claude_settings` is the file `write_claude_hooks` wrote for this kind: Claude's settings, the Pi extension,
+/// the opencode plugin (Kimi and Antigravity take none on the command line).
 pub fn agent_command(kind: Kind, command: &str, shifu: &str, claude_settings: &str, extra: &[String], perms: Permissions) -> String {
-    if kind == Kind::Other && command == "terminal" {
-        let shell = std::env::var("SHELL").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| "/bin/zsh".into());
-        return format!("{} -l", sh_quote(&shell));
-    }
-    if kind == Kind::StepFun {
-        let mut words = vec![sh_quote(shifu), "stepfun".to_string()];
-        words.extend(extra.iter().map(|a| sh_quote(a)));
-        return words.join(" ");
-    }
-    if kind == Kind::Qwen {
-        let mut words = vec![sh_quote(shifu), "qwen".to_string()];
-        // `shifu qwen` adds `--approval-mode yolo` unless a mode is given.
-        if perms == Permissions::Own {
-            words.extend(["--approval-mode".to_string(), "default".to_string()]);
+    let spec = match agents_spec::of_kind(kind) {
+        Some(spec) => spec,
+        None if command == "terminal" => {
+            let shell = std::env::var("SHELL").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| "/bin/zsh".into());
+            return format!("{} -l", sh_quote(&shell));
         }
-        words.extend(extra.iter().map(|a| sh_quote(a)));
-        return words.join(" ");
-    }
-    let program = match kind {
-        Kind::Kimi => KIMI_PROGRAM,
-        Kind::Antigravity => "agy",
-        _ => command,
+        None => {
+            let mut words = vec![sh_quote(command)];
+            words.extend(extra.iter().map(|a| sh_quote(a)));
+            return words.join(" ");
+        }
     };
-    let mut words: Vec<String> = vec![sh_quote(program)];
-    match kind {
-        Kind::Claude | Kind::CodeBuddy => {
-            words.push("--settings".to_string());
-            words.push(sh_quote(claude_settings));
-            if perms == Permissions::Bypass {
-                words.push(CLAUDE_BYPASS.to_string());
-            }
+    let mut words = env_words(spec, claude_settings, perms);
+    match spec.launch {
+        // The launcher (`shifu stepfun`, `shifu qwen`) sets up the runtime and its hooks.
+        Launch::Shifu => words.extend([sh_quote(shifu), spec.id.to_string()]),
+        Launch::Direct | Launch::Bespoke => {
+            words.push(sh_quote(spec.commands[0]));
+            words.extend(hook_words(spec, shifu, claude_settings, perms));
         }
-        Kind::Codex => words.extend(codex_flags(shifu, perms)),
-        Kind::Kimi => {
-            if perms == Permissions::Bypass {
-                words.push(KIMI_YOLO.to_string());
-            }
-        }
-        Kind::Antigravity | Kind::StepFun | Kind::Qwen | Kind::Other => {}
+    }
+    // Codex's no-approval flag comes after its hook overrides, inside `codex_flags`.
+    if spec.hooks != Hooks::Codex {
+        words.extend(permission_words(spec, perms));
     }
     words.extend(extra.iter().map(|a| sh_quote(a)));
     words.join(" ")
 }
 
 /// 选的模型和思考档位换成各家命令行的参数（未加引号，交给 `agent_command` 的 extra 或 `resume_command`）。
-/// 没选就不加，用命令行自己的默认。
+/// 没选就不加，用命令行自己的默认。Kimi Code takes no effort on the command line (only /model inside it).
 pub fn model_flags(kind: Kind, model: Option<&str>, effort: Option<&str>) -> Vec<String> {
+    let Some(spec) = agents_spec::of_kind(kind) else { return Vec::new() };
     let mut words = Vec::new();
-    match kind {
-        Kind::Codex => {
-            if let Some(m) = model {
-                words.extend(["-m".to_string(), m.to_string()]);
-            }
-            if let Some(e) = effort {
-                words.extend(["-c".to_string(), format!("model_reasoning_effort=\"{e}\"")]);
-            }
-        }
-        Kind::Claude | Kind::CodeBuddy | Kind::Antigravity => {
-            if let Some(m) = model {
-                words.extend(["--model".to_string(), m.to_string()]);
-            }
-            if let Some(e) = effort {
-                words.extend(["--effort".to_string(), e.to_string()]);
-            }
-        }
-        // Kimi Code takes no effort on the command line (only /model inside it), so models.rs offers none.
-        Kind::Kimi | Kind::StepFun | Kind::Qwen => {
-            if let Some(m) = model {
-                words.extend(["--model".to_string(), m.to_string()]);
-            }
-        }
-        Kind::Other => {}
+    if let Some(m) = model {
+        words.extend(agents_spec::fill(spec.model_args, "model", m));
+    }
+    if let Some(e) = effort {
+        words.extend(agents_spec::fill(spec.effort_args, "effort", e));
     }
     words
 }
 
-/// 恢复已退出的会话：Claude 用 `--resume <id>`（没有 id 用 `--continue`），
-/// Kimi 用 `--session <id>`，Codex 用 `resume` 子命令（没有 id 用 `--last`），其他命令原样重开。
-/// `pick` 是 `model_flags` 的结果，恢复时照原样再带上。
+/// 恢复已退出的会话：按 `agents_spec` 的 `resume_by_id`（如 Claude `--resume <id>`、Kimi/Pi/opencode `--session <id>`），
+/// 没有 id 用 `resume_latest`（`--continue`；空的就重新开）。Codex 用 `resume` 子命令（没有 id 用 `--last`），
+/// 其他命令原样重开。`pick` 是 `model_flags` 的结果，恢复时照原样再带上。
 pub fn resume_command(
     kind: Kind,
     command: &str,
@@ -339,47 +343,22 @@ pub fn resume_command(
     pick: &[String],
     perms: Permissions,
 ) -> String {
-    match (kind, session_id) {
-        (Kind::Qwen, id) => {
-            let mut extra = pick.to_vec();
-            if let Some(id) = id {
-                extra.extend(["--resume".to_string(), id.to_string()]);
-            }
-            agent_command(kind, command, shifu, claude_settings, &extra, perms)
-        }
-        (Kind::StepFun, id) => {
-            let mut extra = pick.to_vec();
-            if let Some(id) = id {
-                extra.extend(["--session".to_string(), id.to_string()]);
-            }
-            agent_command(kind, command, shifu, claude_settings, &extra, perms)
-        }
-        (Kind::Antigravity, id) => {
-            let mut extra = pick.to_vec();
-            if let Some(id) = id {
-                extra.extend(["--conversation".to_string(), id.to_string()]);
-            }
-            // Without an ID this task has not started a conversation yet. --continue could open another task.
-            agent_command(kind, command, shifu, claude_settings, &extra, perms)
-        }
-        (Kind::Claude | Kind::CodeBuddy | Kind::Kimi, id) => {
-            let mut extra = pick.to_vec();
-            let by_id = if kind == Kind::Kimi { "--session" } else { "--resume" };
-            match id {
-                Some(id) => extra.extend([by_id.to_string(), id.to_string()]),
-                None => extra.push("--continue".to_string()),
-            }
-            agent_command(kind, command, shifu, claude_settings, &extra, perms)
-        }
-        (Kind::Codex, id) => {
-            let mut words = vec![sh_quote(command), sh_quote("resume")];
-            words.extend(codex_flags(shifu, perms));
-            words.extend(pick.iter().map(|w| sh_quote(w)));
-            words.push(sh_quote(id.unwrap_or("--last")));
-            words.join(" ")
-        }
-        (Kind::Other, _) => agent_command(kind, command, shifu, claude_settings, &[], perms),
+    let Some(spec) = agents_spec::of_kind(kind) else {
+        return agent_command(kind, command, shifu, claude_settings, &[], perms);
+    };
+    if kind == Kind::Codex {
+        let mut words = vec![sh_quote(command), sh_quote("resume")];
+        words.extend(codex_flags(shifu, perms));
+        words.extend(pick.iter().map(|w| sh_quote(w)));
+        words.push(sh_quote(session_id.unwrap_or("--last")));
+        return words.join(" ");
     }
+    let mut extra = pick.to_vec();
+    match session_id {
+        Some(id) => extra.extend(agents_spec::fill(spec.resume_by_id, "id", id)),
+        None => extra.extend(spec.resume_latest.iter().map(|w| w.to_string())),
+    }
+    agent_command(kind, command, shifu, claude_settings, &extra, perms)
 }
 
 #[cfg(test)]
@@ -399,6 +378,64 @@ mod tests {
         assert_eq!(resume_command(Kind::Claude, "claude", "/s", "/h.json", None, &[], own), "'claude' --settings '/h.json' '--continue'");
         assert_eq!(agent_command(Kind::Qwen, "qwen", "/s", "", &[], own), "'/s' qwen --approval-mode default");
         assert_eq!(agent_command(Kind::Qwen, "qwen", "/s", "", &[], Permissions::Bypass), "'/s' qwen");
+    }
+
+    #[test]
+    fn opencode_gets_its_plugin_through_the_environment_and_bypass_through_permissions() {
+        let plugin = "/h/.shifu/opencode/shifu-status.js";
+        let content = r#"OPENCODE_CONFIG_CONTENT='{"plugin":["/h/.shifu/opencode/shifu-status.js"]}'"#;
+        let pick = model_flags(Kind::OpenCode, Some("anthropic/claude-sonnet-5"), Some("high"));
+        assert_eq!(pick, ["-m", "anthropic/claude-sonnet-5"]);
+        let bypass = agent_command(Kind::OpenCode, "opencode", "/s", plugin, &pick, Permissions::Bypass);
+        assert_eq!(bypass, format!(r#"{content} OPENCODE_PERMISSION='{{"edit":"allow","bash":"allow","webfetch":"allow"}}' 'opencode' '-m' 'anthropic/claude-sonnet-5'"#));
+        let own = agent_command(Kind::OpenCode, "opencode", "/s", plugin, &[], Permissions::Own);
+        assert_eq!(own, format!("{content} 'opencode'"));
+        let by_id = resume_command(Kind::OpenCode, "opencode", "/s", plugin, Some("ses_9"), &pick, Permissions::Own);
+        assert_eq!(by_id, format!("{content} 'opencode' '-m' 'anthropic/claude-sonnet-5' '--session' 'ses_9'"));
+        let latest = resume_command(Kind::OpenCode, "opencode", "/s", plugin, None, &[], Permissions::Own);
+        assert_eq!(latest, format!("{content} 'opencode' '--continue'"));
+        assert_eq!(Kind::of_command("opencode"), Kind::OpenCode);
+        // A path with a quote or space survives JSON and the shell.
+        let odd = opencode_config_content("/a b/it's.js");
+        assert_eq!(serde_json::from_str::<Value>(&odd).unwrap()["plugin"][0], "/a b/it's.js");
+    }
+
+    #[test]
+    fn pi_runs_the_users_pi_with_shifus_extension_and_ignores_the_permission_switch() {
+        let ext = "/h/.shifu/pi/shifu-status.mjs";
+        let pick = model_flags(Kind::Pi, Some("anthropic/claude-sonnet-5"), Some("high"));
+        assert_eq!(pick, ["--model", "anthropic/claude-sonnet-5", "--thinking", "high"]);
+        let bypass = agent_command(Kind::Pi, "pi", "/s", ext, &pick, Permissions::Bypass);
+        assert_eq!(bypass, "'pi' --extension '/h/.shifu/pi/shifu-status.mjs' '--model' 'anthropic/claude-sonnet-5' '--thinking' 'high'");
+        assert_eq!(agent_command(Kind::Pi, "pi", "/s", ext, &pick, Permissions::Own), bypass);
+        assert!(!bypass.contains("PI_CODING_AGENT_DIR") && !bypass.contains("--no-extensions"));
+        let file = "/Users/x/.pi/agent/sessions/--w--/2026 a.jsonl";
+        assert_eq!(resume_command(Kind::Pi, "pi", "/s", ext, Some(file), &[], Permissions::Bypass),
+            format!("'pi' --extension '{ext}' '--session' '{file}'"));
+        assert_eq!(resume_command(Kind::Pi, "pi", "/s", ext, None, &[], Permissions::Own), format!("'pi' --extension '{ext}' '--continue'"));
+        assert_eq!(Kind::of_command("pi"), Kind::Pi);
+    }
+
+    #[test]
+    fn status_scripts_get_this_shifu_as_a_javascript_string() {
+        for template in [OPENCODE_PLUGIN, PI_EXTENSION] {
+            let script = status_script(template, "/a \"b\"/shifu");
+            assert!(script.contains(r#"const SHIFU = "/a \"b\"/shifu";"#), "{script}");
+            assert!(!script.contains("__SHIFU_BIN__"));
+            assert!(script.contains("SHIFU_ID") && script.contains("SHIFU_STATUS_OWNER"));
+        }
+        assert!(OPENCODE_PLUGIN.contains(r#"["hook", "opencode", event]"#));
+        assert!(PI_EXTENSION.contains(r#"["hook", "pi", event]"#));
+    }
+
+    #[test]
+    fn the_table_keeps_the_codex_bypass_flag_it_documents() {
+        assert_eq!(agents_spec::of_kind(Kind::Codex).unwrap().bypass_args, [CODEX_BYPASS]);
+        assert_eq!(resume_command(Kind::Antigravity, "agy", "/s", "", None, &[], Permissions::Bypass), "'agy'");
+        assert_eq!(resume_command(Kind::Antigravity, "antigravity", "/s", "", Some("c-1"), &[], Permissions::Bypass), "'agy' '--conversation' 'c-1'");
+        assert_eq!(resume_command(Kind::Qwen, "qwen", "/s", "", None, &[], Permissions::Bypass), "'/s' qwen");
+        assert_eq!(resume_command(Kind::Qwen, "qwen", "/s", "", Some("q1"), &[], Permissions::Own), "'/s' qwen --approval-mode default '--resume' 'q1'");
+        assert!(agent_command(Kind::Other, "terminal", "/s", "", &[], Permissions::Bypass).ends_with(" -l"));
     }
 
     #[test]

@@ -19,6 +19,8 @@ export const AGENTS: AgentSpec[] = [
   { kind: "antigravity", name: "Antigravity" },
   { kind: "stepfun", name: "StepFun" },
   { kind: "qwen", name: "Qwen Code" },
+  { kind: "opencode", name: "opencode" },
+  { kind: "pi", name: "Pi" },
   { kind: "gemini", name: "Gemini CLI" },
   { kind: "terminal", name: "终端" },
 ];

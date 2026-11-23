@@ -257,8 +257,8 @@ fn write_settings(cfg: &Config, kind: Kind) -> Res<String> {
 /// `claude-opus-5-5`, `gpt-6.1-sol` or `high` are expected.
 fn check_pick(what: &str, value: Option<&str>) -> Res<()> {
     match value {
-        // '/' for Kimi's ids (`kimi-code/k3`).
-        Some(v) if v.is_empty() || !v.chars().all(|c| c.is_ascii_alphanumeric() || "._-/".contains(c)) => {
+        // '/' for Kimi's, opencode's and Pi's ids (`kimi-code/k3`, `openrouter/x:free`).
+        Some(v) if v.is_empty() || !v.chars().all(|c| c.is_ascii_alphanumeric() || "._-/:".contains(c)) => {
             Err(format!("{what} {v:?} is not a model id"))
         }
         _ => Ok(()),

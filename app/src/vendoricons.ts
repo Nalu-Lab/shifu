@@ -9,17 +9,20 @@ import type { Vendor } from "./limits";
 const antigravityIcon = new URL("./assets/antigravity.svg", import.meta.url).href;
 
 /** Agents with a mark: the two with usage limits, plus CodeBuddy and Kimi. */
-export type Mark = Vendor | "codebuddy" | "kimi" | "antigravity" | "stepfun" | "qwen" | "gemini" | "terminal";
+export type Mark = Vendor | "codebuddy" | "kimi" | "antigravity" | "stepfun" | "qwen" | "opencode" | "pi" | "gemini" | "terminal";
 
 /** Bar colours: Claude's orange, the blue of the Codex cloud. */
-export const VENDOR_COLORS: Record<Mark, string> = { claude: "#d97757", codex: "#5560f6", codebuddy: "currentColor", kimi: "#000", antigravity: "currentColor", stepfun: "currentColor", qwen: "currentColor", gemini: "currentColor", terminal: "currentColor" };
-const VIEWBOX: Record<Mark, string> = { claude: "0 0 24 24", codex: "0 0 12 12", codebuddy: "0 0 12 12", kimi: "0 0 12 12", antigravity: "0 0 16 16", stepfun: "0 0 12 12", qwen: "0 0 12 12", gemini: "0 0 12 12", terminal: "0 0 12 12" };
+export const VENDOR_COLORS: Record<Mark, string> = { claude: "#d97757", codex: "#5560f6", codebuddy: "currentColor", kimi: "#000", antigravity: "currentColor", stepfun: "currentColor", qwen: "currentColor", opencode: "currentColor", pi: "currentColor", gemini: "currentColor", terminal: "currentColor" };
+const VIEWBOX: Record<Mark, string> = { claude: "0 0 24 24", codex: "0 0 12 12", codebuddy: "0 0 12 12", kimi: "0 0 12 12", antigravity: "0 0 16 16", stepfun: "0 0 12 12", qwen: "0 0 12 12", opencode: "0 0 12 12", pi: "0 0 12 12", gemini: "0 0 12 12", terminal: "0 0 12 12" };
 
 const PATHS: Record<Exclude<Mark, "antigravity">, string> = {
   terminal: "M2.2 2.8L5.4 6l-3.2 3.2.85.85L7.1 6 3.05 1.95zM6.8 9h3.4v1.2H6.8z",
   gemini: "M6 0C6.45 3.35 8.65 5.55 12 6C8.65 6.45 6.45 8.65 6 12C5.55 8.65 3.35 6.45 0 6C3.35 5.55 5.55 3.35 6 0Z",
   // Neutral Q monogram, not an official vendor logo.
   qwen: "M5.5 1a4.5 4.5 0 1 0 2.65 8.14L10 11l1-1-1.86-1.85A4.5 4.5 0 0 0 5.5 1zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z",
+  // Neutral O and π monograms, not opencode's or Pi's own marks.
+  opencode: "M2 1h8v10H2zM4 3v6h4V3z",
+  pi: "M1.5 2.5h9V4h-9zM3.5 4H5v6.5H3.5zM7 4h1.5v5c0 .4.2.6.6.6h.9V11H8.8C7.6 11 7 10.4 7 9.2z",
   // A neutral S monogram; this is not presented as StepFun's official logo.
   stepfun: "M9.5 2H4a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H2.5V8.5H8a.5.5 0 0 0 0-1H4a3.5 3.5 0 0 1 0-7h5.5z",
   kimi: "M2.6 0h6.8A2.6 2.6 0 0 1 12 2.6v6.8A2.6 2.6 0 0 1 9.4 12H2.6A2.6 2.6 0 0 1 0 9.4V2.6A2.6 2.6 0 0 1 2.6 0z",

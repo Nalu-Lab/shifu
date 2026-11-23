@@ -99,9 +99,9 @@ const ERROR_SHOW_MS = 8000;
 /** Wait this long after the last key before reading transcripts. */
 const SEARCH_DEBOUNCE_MS = 200;
 const REFRESH_AGE_MS = 15000;
-const KIND_NAMES: Record<string, string> = { claude: "Claude", codex: "Codex", codebuddy: "CodeBuddy", kimi: "Kimi", antigravity: "Antigravity", stepfun: "StepFun", qwen: "Qwen Code" };
+const KIND_NAMES: Record<string, string> = { claude: "Claude", codex: "Codex", codebuddy: "CodeBuddy", kimi: "Kimi", antigravity: "Antigravity", stepfun: "StepFun", qwen: "Qwen Code", opencode: "opencode", pi: "Pi" };
 
-const MARKED = new Set(["claude", "codex", "codebuddy", "kimi", "antigravity", "stepfun"]);
+const MARKED = new Set(["claude", "codex", "codebuddy", "kimi", "antigravity", "stepfun", "opencode", "pi"]);
 
 /** The agent's own mark (Claude, Codex, CodeBuddy, Kimi), named on hover; empty for other programs. Redrawn only
  *  when the kind changes, so a refresh does not rebuild the SVG. */
