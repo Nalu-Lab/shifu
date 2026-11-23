@@ -38,8 +38,9 @@ fn new_claude_and_codex_receive_a_short_session_context() {
         let value: Value = serde_json::from_str(&output).expect("SessionStart must return structured context");
         assert_eq!(value["hookSpecificOutput"]["hookEventName"], "SessionStart");
         let context = value["hookSpecificOutput"]["additionalContext"].as_str().unwrap();
-        let expected = format!("{} computer guide", shifu::launch::sh_quote(env!("CARGO_BIN_EXE_shifu")));
-        assert!(context.contains(&expected), "{context}");
+        let expected = format!("shifu 指 {}", shifu::launch::sh_quote(env!("CARGO_BIN_EXE_shifu")));
+        assert!(context.contains(&expected) && context.contains("shifu computer guide"), "{context}");
+        assert!(context.contains("shifu ask") && context.contains("shifu reply"), "{context}");
         assert!(context.contains("browser guide"), "{context}");
         assert!(context.contains("API/CLI") && context.contains("截图"));
         assert!(context.chars().count() < 500);

@@ -265,10 +265,196 @@ pub fn cmd_tell(args: &[String]) -> Res<()> {
         return print_input_receipt(&input);
     }
     if id.is_some() || expires_at.is_some() || stop_file.is_some() { return Err("--id, --expires-at and --stop-file require --queue".into()); }
+    let has_session = agent::load(&row.name)?.is_some_and(|a| a.session_id.as_deref().is_some_and(|s| !s.is_empty()));
+    if matches!(row.kind.as_str(), "claude" | "codex") && has_session {
+        // Through the queue: it waits for an empty input box and checks the text before pressing Enter.
+        // A Codex that has never been prompted has no session to check receipts against; it keeps the direct send.
+        let input = enqueue_to(row, &message(from.as_deref(), &text))?;
+        println!("{}", delivery_report(row, &await_delivery(&input, 20)));
+        return Ok(());
+    }
     can_tell(row)?;
     let pane = row.pane.as_deref().ok_or_else(|| format!("「{}」没有终端窗格", row.title))?;
     send(&Tmux::from_env(), pane, &message(from.as_deref(), &text))?;
     println!("已发给「{}」[{}]", row.title, row.name);
+    Ok(())
+}
+
+fn new_id(prefix: &str) -> String {
+    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos();
+    format!("{prefix}-{}-{nanos}", std::process::id())
+}
+
+fn enqueue_to(row: &Row, text: &str) -> Res<crate::inbox::Input> {
+    let mut agent = agent::load(&row.name)?.ok_or("conversation disappeared")?;
+    agent.status = row.status;
+    crate::inbox::enqueue(&shifu_home(), &agent, &new_id("tell"), text, None, None)
+}
+
+/// The desktop app sends queued messages; wait a little for it so the sender learns whether it went in.
+fn await_delivery(input: &crate::inbox::Input, seconds: u64) -> crate::inbox::Input {
+    let end = std::time::Instant::now() + std::time::Duration::from_secs(seconds);
+    let mut last = input.clone();
+    while std::time::Instant::now() < end {
+        match crate::inbox::receipt(&shifu_home(), &input.agent, &input.id) {
+            Ok(now) if now.phase != crate::inbox::Phase::Queued && now.phase != crate::inbox::Phase::Delivering => return now,
+            Ok(now) => last = now,
+            Err(_) => break,
+        }
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+    last
+}
+
+fn delivery_report(row: &Row, input: &crate::inbox::Input) -> String {
+    use crate::inbox::Phase;
+    let who = format!("「{}」[{}]", row.title, row.name);
+    match input.phase {
+        Phase::Written | Phase::Received => format!("已送进{who}"),
+        Phase::Queued | Phase::Delivering => format!("已排队，{who}输入框空出来、Shifu 桌面版开着时送进去（编号 {}，shifu inbox {} {} 查）", input.id, input.agent, input.id),
+        Phase::Cancelled => format!("没送进{who}：{}", input.reason.as_deref().unwrap_or("已取消")),
+        Phase::Unknown => format!("不确定是否送进{who}：{}。去那个对话看一眼，别重发", input.reason.as_deref().unwrap_or("送的过程被打断")),
+    }
+}
+
+#[derive(Serialize, serde::Deserialize)]
+struct Ask {
+    id: String,
+    /// The asking conversation, when the question came from inside Shifu.
+    asker: Option<String>,
+    asker_title: String,
+    target_title: String,
+    /// The start of the question, so a late answer says what it answers.
+    #[serde(default)]
+    question: String,
+    /// The `shifu ask` process waiting for the answer; once it has gone, the answer is queued to the asker.
+    pid: u32,
+}
+
+fn asks_dir() -> Res<std::path::PathBuf> {
+    let dir = shifu_home().join("asks");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700)).map_err(|e| e.to_string())?;
+    Ok(dir)
+}
+
+fn ask_files(id: &str) -> Res<(std::path::PathBuf, std::path::PathBuf)> {
+    if !id.starts_with("ask-") || !id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-') {
+        return Err(format!("不是提问编号：{id}"));
+    }
+    let dir = asks_dir()?;
+    Ok((dir.join(format!("{id}.json")), dir.join(format!("{id}.reply"))))
+}
+
+fn self_command() -> String {
+    std::env::current_exe().ok().and_then(|p| p.to_str().map(crate::launch::sh_quote)).unwrap_or_else(|| "shifu".into())
+}
+
+fn question_text(asker_title: &str, id: &str, question: &str) -> String {
+    format!("（{asker_title}问你，编号 {id}）{question}\n\n答完运行 {} reply {id} \"你的答复\"，答复会直接回到它那里。", self_command())
+}
+
+/// `shifu ask`: put a question to another conversation and wait for its `shifu reply`.
+pub fn cmd_ask(args: &[String]) -> Res<()> {
+    let mut wait = 100u64;
+    let mut rest = Vec::new();
+    let mut iter = args.iter();
+    while let Some(a) = iter.next() {
+        if a == "--wait" {
+            wait = iter.next().and_then(|v| v.parse().ok()).ok_or("--wait 后面写秒数")?;
+        } else {
+            rest.push(a.clone());
+        }
+    }
+    let (Some(target), true) = (rest.first(), rest.len() > 1) else {
+        return Err("用法: shifu ask <对话> [--wait 秒] <问题>".into());
+    };
+    let question = rest[1..].join(" ");
+    let rows = rows();
+    let row = resolve(&rows, target)?;
+    let asker = std::env::var("SHIFU_ID").ok().filter(|n| !n.is_empty());
+    if asker.as_deref() == Some(row.name.as_str()) {
+        return Err("不能问自己".into());
+    }
+    let asker_title = asker.as_deref()
+        .map(|n| rows.iter().find(|r| r.name == n && r.title != n).map_or(n.to_string(), |r| format!("{n}（{}）", r.title)))
+        .unwrap_or_else(|| "Shifu 外的程序".into());
+    let id = new_id("ask");
+    let (record, reply) = ask_files(&id)?;
+    let ask = Ask { id: id.clone(), asker, asker_title: asker_title.clone(), target_title: row.title.clone(),
+        question: question.chars().take(80).collect(), pid: std::process::id() };
+    crate::app_session::write_atomic(&record, &serde_json::to_string(&ask).map_err(|e| e.to_string())?)?;
+    let input = enqueue_to(row, &question_text(&asker_title, &id, &question))?;
+    let sent = await_delivery(&input, wait.min(20));
+    if matches!(sent.phase, crate::inbox::Phase::Cancelled | crate::inbox::Phase::Unknown) {
+        println!("{}", delivery_report(row, &sent));
+        return Ok(());
+    }
+    let end = std::time::Instant::now() + std::time::Duration::from_secs(wait);
+    loop {
+        // Checked once more after the deadline: a reply written before this process exits is never lost.
+        if let Ok(answer) = std::fs::read_to_string(&reply) {
+            println!("「{}」回复：\n{answer}", row.title);
+            return Ok(());
+        }
+        if std::time::Instant::now() >= end { break; }
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+    if ask.asker.is_some() {
+        println!("「{}」还没回（编号 {id}）。它回复后会自动送进你这个对话，不用守着。", row.title);
+    } else {
+        println!("「{}」还没回（编号 {id}）。回复后存在 {}", row.title, reply.display());
+    }
+    Ok(())
+}
+
+fn alive(pid: u32) -> bool {
+    // SAFETY: signal 0 only checks that the process exists.
+    unsafe { libc::kill(pid as libc::pid_t, 0) == 0 }
+}
+
+/// `shifu reply`: answer a `shifu ask`. A waiting asker gets it at once; otherwise it is queued to the asker.
+pub fn cmd_reply(args: &[String]) -> Res<()> {
+    let (Some(id), true) = (args.first(), args.len() > 1) else {
+        return Err("用法: shifu reply <提问编号> <答复>".into());
+    };
+    let answer = args[1..].join(" ");
+    if answer.trim().is_empty() { return Err("答复是空的".into()); }
+    let (record, reply) = ask_files(id)?;
+    let ask: Ask = serde_json::from_str(&std::fs::read_to_string(&record).map_err(|_| format!("没有编号 {id} 的提问"))?)
+        .map_err(|e| e.to_string())?;
+    let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(&reply)
+        .map_err(|_| format!("编号 {id} 已经回复过了"))?;
+    file.write_all(answer.as_bytes()).map_err(|e| e.to_string())?;
+    drop(file);
+    if alive(ask.pid) {
+        println!("已回给{}（它正在等）", ask.asker_title);
+        return Ok(());
+    }
+    let Some(asker) = ask.asker.as_deref() else {
+        println!("已存下答复；提问的程序已经不在等了");
+        return Ok(());
+    };
+    let rows = rows();
+    let row = rows.iter().find(|r| r.name == asker).ok_or_else(|| format!("提问的对话 {asker} 已经不在了；答复存在 {}", reply.display()))?;
+    let input = enqueue_to(row, &format!("（{}回复你之前的提问「{}」）{answer}", ask.target_title, ask.question))?;
+    println!("{}", delivery_report(row, &await_delivery(&input, 20)));
+    Ok(())
+}
+
+/// `shifu read`: the last lines another conversation shows, so an agent never has to open it on screen.
+pub fn cmd_read(args: &[String]) -> Res<()> {
+    let (Some(target), true) = (args.first(), args.len() <= 2) else {
+        return Err("用法: shifu read <对话> [行数]".into());
+    };
+    let lines: u32 = match args.get(1) { Some(n) => n.parse().map_err(|_| "行数要是数字")?, None => 80 };
+    let rows = rows();
+    let row = resolve(&rows, target)?;
+    let pane = row.pane.as_deref().ok_or_else(|| format!("「{}」没有终端窗格", row.title))?;
+    let start = format!("-{}", lines.clamp(1, 2000));
+    let screen = Tmux::from_env().run(["capture-pane", "-J", "-p", "-S", &start, "-t", pane])?;
+    println!("「{}」[{}] {}\n{}", row.title, row.name, row.status.label(), screen.trim_end());
     Ok(())
 }
 

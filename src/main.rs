@@ -13,6 +13,10 @@ const USAGE: &str = "shifu — 多 agent 终端工作台
   shifu status [--json]        Shifu 应用里每个对话在干什么、等了多久、在等什么、最后一句
   shifu tell <对话> [--from 谁] <话>
                                往停着的对话发消息；加 --queue --id <ID> 可向原会话排队追加
+  shifu ask <对话> [--wait 秒] <问题>
+                               问另一个对话并等它用 shifu reply 回答；等不到时答复自动送回你的对话
+  shifu reply <提问编号> <答复>   回答别的对话用 shifu ask 问你的问题
+  shifu read <对话> [行数]       看另一个对话最近显示的内容，不用去屏幕上打开它
   shifu inbox <对话> [消息ID] [--cancel]
                                查看追加消息回执，或取消尚未送入的消息
   shifu stepfun                用 Step Plan 订阅开始或继续 StepFun 会话
@@ -53,6 +57,9 @@ fn subcommand_usage(cmd: &str) -> Option<&'static str> {
         "inbox" => "用法: shifu inbox <对话名> [消息ID] [--cancel]",
         "act" => "用法: shifu act jump|right|below|own|even|finder|resume|close <名字> [页]",
         "status" => "用法: shifu status [--json]",
+        "ask" => "用法: shifu ask <对话> [--wait 秒] <问题>",
+        "reply" => "用法: shifu reply <提问编号> <答复>",
+        "read" => "用法: shifu read <对话> [行数]",
         _ => return None,
     })
 }
@@ -97,6 +104,18 @@ fn dispatch(args: &[String]) -> Result<(), String> {
             bridge::default_to_app();
             bridge::cmd_inbox(&args[1..])
         }
+        Some("ask") => {
+            bridge::default_to_app();
+            bridge::cmd_ask(&args[1..])
+        }
+        Some("reply") => {
+            bridge::default_to_app();
+            bridge::cmd_reply(&args[1..])
+        }
+        Some("read") => {
+            bridge::default_to_app();
+            bridge::cmd_read(&args[1..])
+        }
         Some("sidebar") => sidebar::run(),
         Some("version") => {
             println!("{}", shifu::SOURCE);
@@ -120,7 +139,7 @@ mod tests {
 
     #[test]
     fn help_flag_is_usage_for_commands_that_create_or_send() {
-        for cmd in ["new", "tell", "resume", "inbox", "act", "status"] {
+        for cmd in ["new", "tell", "resume", "inbox", "act", "status", "ask", "reply", "read"] {
             assert!(subcommand_usage(cmd).is_some(), "{cmd}");
             assert!(wants_help(&s(&[cmd, "--help"])));
             assert!(wants_help(&s(&[cmd, "-h"])));
@@ -131,7 +150,7 @@ mod tests {
 
     #[test]
     fn help_dispatch_does_not_touch_sessions() {
-        for cmd in ["new", "tell", "resume", "inbox", "act", "status"] {
+        for cmd in ["new", "tell", "resume", "inbox", "act", "status", "ask", "reply", "read"] {
             assert_eq!(dispatch(&s(&[cmd, "--help"])), Ok(()), "{cmd}");
         }
     }
