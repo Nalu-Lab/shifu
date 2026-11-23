@@ -1,4 +1,5 @@
 import { FitAddon } from "@xterm/addon-fit";
+import { PtySize } from "./ptysize";
 import { Terminal } from "@xterm/xterm";
 import type { IBufferCellPosition, ILink } from "@xterm/xterm";
 import type { GroupPanelPartInitParameters, IContentRenderer } from "dockview";
@@ -46,6 +47,8 @@ export class TerminalPanel implements IContentRenderer {
     },
   });
   private readonly fit = new FitAddon();
+  /** The attached client's PTY size, kept at the terminal's (see ptysize.ts). */
+  private size: PtySize | null = null;
   private name = "";
   private readonly fileLinkLabels = new CodexFileLinkLabelCache();
   /** The dock group this terminal sits in; file tabs open beside it. */
@@ -177,9 +180,7 @@ export class TerminalPanel implements IContentRenderer {
       // The DataTransfer is emptied once this handler returns; take what is needed now.
       void this.dropFiles(fileUris(data.getData("text/uri-list")), Array.from(data.files)).catch(reportError);
     });
-    this.term.onResize(({ cols, rows }) => {
-      if (this.ptyId !== null) void ptyResize(this.ptyId, cols, rows).catch(reportError);
-    });
+    this.term.onResize(({ cols, rows }) => this.size?.want(cols, rows));
     // A hidden panel has no size; fit and attach only once it is laid out.
     this.resizeObserver = new ResizeObserver(() => {
       this.fitAndAttach();
@@ -415,13 +416,16 @@ export class TerminalPanel implements IContentRenderer {
     this.attaching = true;
     const finish = beginPtyAttach();
     try {
-      const id = await termAttach(this.name, this.term.cols, this.term.rows);
+      const [cols, rows] = [this.term.cols, this.term.rows];
+      const id = await termAttach(this.name, cols, rows);
       if (this.destroyed) {
         unregister(id);
         void ptyKill(id).catch(() => undefined);
         return;
       }
       this.ptyId = id;
+      this.size = new PtySize((c, r) => ptyResize(id, c, r), reportError, cols, rows);
+      this.size.want(this.term.cols, this.term.rows);
       this.outbox.attach(id);
       this.syncScrollStrip();
       register(id, {
@@ -430,6 +434,7 @@ export class TerminalPanel implements IContentRenderer {
           if (this.ptyId !== id) return;
           this.outbox.invalidate();
           this.ptyId = null;
+          this.size = null;
           this.strip.setConnection(false, null);
           this.strip.reset();
           this.needsReattach = true;
@@ -508,6 +513,7 @@ export class TerminalPanel implements IContentRenderer {
         // The client may already have exited on its own; nothing left to kill.
       });
       this.ptyId = null;
+      this.size = null;
     }
     this.term.dispose();
   }
