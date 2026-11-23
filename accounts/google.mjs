@@ -1,9 +1,10 @@
 import { OAuth2Client } from 'google-auth-library';
 import { digest } from './store.mjs';
 
-const redirect = (port) => `http://127.0.0.1:${port}/callback`;
+const loopback = (port) => `http://127.0.0.1:${port}/callback`;
 
-export function googleIdentity(clientId, clientSecret) {
+// The desktop client returns to a loopback port; the web client passes a fixed HTTPS callback.
+export function googleIdentity(clientId, clientSecret, redirect = loopback) {
   if (!clientId || !clientSecret) throw new Error('Configure the Google Desktop OAuth client ID and secret.');
   const client = new OAuth2Client({ clientId, clientSecret, transporterOptions: { timeout: 12_000 } });
   return {

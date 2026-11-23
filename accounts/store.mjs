@@ -91,7 +91,31 @@ export class AccountStore {
     });
   }
 
-  redeem(ticket, code) {
+  // A website sign-up has no Mac: it only admits the Google account. Port 0 marks a web flow.
+  startWeb() {
+    return this.start(0, '', 'web');
+  }
+
+  // Web counterpart of identified(): never creates a Mac session.
+  identifiedWeb({ subject, email }) {
+    if (this.db.prepare('SELECT 1 FROM accounts WHERE subject = ?').get(subject)) {
+      this.db.prepare('UPDATE accounts SET email = ? WHERE subject = ?').run(email, subject);
+      return { status: 'member', email };
+    }
+    const ticket = secret();
+    this.db
+      .prepare('INSERT INTO admissions VALUES (?, ?, ?, ?, ?, 5, ?)')
+      .run(digest(ticket), subject, email, '', 'web', this.now() + 10 * minute);
+    return { status: 'invite_required', ticket, email };
+  }
+
+  pendingEmail(ticket) {
+    return this.db
+      .prepare('SELECT email FROM admissions WHERE hash = ? AND expires > ? AND attempts > 0')
+      .get(digest(ticket), this.now())?.email;
+  }
+
+  redeem(ticket, code, { web = false } = {}) {
     const now = this.now();
     const hash = digest(ticket);
     return this.transaction(() => {
@@ -113,6 +137,7 @@ export class AccountStore {
         this.db.prepare('UPDATE invites SET claimed_by = ? WHERE hash = ?').run(user.subject, codeHash);
       }
       this.db.prepare('DELETE FROM admissions WHERE hash = ?').run(hash);
+      if (web || !user.device) return { status: 'member', email: user.email };
       return this.signIn(user);
     });
   }
