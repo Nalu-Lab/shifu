@@ -284,7 +284,8 @@ export class TerminalPanel implements IContentRenderer {
         continue;
       }
       const hit = resolved[paths.indexOf(found)]!;
-      links.push({ range, text: hit.path, activate: (e) => this.pathMenu(e, hit.path, hit.is_dir, l.line) });
+      const files = l.files;
+      links.push({ range, text: hit.path, activate: (e) => files ? void this.filesMenu(e, files, cwd).catch(reportError) : this.pathMenu(e, hit.path, hit.is_dir, l.line) });
     }
     return links;
   }
@@ -326,6 +327,25 @@ export class TerminalPanel implements IContentRenderer {
     const name = this.name;
     items.push({ label: "复制终端 ID", run: () => copy(name) });
     showMenu(e.clientX, e.clientY, items);
+  }
+
+  /** One title naming several files: list them by name; a pick opens it in a Shifu tab where Shifu can show it. */
+  private async filesMenu(e: MouseEvent, files: readonly string[][], cwd: string): Promise<void> {
+    const resolved = await pathsResolve(files.flat(), cwd);
+    let at = 0;
+    const found = files.flatMap((alternatives) => {
+      const hits = resolved.slice(at, at += alternatives.length);
+      const hit = hits.find((h) => h !== null && !h.is_dir);
+      return hit ? [hit] : [];
+    });
+    showMenu(e.clientX, e.clientY, found.map(({ path }) => {
+      const inShifu = !opensOutsideShifu(path) || /\.docx$/i.test(path);
+      return {
+        label: path.split("/").pop() ?? path,
+        hint: inShifu ? "在 Shifu 里打开" : "用默认程序打开",
+        run: () => inShifu ? openFile(path, undefined, this.group) : pathOpen(path).catch(reportError),
+      };
+    }));
   }
 
   private pathMenu(e: MouseEvent, path: string, isDir: boolean, line?: number): void {

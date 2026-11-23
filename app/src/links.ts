@@ -12,6 +12,9 @@ export interface FoundLink {
   /** String indices of the clickable text, end exclusive; includes any `:line:col`. */
   start: number;
   end: number;
+  /** Every file this title names, when one Codex title is used for several (each résumé's "PDF"); each file's
+   *  alternatives as pathCandidates gives them. */
+  files?: string[][];
 }
 
 // Token boundaries locate bare paths; quoted/Markdown destinations and balanced filename brackets are read below.
@@ -291,10 +294,13 @@ export function underlinedFileLinks(text: string, cells: readonly Placed[], sour
     let end = start + 1;
     while (end < text.length && cells[end]?.underlined && cells[end].y === cells[start].y) end++;
     const label = text.slice(start, end);
-    const entry = source.find((item) => item.label === label);
-    const target = entry && parseLinkTarget(entry.target, true);
-    if (target?.kind === "path") {
-      links.push(pathCandidates(target.target).map((path) => ({ ...target, target: path, start, end })));
+    const targets = source.filter((item) => item.label === label)
+      .map((item) => parseLinkTarget(item.target, true))
+      .filter((target): target is Omit<FoundLink, "start" | "end"> => target?.kind === "path");
+    if (targets.length === 1) {
+      links.push(pathCandidates(targets[0].target).map((path) => ({ ...targets[0], target: path, start, end })));
+    } else if (targets.length > 1) {
+      links.push([{ ...targets[0], start, end, files: targets.map((target) => pathCandidates(target.target)) }]);
     }
     start = end - 1;
   }

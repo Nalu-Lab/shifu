@@ -531,6 +531,18 @@ describe("Codex underlined file titles", () => {
     expect(cells[links[0][0].start]).toEqual({ x: 3, y: 1, w: 2, underlined: true });
   });
 
+  it("binds a title repeated for several files to all of them", () => {
+    const { text, cells } = glueRows(styled("• PDF 审阅 · Word 编辑", ["PDF 审阅"]), 0);
+    const repeated = [
+      { label: "PDF 审阅", target: "/cv/%E7%AE%80%E5%8E%86-agent.pdf" },
+      { label: "PDF 审阅", target: "/cv/data.pdf" },
+    ];
+    const links = underlinedFileLinks(text, cells, repeated);
+    expect(links).toHaveLength(1);
+    expect(text.slice(links[0][0].start, links[0][0].end)).toBe("PDF 审阅");
+    expect(links[0][0].files).toEqual([["/cv/%E7%AE%80%E5%8E%86-agent.pdf", "/cv/简历-agent.pdf"], ["/cv/data.pdf"]]);
+  });
+
   it("leaves plain prose, partial titles and web destinations unbound", () => {
     for (const rows of [screen("打开 Word"), styled("打开", ["打开"]), styled("前文打开 Word后文", ["前文打开 Word后文"])]) {
       const { text, cells } = glueRows(rows, 0);
