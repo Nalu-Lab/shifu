@@ -127,7 +127,8 @@ pub const AGENTS: &[AgentSpec] = &[
     AgentSpec {
         id: "kimi",
         kind: Kind::Kimi,
-        // Agents recorded as `kimi-cli` start Kimi Code's `kimi` too.
+        // Kimi Code CLI (the TypeScript successor of kimi-cli). Its installer puts `kimi` in ~/.kimi-code/bin, which the
+        // app's PATH lists before ~/.local/bin, where uv's old kimi-cli may put one. Agents recorded as `kimi-cli` start it too.
         commands: &["kimi", "kimi-cli"],
         detect: &["kimi"],
         label: "Kimi",
