@@ -1,0 +1,2 @@
+- 新建对话的 Agent 下拉菜单多了 Gemini CLI：装了 `gemini` 就会出现，没装时列在「未安装」里，点名字打开安装说明。它目前作为普通命令启动，侧栏还看不到它的等待状态。需要同时更新 App 和 `shifu` 命令行。
+- Gemini CLI is in the agent dropdown for new conversations. It appears when `gemini` is installed; otherwise it is listed under 未安装 with a link to its install page. It currently starts as a plain command, so the sidebar does not yet show when it is waiting. Needs both the app and the `shifu` CLI updated.
