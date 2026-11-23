@@ -70,6 +70,16 @@ test('a rejected account cannot sign in, cannot be approved later, and its invit
   assert.equal(reused.json().error, 'invalid_invite');
 });
 
+test('approving or rejecting by email changes nothing when two waiting accounts share it', async (t) => {
+  const { store } = await fixture(t);
+  store.db.prepare("INSERT INTO accounts(subject, email, approved) VALUES ('a', 'same@example.test', 0), ('b', 'same@example.test', 0)").run();
+  assert.equal(store.approve('same@example.test'), false);
+  assert.equal(store.reject('same@example.test'), false);
+  assert.equal(store.approved('a'), false);
+  assert.equal(store.approved('b'), false);
+  assert.deepEqual(store.pending(), ['same@example.test', 'same@example.test']);
+});
+
 test('approval is required for existing sessions too, and accounts from before review keep access', () => {
   const dir = mkdtempSync(join(tmpdir(), 'shifu-review-'));
   try {

@@ -52,14 +52,23 @@ export class AccountStore {
     return this.db.prepare('SELECT email FROM accounts WHERE approved = 0 ORDER BY rowid').all().map((r) => r.email);
   }
 
-  // Returns true when exactly one waiting account has this email.
+  // Decides a waiting account by email. Changes nothing unless exactly one waiting account has that email.
+  decide(email, approved) {
+    return this.transaction(() => {
+      const waiting = this.db.prepare('SELECT subject FROM accounts WHERE email = ? AND approved = 0').all(email);
+      if (waiting.length !== 1) return false;
+      this.db.prepare('UPDATE accounts SET approved = ? WHERE subject = ?').run(approved, waiting[0].subject);
+      return true;
+    });
+  }
+
   approve(email) {
-    return this.db.prepare('UPDATE accounts SET approved = 1 WHERE email = ? AND approved = 0').run(email).changes === 1;
+    return this.decide(email, 1);
   }
 
   // Refuses a waiting account. Its invite stays spent, and the Google account cannot try again.
   reject(email) {
-    return this.db.prepare('UPDATE accounts SET approved = -1 WHERE email = ? AND approved = 0').run(email).changes === 1;
+    return this.decide(email, -1);
   }
 
   transaction(work) {

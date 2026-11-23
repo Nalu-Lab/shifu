@@ -10,7 +10,7 @@ try {
     console.log(waiting.length ? waiting.join('\n') : 'No one is waiting.');
   } else if ((action === 'approve' || action === 'reject') && email) {
     if (!store[action](email)) {
-      console.error(`No waiting account for ${email}.`);
+      console.error(`No single waiting account for ${email}: none, or more than one has this email.`);
       process.exitCode = 1;
     } else console.log(`${action === 'approve' ? 'Approved' : 'Rejected'} ${email}.`);
   } else {
