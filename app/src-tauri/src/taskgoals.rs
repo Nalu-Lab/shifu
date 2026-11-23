@@ -265,7 +265,7 @@ fn deliver(cfg: &Config, agent: &Agent, task_id: &str, text: &str, way: &Way, tm
                 return Err("conversation changed or has a draft; message not sent".into());
             }
             let screen = tmux.run(["capture-pane", "-e", "-p", "-t", pane])?;
-            if !shifu::inbox::composer_empty(agent.kind, &screen) {
+            if !shifu::inbox::composer_empty_at(agent.kind, &screen, shifu::inbox::cursor(tmux, pane)) {
                 return Err("conversation has a draft; message not sent".into());
             }
             // Codex may fold a long first prompt into a paste summary. Its visible text is not

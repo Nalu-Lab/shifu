@@ -1,0 +1,2 @@
+- 关掉颜色（`NO_COLOR=1`）的 Claude 对话也能收到排队消息了。以前没有颜色时，Shifu 分不出输入框里灰色的建议句和你打了一半的字，一直当成有草稿，消息永远不送（Mac mini 上交接消息因此停了两天）。现在没有颜色时看光标：光标停在建议句开头就是空的，停在字后面就是你在打字，照旧不送。
+- Claude conversations with colour turned off (`NO_COLOR=1`) receive queued messages again. Without colour Shifu could not tell Claude's grey suggestion from a half-typed draft, so it waited forever (handovers on the Mac mini sat for two days). Without colour it now looks at the cursor: at the start of the suggestion means empty; after the text means you are typing, and nothing is sent.
