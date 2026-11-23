@@ -1,0 +1,2 @@
+- 终端偶尔把 Codex 的「Working」那行或输入框显示两遍、错开一行、字母乱掉的问题修了。原因是改窗口或分屏大小时，几次调整可能乱序送到 tmux，切回标签页重连那一刻的调整还会丢掉，tmux 按一个尺寸画、Shifu 按另一个尺寸显示。现在只送最新的尺寸、一次一个，重连后发现尺寸变了会补一次。
+- Fixed the terminal sometimes showing Codex's "Working" line or its input box twice, one row apart, with letters mixed up. Quick resizes (dragging a split, toggling the sidebar) could reach tmux out of order, and a resize while a tab was reconnecting was dropped, so tmux drew for one size while Shifu showed another. Now only the latest size is sent, one at a time, and a reconnect catches up a size that changed meanwhile.
