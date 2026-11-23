@@ -47,6 +47,12 @@ pub const CLIS: &[CliSpec] = &[
         install_url: "https://github.com/Nalu-Lab/shifu/blob/main/docs/STEPFUN.md",
     },
     CliSpec { kind: "qwen", name: "Qwen Code", programs: &["qwen"], install_url: "https://github.com/QwenLM/qwen-code" },
+    CliSpec {
+        kind: "gemini",
+        name: "Gemini CLI",
+        programs: &["gemini"],
+        install_url: "https://geminicli.com/docs/get-started/installation/",
+    },
 ];
 
 /// What was found for one agent.
@@ -239,7 +245,7 @@ mod tests {
         }
         std::fs::write(first.join("codex"), "").unwrap(); // not executable
         std::fs::create_dir_all(first.join("claude")).unwrap(); // a folder
-        for (dir, name) in [(&second, "codex"), (&second, "claude"), (&second, "agy")] {
+        for (dir, name) in [(&second, "codex"), (&second, "claude"), (&second, "agy"), (&first, "gemini")] {
             let p = dir.join(name);
             std::fs::write(&p, "#!/bin/sh\n").unwrap();
             std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
@@ -250,6 +256,7 @@ mod tests {
         let path_of = |kind: &str| found.iter().find(|f| f.kind == kind).unwrap().path.clone();
         assert_eq!(path_of("claude"), Some(second.join("claude").to_string_lossy().into_owned()));
         assert_eq!(path_of("antigravity"), Some(second.join("agy").to_string_lossy().into_owned()));
+        assert_eq!(path_of("gemini"), Some(first.join("gemini").to_string_lossy().into_owned()));
         assert_eq!(path_of("kimi"), None);
         std::fs::remove_dir_all(&root).unwrap();
     }
