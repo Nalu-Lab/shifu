@@ -41,8 +41,25 @@ input{width:100%;font:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,mono
 button,a.button{display:inline-block;margin-top:16px;font:inherit;font-weight:500;padding:10px 18px;border:0;border-radius:10px;background:var(--accent);color:#fff;text-decoration:none;cursor:pointer}
 .error{color:#c5221f}@media (prefers-color-scheme:dark){.error{color:#f28b82}}
 ol{padding-left:20px;color:var(--muted)}ol li{margin-bottom:6px}
-</style></head><body><main><div class="brand">Shifu · private beta</div>${body}</main></body></html>`;
+footer{margin-top:24px;font-size:13px;color:var(--muted)}footer a{color:var(--muted)}
+h2{font-size:16px;margin:20px 0 6px}ul{padding-left:20px;color:var(--muted)}ul li{margin-bottom:6px}
+</style></head><body><main><div class="brand">Shifu · private beta</div>${body}<footer><a href="/">Home</a> · <a href="/privacy">Privacy</a></footer></main></body></html>`;
 }
+
+const PRIVACY = `<h1>Privacy</h1>
+<p>Last updated 23 November 2026.</p>
+<p>This site and the Shifu beta are run by Eddie Lin. Contact: ltalpha51759@gmail.com.</p>
+<h2>What we keep</h2>
+<ul><li>Your Google account ID and email address, from Google sign-in. We ask Google for nothing else.</li>
+<li>Whether you have redeemed an invite and been approved. Invite codes are stored only as a one-way hash.</li>
+<li>For each Mac you sign in on: a random ID, the name you give it, and a hashed session that expires after 30 days.</li></ul>
+<h2>What we don't keep</h2>
+<ul><li>Your projects, terminal sessions, transcripts, agent credentials and pairing keys stay on your Mac.</li>
+<li>We keep no access logs, use no analytics or advertising, and sell or share nothing.</li></ul>
+<h2>Where it lives</h2>
+<p>On one server in Google Cloud (us-west1), with daily disk snapshots kept for 14 days.</p>
+<h2>Deleting your account</h2>
+<p>Email the address above. We delete your account and Mac list; snapshots age out within 14 days.</p>`;
 
 const signInButton = `<a class="google" href="/auth/google"><img src="/google-sign-in.png" alt="">Sign in with Google</a>`;
 
@@ -103,10 +120,11 @@ export async function accountWeb(app, store, google, { origin }) {
       reply,
       page(
         'Join the beta',
-        `<h1>Join the Shifu beta</h1><p>Shifu is invite-only for now. Sign in with Google, then enter the invite code you were given.</p>${signInButton}`
+        `<h1>Join the Shifu beta</h1><p>Shifu is a Mac app for running coding agents such as Claude Code and Codex side by side, so you can see at a glance which session needs you.</p><p>The beta is invite-only. Sign in with Google, then enter the invite code you were given.</p>${signInButton}`
       )
     )
   );
+  app.get('/privacy', (_request, reply) => html(reply, page('Privacy', PRIVACY)));
   app.get('/google-sign-in.png', (_request, reply) =>
     reply.header('Content-Type', 'image/png').header('Cache-Control', 'public, max-age=86400').send(googleButton)
   );
