@@ -1,0 +1,2 @@
+- 合盖继续运行开着、接着外接屏时，用电池合盖后外接屏会被自动叫亮，不再一直黑着（插电时 macOS 本来就会保持亮）。
+- With 合盖继续运行 on and an external screen attached, closing the lid on battery now wakes the external screen instead of leaving it dark.
