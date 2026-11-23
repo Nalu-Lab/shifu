@@ -6,7 +6,7 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 
 普通会话优先使用下载包；源码构建方式收在下方开发者说明。
 
-Shifu 默认用免确认模式启动 Claude、Codex、CodeBuddy、Kimi 和 Qwen Code（如 `--dangerously-skip-permissions`、`--dangerously-bypass-approvals-and-sandbox`、`--yolo`）。它们执行文件修改和命令时不会逐项请求批准。新建任务窗口里的「权限」可改成「用 Agent 自己的设置」：之后新开或恢复的对话不再加这些参数，按各家自己的配置决定何时询问。
+Shifu 默认用免确认模式启动 Claude、Codex、CodeBuddy、Kimi、Qwen Code 和 opencode（opencode 加 `--auto`，你明确 deny 的规则仍然有效；如 `--dangerously-skip-permissions`、`--dangerously-bypass-approvals-and-sandbox`、`--yolo`）。它们执行文件修改和命令时不会逐项请求批准。新建任务窗口里的「权限」可改成「用 Agent 自己的设置」：之后新开或恢复的对话不再加这些参数，按各家自己的配置决定何时询问。Pi 本身不弹批准，这个开关对它不起作用。
 
 应用用 Shifu 自己的固定证书签名（不是 Apple 颁发的），尚未公证。首次打开若被 macOS 拦截，确认来源后按「系统设置 → 隐私与安全性」中的对应提示处理。
 
@@ -123,4 +123,4 @@ cd app && npm run tauri dev                          # 开发模式
 
 StepFun 需额外配置 Node/Pi 和订阅密钥，见[StepFun设置](STEPFUN.md)。App与配套CLI应成对更新。后台托管脚本见[AUTOPILOT.md](AUTOPILOT.md)，不会因安装自动启动。
 
-当前源码另提供 [Qwen Code / Token Plan](QWEN.md)、[每日分析定时补跑](DAILY-ANALYSIS.md)和[工作区接续 / 会话恢复](WORKSPACES.md)。这些源码增量尚未更新到上方下载包；需要它们时从同一版本构建 App 与 CLI。
+当前源码另提供 opencode 与 Pi 两种 Agent（装了 `opencode` / `pi` 就出现在新建列表；用你自己的配置和账号，Shifu 不改它们的配置文件，详见[Agent 描述表](AGENTS.md)）、[Qwen Code / Token Plan](QWEN.md)、[每日分析定时补跑](DAILY-ANALYSIS.md)和[工作区接续 / 会话恢复](WORKSPACES.md)。这些源码增量尚未更新到上方下载包；需要它们时从同一版本构建 App 与 CLI。

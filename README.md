@@ -32,7 +32,7 @@ Agent 多起来以后，不用逐个翻终端：Shifu 把需要你接手的会�
 
 ## 是什么
 
-Shifu 把 Claude Code、Codex、Kimi、CodeBuddy、Antigravity，以及可选的 StepFun、Qwen Code 放进同一个 macOS 窗口。左侧按项目和任务组织会话，显示谁在运行、谁在等批准、谁在等你回复；右侧是各家 Agent 自己的终端，可以拖动标签、左右或上下分屏。
+Shifu 把 Claude Code、Codex、Kimi、CodeBuddy、Antigravity、opencode、Pi，以及可选的 StepFun、Qwen Code 放进同一个 macOS 窗口。左侧按项目和任务组织会话，显示谁在运行、谁在等批准、谁在等你回复；右侧是各家 Agent 自己的终端，可以拖动标签、左右或上下分屏。
 
 会话由独立的 tmux 服务管理，桌面版只负责显示和操作。关掉或重开窗口不会结束 Agent；回来时恢复任务与分屏布局。命令行也能单独使用，设计见[架构说明](docs/ARCHITECTURE.md)。
 
@@ -155,6 +155,7 @@ npm run build:desktop -- --debug
 - Claude Code、Codex、CodeBuddy 的 hooks 通过启动参数挂在 Shifu 开的那个进程上，**不改**你的 `~/.claude/settings.json`、`~/.codex/config.toml`。
 - **Kimi**：Kimi 只认自己的配置文件，Shifu 会把 hooks 写进 `~/.kimi-code/config.toml`，你自己的 hook 原样保留，第一次写之前备份成 `config.toml.before-shifu`。在 Shifu 外面开的 Kimi 也会调用这些 hook，但它们发现不是 Shifu 开的就什么都不做。
 - **Qwen Code**：使用独立的 `SHIFU_HOME/qwen` 配置与会话；密钥从环境、本人准备的本地文件或兼容密钥库取得，Shifu 不把密钥值写入生成设置。[配置说明](docs/QWEN.md)。
+- **opencode**：状态插件写在 `SHIFU_HOME/opencode`，通过环境变量 `OPENCODE_CONFIG_CONTENT` 加载，与你的配置合并，不改 `~/.config/opencode` 和项目的 `.opencode/`。**Pi**：用你自己的 `pi`、扩展和模型，只多加一个 `--extension`（Shifu 的状态扩展，在 `SHIFU_HOME/pi`）。
 - **Antigravity**：会在 `~/.gemini/config/hooks.json` 写入 `shifu-status` 分组，保留其他分组；首次改写已有文件前备份为 `hooks.json.before-shifu`。
 - 额度显示：Claude 的额度从它交给 statusLine 的数据里取（你自己的 statusLine 照常显示）；Codex 和 CodeBuddy 的额度读本机会话记录；Kimi 的额度复用 Kimi Code 本机有效登录令牌查询，不另存该令牌；Antigravity 通过当前登录的 `agy` 读取用量。
 - Shifu 用自己的 tmux socket（`shifu-app`，命令行版是 `shifu`），不碰你原来的 tmux。

@@ -32,7 +32,7 @@ When more agents are running, Shifu brings the conversations that need you toget
 
 ## What it is
 
-Shifu puts Claude Code, Codex, Kimi, CodeBuddy, Antigravity, plus optional StepFun and Qwen Code, in one macOS window. The sidebar groups conversations by project and task and shows who is running, waiting for approval or waiting for your reply. Each agent's own terminal stays on the right, with tabs you can drag into horizontal or vertical splits.
+Shifu puts Claude Code, Codex, Kimi, CodeBuddy, Antigravity, opencode, Pi, plus optional StepFun and Qwen Code, in one macOS window. The sidebar groups conversations by project and task and shows who is running, waiting for approval or waiting for your reply. Each agent's own terminal stays on the right, with tabs you can drag into horizontal or vertical splits.
 
 A dedicated tmux server owns the sessions; the desktop app displays and controls them. Closing or reopening the window does not end an agent. Tasks and split layouts return when you reopen it. The CLI also works on its own; see [Architecture](docs/ARCHITECTURE.md).
 
@@ -155,6 +155,7 @@ Conversation search, quotas and process usage live in the same window.
 - Hooks for Claude Code, Codex and CodeBuddy are passed as launch arguments to the processes Shifu starts. Shifu does **not** change your `~/.claude/settings.json` or `~/.codex/config.toml`.
 - **Kimi**: Kimi only reads its own config file, so Shifu writes hooks into `~/.kimi-code/config.toml`. Your own hooks stay, and the file is backed up to `config.toml.before-shifu` before the first write. Kimi sessions started outside Shifu call these hooks too, but they do nothing when the session was not started by Shifu.
 - **Qwen Code**: configuration and sessions use an isolated `SHIFU_HOME/qwen` directory. Credentials come from the environment, an optional user-managed local file or a compatible vault; key values are not written into generated settings. [Setup](docs/QWEN.md#english).
+- **opencode**: the status plugin lives in `SHIFU_HOME/opencode` and is loaded through `OPENCODE_CONFIG_CONTENT`, merged with your config; `~/.config/opencode` and a project's `.opencode/` are not edited. **Pi**: your own `pi`, extensions and models, plus one `--extension` (Shifu's status extension in `SHIFU_HOME/pi`).
 - **Antigravity**: writes a `shifu-status` group in `~/.gemini/config/hooks.json`, keeping other groups. An existing file is backed up to `hooks.json.before-shifu` before its first update.
 - Quotas: Claude's come from the data Claude hands to its statusLine (your own statusLine still shows as before); Codex's and CodeBuddy's are read from local session logs. Kimi's are queried using Kimi Code's current local login token without storing a separate copy. Antigravity usage comes from the signed-in `agy` CLI.
 - Shifu uses its own tmux socket (`shifu-app`, `shifu` for the CLI) and leaves your usual tmux alone.

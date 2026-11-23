@@ -174,6 +174,55 @@ fn probe(cli: &str, dir: &Path) -> Result<Vec<Value>, String> {
     result
 }
 
+/// `opencode models`: one `provider/model` per line, from the providers the user's own config and logins set up.
+pub fn parse_opencode(text: &str) -> Result<Vec<ModelInfo>, String> {
+    let models: Vec<ModelInfo> = text
+        .lines()
+        .map(str::trim)
+        .filter(|l| l.contains('/') && !l.contains(char::is_whitespace))
+        .map(|id| ModelInfo { id: id.to_string(), label: id.to_string(), efforts: Vec::new() })
+        .collect();
+    if models.is_empty() { Err("opencode 没有列出模型".into()) } else { Ok(models) }
+}
+
+/// Pi's thinking levels (`--thinking`), offered for models whose `thinking` column says yes.
+const PI_EFFORTS: [&str; 5] = ["minimal", "low", "medium", "high", "xhigh"];
+
+/// `pi --list-models`: a table `provider  model  context  max-out  thinking  images` of the models it has keys for.
+pub fn parse_pi(text: &str) -> Result<Vec<ModelInfo>, String> {
+    let models: Vec<ModelInfo> = text
+        .lines()
+        .filter_map(|line| {
+            let cols: Vec<&str> = line.split_whitespace().collect();
+            if cols.len() < 6 || cols[0] == "provider" { return None; }
+            let id = format!("{}/{}", cols[0], cols[1]);
+            let efforts = if cols[4] == "yes" { PI_EFFORTS.map(String::from).to_vec() } else { Vec::new() };
+            Some(ModelInfo { label: id.clone(), id, efforts })
+        })
+        .collect();
+    if models.is_empty() { Err("Pi 没有可用的模型".into()) } else { Ok(models) }
+}
+
+/// Runs a listing command in `dir` and returns what it printed, giving up after `PROBE_TIMEOUT`.
+fn listing(mut command: Command, dir: &Path) -> Result<String, String> {
+    use std::io::Read;
+    std::fs::create_dir_all(dir).map_err(|e| format!("create {} failed: {e}", dir.display()))?;
+    let name = command.get_program().to_string_lossy().into_owned();
+    let mut child = command.current_dir(dir).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null())
+        .spawn().map_err(|e| format!("{name} 没能启动: {e}"))?;
+    let mut out = child.stdout.take().ok_or("没有输出管道")?;
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        let mut text = String::new();
+        let _ = out.read_to_string(&mut text);
+        let _ = tx.send(text);
+    });
+    let result = rx.recv_timeout(PROBE_TIMEOUT).map_err(|_| format!("{name} 没在 {} 秒内回答", PROBE_TIMEOUT.as_secs()));
+    let _ = child.kill();
+    let _ = child.wait();
+    result
+}
+
 fn codex_home() -> PathBuf {
     match std::env::var("CODEX_HOME").ok().filter(|h| !h.is_empty()) {
         Some(h) => PathBuf::from(h),
@@ -202,13 +251,38 @@ pub fn collect(scratch: &Path) -> Vec<AgentModels> {
     let kimi = std::fs::read_to_string(&kimi_file).map_err(|e| format!("读 {} 失败: {e}", kimi_file.display())).and_then(|t| parse_kimi(&t));
     let stepfun = serde_json::from_str(shifu::stepfun::MODELS).map_err(|e| e.to_string());
     let qwen = serde_json::from_str(shifu::qwen::MODELS).map_err(|e| e.to_string());
-    vec![entry("claude", joined(claude)), entry("codex", codex), entry("codebuddy", joined(codebuddy)), entry("kimi", kimi), entry("antigravity", joined(antigravity)), entry("stepfun", stepfun), entry("qwen", qwen)]
+    // An empty OPENCODE_CONFIG_CONTENT keeps opencode from writing a starter ~/.config/opencode/opencode.json.
+    let oc_dir = scratch.join("opencode");
+    let opencode = std::thread::spawn(move || {
+        let mut c = Command::new("opencode");
+        c.arg("models").env("OPENCODE_CONFIG_CONTENT", "{}");
+        listing(c, &oc_dir).and_then(|t| parse_opencode(&t))
+    });
+    let pi_dir = scratch.join("pi");
+    let pi = std::thread::spawn(move || {
+        let mut c = Command::new("pi");
+        c.args(["--offline", "--list-models"]);
+        listing(c, &pi_dir).and_then(|t| parse_pi(&t))
+    });
+    vec![entry("claude", joined(claude)), entry("codex", codex), entry("codebuddy", joined(codebuddy)), entry("kimi", kimi), entry("antigravity", joined(antigravity)), entry("stepfun", stepfun), entry("qwen", qwen), entry("opencode", joined(opencode)), entry("pi", joined(pi))]
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn opencode_and_pi_list_provider_slash_model_ids() {
+        let oc = parse_opencode("opencode/big-pickle\nanthropic/claude-sonnet-5\nINFO something happened\n").unwrap();
+        assert_eq!(oc.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["opencode/big-pickle", "anthropic/claude-sonnet-5"]);
+        assert!(parse_opencode("").is_err());
+        let pi = parse_pi("provider  model   context  max-out  thinking  images\nmock      mock-1  128K     16.4K    no        no\nanthropic claude-x 200K 64K yes yes\n").unwrap();
+        assert_eq!(pi[0].id, "mock/mock-1");
+        assert!(pi[0].efforts.is_empty());
+        assert_eq!(pi[1].efforts, PI_EFFORTS);
+        assert!(parse_pi("No models available.\n").is_err());
+    }
 
     #[test]
     fn antigravity_uses_cli_model_ids_and_display_names() {

@@ -62,7 +62,7 @@ describe("installed agents", () => {
   it("offers what is installed, keeps the terminal, and points at the rest", () => {
     const { installed, missing } = splitAgents(report(["codex", "qwen", "gemini"]));
     expect(installed.map((a) => a.kind)).toEqual(["codex", "qwen", "gemini", "terminal"]);
-    expect(missing.map((a) => a.kind)).toEqual(["claude", "codebuddy", "kimi", "antigravity", "stepfun"]);
+    expect(missing.map((a) => a.kind)).toEqual(["claude", "codebuddy", "kimi", "antigravity", "stepfun", "opencode", "pi"]);
     expect(installUrl(report([]), "kimi")).toBe("https://example.com/kimi");
     expect(splitAgents(report(["antigravity"])).missing).toContainEqual({ kind: "gemini", name: "Gemini CLI" });
   });
