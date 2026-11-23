@@ -381,13 +381,14 @@ mod tests {
     }
 
     #[test]
-    fn opencode_gets_its_plugin_through_the_environment_and_bypass_through_permissions() {
+    fn opencode_gets_its_plugin_through_the_environment_and_bypass_through_auto() {
         let plugin = "/h/.shifu/opencode/shifu-status.js";
         let content = r#"OPENCODE_CONFIG_CONTENT='{"plugin":["/h/.shifu/opencode/shifu-status.js"]}'"#;
         let pick = model_flags(Kind::OpenCode, Some("anthropic/claude-sonnet-5"), Some("high"));
         assert_eq!(pick, ["-m", "anthropic/claude-sonnet-5"]);
         let bypass = agent_command(Kind::OpenCode, "opencode", "/s", plugin, &pick, Permissions::Bypass);
-        assert_eq!(bypass, format!(r#"{content} OPENCODE_PERMISSION='{{"edit":"allow","bash":"allow","webfetch":"allow"}}' 'opencode' '-m' 'anthropic/claude-sonnet-5'"#));
+        // --auto approves everything the user has not explicitly denied; their `deny` rules still hold.
+        assert_eq!(bypass, format!("{content} 'opencode' --auto '-m' 'anthropic/claude-sonnet-5'"));
         let own = agent_command(Kind::OpenCode, "opencode", "/s", plugin, &[], Permissions::Own);
         assert_eq!(own, format!("{content} 'opencode'"));
         let by_id = resume_command(Kind::OpenCode, "opencode", "/s", plugin, Some("ses_9"), &pick, Permissions::Own);

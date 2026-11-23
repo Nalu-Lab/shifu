@@ -66,9 +66,6 @@ const NONE: &[&str] = &[];
 const MODEL: &[&str] = &["--model", "{model}"];
 const EFFORT: &[&str] = &["--effort", "{effort}"];
 
-/// opencode's Bypass: let edits, shell commands and web fetches run without asking. opencode merges
-/// `OPENCODE_PERMISSION` over the permission rules of every config it loaded.
-pub const OPENCODE_BYPASS: &str = r#"{"edit":"allow","bash":"allow","webfetch":"allow"}"#;
 
 /// In the order the picker shows them; the first installed one is the default for a new user.
 pub const AGENTS: &[AgentSpec] = &[
@@ -205,9 +202,9 @@ pub const AGENTS: &[AgentSpec] = &[
         detect: &["opencode"],
         label: "opencode",
         install_url: "https://opencode.ai/docs/",
-        bypass_args: NONE,
+        bypass_args: &["--auto"],
         own_args: NONE,
-        bypass_env: &[("OPENCODE_PERMISSION", OPENCODE_BYPASS)],
+        bypass_env: &[],
         model_args: &["-m", "{model}"],
         effort_args: NONE,
         resume_by_id: &["--session", "{id}"],
