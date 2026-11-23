@@ -179,7 +179,18 @@ h1 {
 }
 .hero-shot { margin: var(--s8) auto 0; max-width: 1120px; }
 .hero-shot .window { display: block; width: fit-content; max-width: 100%; margin: 0 auto; }
-.hero-shot img { display: block; }
+.hero-shot img, .hero-shot video { display: block; }
+.hero-video { position: relative; }
+.hero-video video { aspect-ratio: 1440 / 924; height: auto; background: #0b0b0d; }
+.video-play {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: rgba(11,12,15,.82); color: var(--text); font: 600 16px/1 var(--font);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.video-play svg { width: 18px; height: 18px; }
+.video-play:hover { background: rgba(30,32,38,.9); }
+.video-play[hidden] { display: none; }
 
 /* One zoom for every product image: the hero's. A crop of N source pixels is shown at N * (hero width / 1200). */
 .scaled { width: calc(var(--w) / 1200 * min(1120px, 100vw - 2 * var(--pad))); max-width: 100%; height: auto; }
@@ -408,6 +419,7 @@ kbd {
 /* Phones: each section shows one tight crop (via <picture>) at its own size instead of a shrunken window. */
 @media (max-width: 600px) {
   .scaled { width: auto; }
+  .hero-video video { width: 100%; max-width: 480px; aspect-ratio: 480 / 778; }
   .desktop-only { display: none !important; }
   .feature-media { justify-content: center; }
   .more { grid-template-columns: 1fr; }

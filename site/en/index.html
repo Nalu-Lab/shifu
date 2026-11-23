@@ -34,7 +34,6 @@
 
 <meta name="twitter:title" content="Shifu — a macOS workbench for coding agents">
 <meta name="twitter:image" content="../assets/og.png">
-<link rel="preload" as="image" href="../assets/main-en.webp" media="(min-width: 601px)" fetchpriority="high">
 <link rel="stylesheet" href="../styles.css">
 </head>
 <body>
@@ -111,13 +110,33 @@
     </ul>
 
     <figure class="hero-shot hero-glow">
-      <picture class="window">
-        <source media="(max-width: 600px)" srcset="../assets/approval-en.webp" width="480" height="440">
-        <img class="scaled" style="--w:1200" src="../assets/main-en.webp" width="1200" height="770" fetchpriority="high" decoding="async" alt="The Shifu window: the sidebar lists conversations waiting for approval, finished or asking a question, then groups them by project; on the right, Claude Code and Gemini CLI run side by side, one changing the rate-limit middleware and one writing a load test.">
-      </picture>
+      <div class="window hero-video">
+        <video id="hero-video" class="scaled" style="--w:1200" width="1440" height="924" autoplay muted loop playsinline preload="metadata" poster="../assets/video/hero-poster-en.webp" data-mobile-poster="../assets/video/hero-m-poster-en.webp" aria-label="Demo video: three agents work in a split view; Codex stops to ask approval for git push, the sidebar moves it under “waiting for you” and a notification appears; ⌘J jumps there, Enter approves and it keeps going; Claude Code finishes and its row shows done.">
+          <!-- Desktop first (browsers that ignore media take the first source), then the phone crop. -->
+          <source media="(min-width: 601px)" src="../assets/video/hero-en.webm" type="video/webm">
+          <source media="(min-width: 601px)" src="../assets/video/hero-en.mp4" type="video/mp4">
+          <source media="(max-width: 600px)" src="../assets/video/hero-m-en.webm" type="video/webm">
+          <source media="(max-width: 600px)" src="../assets/video/hero-m-en.mp4" type="video/mp4">
+        </video>
+        <script>
+          // Before autoplay can start: phones get the cropped poster; reduced motion gets the poster and a play button.
+          (function () {
+            var v = document.getElementById('hero-video');
+            if (window.matchMedia('(max-width: 600px)').matches) v.poster = v.getAttribute('data-mobile-poster');
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+              v.removeAttribute('autoplay'); v.autoplay = false; v.pause();
+              document.documentElement.classList.add('rm-video');
+            }
+          })();
+        </script>
+        <button class="video-play" type="button" hidden>
+          <svg viewbox="0 0 20 20" aria-hidden="true"><path d="M7 4.5v11l9-5.5z" fill="currentColor"/></svg>
+          <span>Play demo</span>
+        </button>
+      </div>
       <figcaption id="demo-note">
         
-        <span>* Every screenshot on this page shows the current version (0.4.2 preview plus Gemini CLI from source) running in an isolated demo; projects, tasks, terminal output and times are demo data. The app's own labels are in Chinese for now.</span>
+        <span>* The video and screenshots show the current version (0.4.2 preview plus Gemini CLI from source) running in an isolated demo; projects, tasks, terminal output and times are demo data, and the notification banner and key hints in the video are added overlays. The app's own labels are in Chinese for now.</span>
       </figcaption>
     </figure>
   </div>

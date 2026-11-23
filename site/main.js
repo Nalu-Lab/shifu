@@ -19,6 +19,18 @@
     });
   }
 
+  // Hero video: with reduced motion it stays on its poster until the play button is pressed.
+  var video = document.getElementById('hero-video');
+  var playBtn = document.querySelector('.video-play');
+  if (video && playBtn && root.classList.contains('rm-video')) {
+    playBtn.hidden = false;
+    playBtn.addEventListener('click', function () {
+      playBtn.hidden = true;
+      video.controls = true;
+      video.play();
+    });
+  }
+
   // Header border once scrolled.
   var header = document.querySelector('.site-header');
   function onScroll() { header.classList.toggle('scrolled', window.scrollY > 8); }

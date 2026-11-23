@@ -34,7 +34,6 @@
 <meta data-l="zh" name="twitter:title" content="Shifu — macOS 编程 Agent 工作台">
 <meta data-l="en" name="twitter:title" content="Shifu — a macOS workbench for coding agents">
 <meta name="twitter:image" content="{{ROOT}}assets/og.png">
-<link rel="preload" as="image" href="{{ROOT}}assets/main-{L}.webp" media="(min-width: 601px)" fetchpriority="high">
 <link rel="stylesheet" href="{{ROOT}}styles.css">
 </head>
 <body>
@@ -112,15 +111,37 @@
     </ul>
 
     <figure class="hero-shot hero-glow">
-      <picture class="window">
-        <source media="(max-width: 600px)" srcset="{{ROOT}}assets/approval-{L}.webp" width="480" height="440">
-        <img class="scaled" style="--w:1200" src="{{ROOT}}assets/main-{L}.webp" width="1200" height="770" fetchpriority="high" decoding="async"
-             data-zh-alt="Shifu 主窗口：侧栏「在等你」列出等批准、做完了和在问你的会话，下面按项目分组；右侧 Claude Code 和 Gemini CLI 左右分屏，一个在改限流中间件，一个在写压测脚本。"
-             data-en-alt="The Shifu window: the sidebar lists conversations waiting for approval, finished or asking a question, then groups them by project; on the right, Claude Code and Gemini CLI run side by side, one changing the rate-limit middleware and one writing a load test.">
-      </picture>
+      <div class="window hero-video">
+        <video id="hero-video" class="scaled" style="--w:1200" width="1440" height="924"
+               autoplay muted loop playsinline preload="metadata" poster="{{ROOT}}assets/video/hero-poster-{L}.webp"
+               data-mobile-poster="{{ROOT}}assets/video/hero-m-poster-{L}.webp"
+               data-zh-aria-label="演示视频：三个 Agent 分屏工作；Codex 停下来请求批准 git push，侧栏把它移到「在等你」并弹出通知；按 ⌘J 跳过去、按回车批准，它继续运行；Claude Code 做完，侧栏显示做完了。"
+               data-en-aria-label="Demo video: three agents work in a split view; Codex stops to ask approval for git push, the sidebar moves it under “waiting for you” and a notification appears; ⌘J jumps there, Enter approves and it keeps going; Claude Code finishes and its row shows done.">
+          <!-- Desktop first (browsers that ignore media take the first source), then the phone crop. -->
+          <source media="(min-width: 601px)" src="{{ROOT}}assets/video/hero-{L}.webm" type="video/webm">
+          <source media="(min-width: 601px)" src="{{ROOT}}assets/video/hero-{L}.mp4" type="video/mp4">
+          <source media="(max-width: 600px)" src="{{ROOT}}assets/video/hero-m-{L}.webm" type="video/webm">
+          <source media="(max-width: 600px)" src="{{ROOT}}assets/video/hero-m-{L}.mp4" type="video/mp4">
+        </video>
+        <script>
+          // Before autoplay can start: phones get the cropped poster; reduced motion gets the poster and a play button.
+          (function () {
+            var v = document.getElementById('hero-video');
+            if (window.matchMedia('(max-width: 600px)').matches) v.poster = v.getAttribute('data-mobile-poster');
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+              v.removeAttribute('autoplay'); v.autoplay = false; v.pause();
+              document.documentElement.classList.add('rm-video');
+            }
+          })();
+        </script>
+        <button class="video-play" type="button" hidden>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4.5v11l9-5.5z" fill="currentColor"/></svg>
+          <span data-l="zh">播放演示</span><span data-l="en">Play demo</span>
+        </button>
+      </div>
       <figcaption id="demo-note">
-        <span data-l="zh">* 本页所有截图都来自当前版本（{{VERSION}} 预览版，外加源码中的 Gemini CLI）在独立演示环境里的运行画面；项目、任务、终端内容和时间都是演示数据。</span>
-        <span data-l="en">* Every screenshot on this page shows the current version ({{VERSION}} preview plus Gemini CLI from source) running in an isolated demo; projects, tasks, terminal output and times are demo data. The app's own labels are in Chinese for now.</span>
+        <span data-l="zh">* 视频和截图都来自当前版本（{{VERSION}} 预览版，外加源码中的 Gemini CLI）在独立演示环境里的运行画面，项目、任务、终端内容和时间都是演示数据；视频里的通知横幅和按键提示是后期叠加的示意。</span>
+        <span data-l="en">* The video and screenshots show the current version ({{VERSION}} preview plus Gemini CLI from source) running in an isolated demo; projects, tasks, terminal output and times are demo data, and the notification banner and key hints in the video are added overlays. The app's own labels are in Chinese for now.</span>
       </figcaption>
     </figure>
   </div>

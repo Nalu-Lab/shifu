@@ -21,6 +21,7 @@ site/
     ├── pane-*.webp       一个 Claude Code 终端（「真终端」）
     ├── newtask-*.webp    新建任务弹窗连同周围（桌面）
     ├── popover-*.webp    只有新建任务弹窗（手机）
+    ├── video/            首屏演示视频：hero-{zh,en}.mp4/.webm（1440×924）、hero-m-*（手机竖版裁切 480 宽）、各自的 poster
     ├── og.png            分享预览图（docs/images/shifu-social-preview.png 原样复制）
     └── logo-96.webp / favicon-32.png / apple-touch-icon.png   来自 app/src-tauri/icons/
 ```
@@ -39,6 +40,17 @@ site/
 - 右上角的切换是普通链接，跳到另一种语言的页面，同时把选择记在 localStorage（`shifu-lang`）。页面语言以网址为准，不根据记录或浏览器语言自动跳转，分享出去的链接打开的就是那种语言。
 - 源文件里 `data-zh-alt` / `data-en-alt`、`data-zh-aria-label` 之类的属性，生成时变成对应语言的 `alt` / `aria-label`；图片路径里的 `-{L}` 换成 `-zh` / `-en`。
 
+### 首屏视频怎么做的
+
+15.7 秒、无声、首尾交叉淡化成无缝循环。故事：三个 Agent 分屏工作 → Codex 请求批准 `git push`，侧栏把它挪到「在等你」并出现通知横幅 → ⌘J 跳过去 → 回车批准，Codex 继续，侧栏回到运行中 → Claude Code 做完，侧栏显示 ✓ 做完了。
+
+- **真实录制**：侧栏、分屏、状态变化、终端输出都是隔离演示实例的真实画面（`screencapture -l <窗口 id>` 后台连续截帧，约 20 帧/秒，重采成 30 帧）。状态变化靠改演示目录里的 agent 记录；终端是 tmux 里的小脚本按提示文件逐行打印；「批准」是向演示 socket 的 Codex 窗格 `tmux send-keys Enter`。没有任何输入进入桌面，演示窗口也没有抢焦点。
+- **后期合成**：macOS 通知横幅、「⌘J 跳到在等你」「↵ 批准」按键提示、橙色焦点框，都是 Playwright 渲染的透明 PNG，用 ffmpeg 叠上去。演示实例本身不会发系统通知：它用一个未注册的 bundle id（通知调用直接失败），而且启动前把两条将要出现的等待状态预先标成「已通知过」。
+- **左上角品牌名**：非正式 bundle 的实例会自称「Shifu 测试」，合成时用同一版本早先截图里的「Shifu」小块盖住，除此之外画面未改动。
+- 底部用量栏（本机真实额度）被裁掉。
+- 重做：`site/tools/video/` 里的脚本（需要先按「截图怎么来的」编出 App 和 CLI）：`run4.py zh|en` 布置并录制，`overlays.cjs` 画叠加层，`compose4.py zh|en` 合成，`encode4.sh` 输出 MP4（H.264、yuv420p、faststart）/ WebM / poster。脚本里的临时路径按自己的环境改。
+- 页面：`<video autoplay muted loop playsinline preload="metadata">`，桌面和手机各有 `media` 限定的源；`prefers-reduced-motion` 时不自动播放，停在 poster 上并显示「播放演示」按钮。
+
 ### 截图怎么来的
 
 截图来自本分支（0.4.2 + Gemini CLI，提交 4620d85）编出来的 App，在一个与真实 Shifu 完全隔离的演示环境里拍：
@@ -54,7 +66,7 @@ site/
 ## 页面结构
 
 1. 顶栏：Logo、锚点导航、语言切换、GitHub、下载
-2. 首屏：标题、一句说明、下载主按钮、GitHub 次按钮、未公证提示、四种会话状态图例、主窗口截图；截图下方一条脚注说明全站截图都是演示数据（全站只有这一处）
+2. 首屏：标题、一句说明、下载主按钮、GitHub 次按钮、未公证提示、四种会话状态图例、演示视频；视频下方一条脚注说明视频和截图都是演示数据、横幅和按键提示是后期叠加（全站只有这一处）
 3. 支持的工具：自动滚动的标志带（图标取自 app/src/vendoricons.ts 和 app/src/assets/antigravity.svg，单色内联 SVG，名字是文字）；悬停或聚焦时暂停，`prefers-reduced-motion` 下变成静止的换行排列
 4. 功能：只有三个大块，按顺序编号——01 在等你、02 真终端、03 关掉窗口继续跑（只留一行流程：Agent → tmux → 窗口）；其余放进「还有这些」网格：任务与进度、通知、额度、另一台 Mac 和手机、操作窗口和网页、长任务不睡，每项一个图标、一两行字和文档链接
 5. 三步开始：左边三步，右边新建任务弹窗

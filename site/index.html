@@ -34,7 +34,6 @@
 <meta name="twitter:title" content="Shifu — macOS 编程 Agent 工作台">
 
 <meta name="twitter:image" content="assets/og.png">
-<link rel="preload" as="image" href="assets/main-zh.webp" media="(min-width: 601px)" fetchpriority="high">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -111,12 +110,32 @@
     </ul>
 
     <figure class="hero-shot hero-glow">
-      <picture class="window">
-        <source media="(max-width: 600px)" srcset="assets/approval-zh.webp" width="480" height="440">
-        <img class="scaled" style="--w:1200" src="assets/main-zh.webp" width="1200" height="770" fetchpriority="high" decoding="async" alt="Shifu 主窗口：侧栏「在等你」列出等批准、做完了和在问你的会话，下面按项目分组；右侧 Claude Code 和 Gemini CLI 左右分屏，一个在改限流中间件，一个在写压测脚本。">
-      </picture>
+      <div class="window hero-video">
+        <video id="hero-video" class="scaled" style="--w:1200" width="1440" height="924" autoplay muted loop playsinline preload="metadata" poster="assets/video/hero-poster-zh.webp" data-mobile-poster="assets/video/hero-m-poster-zh.webp" aria-label="演示视频：三个 Agent 分屏工作；Codex 停下来请求批准 git push，侧栏把它移到「在等你」并弹出通知；按 ⌘J 跳过去、按回车批准，它继续运行；Claude Code 做完，侧栏显示做完了。">
+          <!-- Desktop first (browsers that ignore media take the first source), then the phone crop. -->
+          <source media="(min-width: 601px)" src="assets/video/hero-zh.webm" type="video/webm">
+          <source media="(min-width: 601px)" src="assets/video/hero-zh.mp4" type="video/mp4">
+          <source media="(max-width: 600px)" src="assets/video/hero-m-zh.webm" type="video/webm">
+          <source media="(max-width: 600px)" src="assets/video/hero-m-zh.mp4" type="video/mp4">
+        </video>
+        <script>
+          // Before autoplay can start: phones get the cropped poster; reduced motion gets the poster and a play button.
+          (function () {
+            var v = document.getElementById('hero-video');
+            if (window.matchMedia('(max-width: 600px)').matches) v.poster = v.getAttribute('data-mobile-poster');
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+              v.removeAttribute('autoplay'); v.autoplay = false; v.pause();
+              document.documentElement.classList.add('rm-video');
+            }
+          })();
+        </script>
+        <button class="video-play" type="button" hidden>
+          <svg viewbox="0 0 20 20" aria-hidden="true"><path d="M7 4.5v11l9-5.5z" fill="currentColor"/></svg>
+          <span>播放演示</span>
+        </button>
+      </div>
       <figcaption id="demo-note">
-        <span>* 本页所有截图都来自当前版本（0.4.2 预览版，外加源码中的 Gemini CLI）在独立演示环境里的运行画面；项目、任务、终端内容和时间都是演示数据。</span>
+        <span>* 视频和截图都来自当前版本（0.4.2 预览版，外加源码中的 Gemini CLI）在独立演示环境里的运行画面，项目、任务、终端内容和时间都是演示数据；视频里的通知横幅和按键提示是后期叠加的示意。</span>
         
       </figcaption>
     </figure>
