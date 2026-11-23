@@ -271,6 +271,7 @@ fn guide_context(kind: &str, event: &str, name: &str, registered: &Agent, input:
         (Some(only), None) | (None, Some(only)) => only,
         (None, None) => return Ok(None),
     };
+    let context = format!("{}\n\n{context}", talk_note()?);
     if kind == "kimi" { return Ok(Some(context)); }
     Ok(Some(serde_json::json!({"hookSpecificOutput": {
         "hookEventName":"SessionStart", "additionalContext":context
@@ -278,13 +279,19 @@ fn guide_context(kind: &str, event: &str, name: &str, registered: &Agent, input:
 }
 
 fn computer_note() -> Res<String> {
-    let executable = std::env::current_exe().map_err(|e| e.to_string())?;
-    let executable = executable.to_str().ok_or("Shifu 程序路径不是 UTF-8")?;
-    let command = format!("{} computer guide", crate::launch::sh_quote(executable));
-    let browser = format!("{} browser guide", crate::launch::sh_quote(executable));
-    let find = format!("{} find", crate::launch::sh_quote(executable));
+    // `shifu` is spelled out once, at the start of the context (`talk_note`).
+    let (command, browser, find) = ("shifu computer guide", "shifu browser guide", "shifu find");
     Ok(format!(
         "优先用已有 API/CLI；网页先读 {browser}，本机窗口先读 {command}；用户提到“我发的、之前那份、微信里的”文件时先用 {find} 查候选。Shifu 自带后台截图、点击、输入和滚动，不依赖 Orca；普通后台保持鼠标位置，应用仍可能改变焦点或弹窗。--background-only 仅允许读取和文本框赋值，不得去掉限制重试。截图路径须打开查看；不扩大前台接管、发送或交易授权。"
+    ))
+}
+
+/// How to reach the other conversations. Without it agents opened them by clicking through the window.
+fn talk_note() -> Res<String> {
+    let executable = std::env::current_exe().map_err(|e| e.to_string())?;
+    let shifu = crate::launch::sh_quote(executable.to_str().ok_or("Shifu 程序路径不是 UTF-8")?);
+    Ok(format!(
+        "下面的 shifu 指 {shifu}。找 Shifu 里别的对话用命令，别截图点开：shifu status 看有谁；shifu read <对话> 看它最近输出；shifu ask <对话> <问题> 问并等回复；shifu tell <对话> <话> 只通知。收到带「编号 ask-…」的提问，答完用 shifu reply <编号> <答复>。"
     ))
 }
 

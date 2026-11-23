@@ -47,6 +47,28 @@ pub struct Input {
     pub transcript_scanned: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub native_receipt_end: Option<u64>,
+    /// A long or multi-line message is saved here and `text` is a one-line pointer to it. Agents fold a long
+    /// paste into a placeholder such as `[Pasted text #4]`, which can never match the composer check, so the
+    /// message used to sit unsent in the input box.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub full_text: Option<PathBuf>,
+}
+
+/// Longest message typed into a composer as it is; anything longer, or with a line break, goes by file.
+const TYPED_LIMIT: usize = 200;
+
+fn pointer(text: &str, file: &Path) -> String {
+    let first = text.lines().map(str::trim).find(|l| !l.is_empty()).unwrap_or("");
+    let head: String = first.chars().take(60).collect();
+    format!("{head}…（全文在 {}，先读完再处理）", file.display())
+}
+
+/// What the sender wrote, whether it was typed or saved to a file.
+pub fn original_text(input: &Input) -> Res<String> {
+    match &input.full_text {
+        Some(file) => fs::read_to_string(file).map_err(|e| format!("message file {}: {e}", file.display())),
+        None => Ok(input.text.clone()),
+    }
 }
 
 fn directory(home: &Path, agent: &str) -> Res<PathBuf> {
@@ -117,7 +139,7 @@ fn previous_introduction(dir: &Path, prefix: &str, agent: &Agent, text: &str) ->
         let Some(id) = p.file_name().and_then(|n| n.to_str()).and_then(|n| n.strip_suffix(".json")) else { continue };
         if !id.starts_with(prefix) { continue; }
         let old = read(&p)?;
-        if old.id == id && same_conversation(&old, agent) && old.text == text && old.expires_at.is_none() && old.stop_file.is_none() {
+        if old.id == id && same_conversation(&old, agent) && original_text(&old).is_ok_and(|t| t == text) && old.expires_at.is_none() && old.stop_file.is_none() {
             return Ok(Some(old));
         }
     }
@@ -166,7 +188,7 @@ fn enqueue_input(home: &Path, agent: &Agent, id: &str, text: &str, expires_at: O
     if dest.exists() {
         let old = read(&dest)?;
         return if matches(&old, agent)
-            && old.text == text
+            && original_text(&old)? == text
             && old.expires_at == expires_at
             && old.stop_file.as_deref() == stop_file
         {
@@ -175,6 +197,13 @@ fn enqueue_input(home: &Path, agent: &Agent, id: &str, text: &str, expires_at: O
             Err("message id already belongs to different input".into())
         };
     }
+    let (typed, full_text) = if text.contains('\n') || text.chars().count() > TYPED_LIMIT {
+        let file = dir.join(format!("{id}.md"));
+        write_atomic(&file, text)?;
+        (pointer(text, &file), Some(file))
+    } else {
+        (text.to_string(), None)
+    };
     let transcript = transcript_path(agent.kind, &session_id);
     let transcript_offset = transcript
         .as_ref()
@@ -192,7 +221,7 @@ fn enqueue_input(home: &Path, agent: &Agent, id: &str, text: &str, expires_at: O
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_nanos() as u64,
-        text: text.into(),
+        text: typed,
         phase: Phase::Queued,
         reason: None,
         expires_at,
@@ -201,6 +230,7 @@ fn enqueue_input(home: &Path, agent: &Agent, id: &str, text: &str, expires_at: O
         transcript_offset,
         transcript_scanned: transcript_offset,
         native_receipt_end: None,
+        full_text,
     };
     save(&dest, &input)?;
     Ok(input)
@@ -217,7 +247,8 @@ pub struct ReceiptSummary {
 
 impl From<Input> for ReceiptSummary {
     fn from(input: Input) -> Self {
-        let compact = input.text.split_whitespace().collect::<Vec<_>>().join(" ");
+        let text = original_text(&input).unwrap_or_else(|_| input.text.clone());
+        let compact = text.split_whitespace().collect::<Vec<_>>().join(" ");
         let mut summary: String = compact.chars().take(120).collect();
         if compact.chars().count() > 120 { summary.push('…'); }
         Self { id: input.id, summary, created_at: input.created_at, phase: input.phase }
@@ -1063,7 +1094,31 @@ mod tests {
         assert!(recent(&home, "demo").unwrap().is_empty());
         assert!(cancel_current(&home, "demo", "m33").is_err());
         // The CLI single-message lookup remains available for explicit history inspection.
-        assert_eq!(receipt(&home, "demo", "m33").unwrap().text, "中文 long\n".repeat(100));
+        assert_eq!(original_text(&receipt(&home, "demo", "m33").unwrap()).unwrap(), "中文 long\n".repeat(100));
+        fs::remove_dir_all(home).unwrap();
+    }
+
+    #[test]
+    fn a_long_message_is_typed_as_one_short_line_pointing_at_its_file() {
+        // 11-23: a project lead's long message showed up as `❯ [Pasted text #4]` and was never submitted.
+        let home = std::env::temp_dir().join(format!("shifu-long-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&home);
+        let agent: Agent = serde_json::from_value(serde_json::json!({
+            "name":"demo", "kind":"claude", "command":"claude", "status":"idle", "status_since":10, "cwd":"/work", "created_at":10,
+            "session_id":"session", "pane_id":"%1"
+        })).unwrap();
+        let long = format!("（组长转来）第一行要点\n{}", "细节".repeat(300));
+        let row = enqueue(&home, &agent, "long", &long, None, None).unwrap();
+        assert!(!row.text.contains('\n') && row.text.chars().count() < 200, "{}", row.text);
+        assert!(row.text.starts_with("（组长转来）第一行要点…") && row.text.contains("long.md"), "{}", row.text);
+        assert_eq!(original_text(&row).unwrap(), long);
+        // Re-sending the same id and text is the same message, not a conflict.
+        assert_eq!(enqueue(&home, &agent, "long", &long, None, None).unwrap().text, row.text);
+        assert!(enqueue(&home, &agent, "long", "别的话", None, None).is_err());
+        let screen = format!("❯ {}\n───\n  ⏵⏵ bypass permissions on", row.text);
+        assert!(composer_contains(Kind::Claude, &screen, &row.text));
+        let short = enqueue(&home, &agent, "short", "（组长转来）测完告诉我", None, None).unwrap();
+        assert_eq!((short.text.as_str(), short.full_text.is_none()), ("（组长转来）测完告诉我", true));
         fs::remove_dir_all(home).unwrap();
     }
     #[test]
