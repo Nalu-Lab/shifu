@@ -196,10 +196,18 @@ export function present(anchor: HTMLElement, which: string, pop: HTMLElement, bl
   if (wasOpenHere) return false;
   anchorOpen = { anchor, which };
   document.body.append(pop);
-  const rect = anchor.getBoundingClientRect();
-  const { width, height } = pop.getBoundingClientRect();
-  pop.style.left = `${Math.max(4, Math.min(rect.left, window.innerWidth - width - 4))}px`;
-  pop.style.top = `${Math.max(4, Math.min(rect.bottom + 4, window.innerHeight - height - 4))}px`;
+  // Placed again whenever it changes size: the new-task list fills in after it opens, and a placement measured
+  // before that pushed the 建立 button below the window (Eddie 11-23).
+  const place = () => {
+    const rect = anchor.getBoundingClientRect();
+    const { width, height } = pop.getBoundingClientRect();
+    pop.style.left = `${Math.max(4, Math.min(rect.left, window.innerWidth - width - 4))}px`;
+    pop.style.top = `${Math.max(4, Math.min(rect.bottom + 4, window.innerHeight - height - 4))}px`;
+  };
+  place();
+  const resized = new ResizeObserver(place);
+  resized.observe(pop);
+  window.addEventListener("resize", place);
 
   const onPointer = (e: PointerEvent) => {
     if (!pop.contains(e.target as Node) && !anchor.contains(e.target as Node)) closeNewPopover();
@@ -218,6 +226,8 @@ export function present(anchor: HTMLElement, which: string, pop: HTMLElement, bl
     window.removeEventListener("pointerdown", onPointer, true);
     window.removeEventListener("keydown", onKey, true);
     window.removeEventListener("blur", onBlur);
+    window.removeEventListener("resize", place);
+    resized.disconnect();
     pop.remove();
     anchorOpen = null;
     dismiss = null;
