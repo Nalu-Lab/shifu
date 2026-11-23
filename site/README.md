@@ -6,24 +6,38 @@ Shifu 的第一个官网：一页静态站，介绍产品、给出下载入口�
 
 ```
 site/
-├── index.html     整页内容，中英两种语言都写在里面
-├── styles.css     全部样式（无预处理）
-├── main.js        语言切换、安装页签、复制按钮、滚动淡入；不加载也能正常阅读
-├── README.md      本文件
-└── assets/        图片与图标
-    ├── main-{zh,en}.webp         首屏：主窗口（侧栏 + Claude Code / Gemini CLI 分屏）
-    ├── waiting-{zh,en}.webp      侧栏「在等你」特写
-    ├── approval-{zh,en}.webp     Codex 请求批准 git push
-    ├── split-{zh,en}.webp        分屏特写
-    ├── projects-{zh,en}.webp     按项目分组的任务
-    ├── orders / research / question-{zh,en}.webp   「不只是写代码」三张：数据分析、调研、提问
-    ├── newtask-{zh,en}.webp      新建任务弹窗（项目下拉、Agent 下拉、权限）
-    ├── appearance-{zh,en}.webp   外观弹窗（配色、字号）
-    ├── og.png                    分享预览图（docs/images/shifu-social-preview.png 原样复制）
+├── index.html        中文页（生成，勿手改）
+├── en/index.html     英文页（生成，勿手改）
+├── src/index.html    双语源文件：两种语言都写在这里（data-l="zh" / data-l="en"）
+├── tools/build.py    从源文件生成两张页面；版本号等发布信息只在这里改
+├── styles.css        全部样式（无预处理）
+├── main.js           语言偏好记忆、安装页签、长代码折叠、复制按钮、滚动淡入；不加载也能正常阅读
+├── README.md         本文件
+└── assets/           图片与图标（每张截图都有 -zh / -en 两版，尺寸相同）
+    ├── main-*.webp       首屏：主窗口（桌面）
+    ├── approval-*.webp   Codex 请求批准 git push（桌面「在等你」右图；手机首屏）
+    ├── waiting-*.webp    侧栏到「在等你」为止（桌面）
+    ├── waitlist-*.webp   只有「在等你」列表（手机）
+    ├── pane-*.webp       一个 Claude Code 终端（「真终端」）
+    ├── newtask-*.webp    新建任务弹窗连同周围（桌面）
+    ├── popover-*.webp    只有新建任务弹窗（手机）
+    ├── og.png            分享预览图（docs/images/shifu-social-preview.png 原样复制）
     └── logo-96.webp / favicon-32.png / apple-touch-icon.png   来自 app/src-tauri/icons/
 ```
 
-每张截图都有中文版和英文版，图片尺寸相同；`<img data-l="zh">` / `<img data-l="en">` 成对出现，CSS 只显示当前语言那张（隐藏的那张因 `loading="lazy"` 不会下载），所以切换语言时图片和 alt 一起换，没有布局跳动。
+### 改内容、发新版
+
+1. 改 `src/index.html`（文字、结构）或 `tools/build.py` 顶部的 `RELEASE`（版本号、Release 标签、Gemini 是否已进入下载包）。
+2. 运行 `python3 site/tools/build.py`（只用 Python 标准库），重新生成 `index.html` 和 `en/index.html`。
+3. 两张生成的页面一起提交。托管时不需要构建步骤。
+
+`RELEASE["gemini_in_release"]` 改成 `True` 后，所有「下个版本 / next release」标记和相关说明会一起去掉。
+
+### 语言与网址
+
+- `/` 是中文，`/en/` 是英文，各自是完整的静态页面：自己的 `<title>`、description、og 标签、`lang`、canonical，并用 hreflang 互相指向（x-default 指中文）。
+- 右上角的切换是普通链接，跳到另一种语言的页面，同时把选择记在 localStorage（`shifu-lang`）。页面语言以网址为准，不根据记录或浏览器语言自动跳转，分享出去的链接打开的就是那种语言。
+- 源文件里 `data-zh-alt` / `data-en-alt`、`data-zh-aria-label` 之类的属性，生成时变成对应语言的 `alt` / `aria-label`；图片路径里的 `-{L}` 换成 `-zh` / `-en`。
 
 ### 截图怎么来的
 
@@ -40,14 +54,13 @@ site/
 ## 页面结构
 
 1. 顶栏：Logo、锚点导航、语言切换、GitHub、下载
-2. 首屏：标题、一句说明、「下载 macOS 预览版」主按钮、GitHub 次按钮、未公证提示、四种会话状态图例、真实界面截图
-3. 支持的工具：横向自动滚动的标志带（图标取自 app/src/vendoricons.ts 和 app/src/assets/antigravity.svg，单色内联 SVG，名字是文字）；悬停或聚焦时暂停，`prefers-reduced-motion` 下变成静止的换行排列。Qwen Code / StepFun 标「可选」，Gemini CLI 标「下个版本」
-4. 功能：在等你、真终端与分屏、持久会话（tmux 示意图）、「不只是写代码」（数据分析 / 调研 / 提问三张截图）、任务与进度、额度、通知、远程（中继示意图）、电脑与浏览器操作
-5. 三步开始：安装 → 选项目和 Agent（说明会按 PATH 检测已装的 CLI）→ 开始工作，附新建任务截图
-6. 开源与隐私：无账号无遥测、不改全局设置、Kimi/Antigravity 例外先备份、远程走自己的线路
-7. 安装：两个页签（让 AI 装 / 自己装，文本与 README 一致）。长代码块默认只显示前几行，下方「展开全部（共 N 行）」按钮带 `aria-expanded`，可用键盘操作；收起时保持按钮在屏幕上的位置不变。复制按钮始终复制全文。旁边是「装之前要知道」：仅 Apple Silicon、未公证、默认免确认及切换方法、需 tmux 与已登录 Agent、Codex hooks 检查、窗口界面暂为中文
-8. FAQ（`<details>`，无需 JS）
-9. 结尾下载区与页脚
+2. 首屏：标题、一句说明、下载主按钮、GitHub 次按钮、未公证提示、四种会话状态图例、主窗口截图；截图下方一条脚注说明全站截图都是演示数据（全站只有这一处）
+3. 支持的工具：自动滚动的标志带（图标取自 app/src/vendoricons.ts 和 app/src/assets/antigravity.svg，单色内联 SVG，名字是文字）；悬停或聚焦时暂停，`prefers-reduced-motion` 下变成静止的换行排列
+4. 功能：只有三个大块，按顺序编号——01 在等你、02 真终端、03 关掉窗口继续跑（只留一行流程：Agent → tmux → 窗口）；其余放进「还有这些」网格：任务与进度、通知、额度、另一台 Mac 和手机、操作窗口和网页、长任务不睡，每项一个图标、一两行字和文档链接
+5. 三步开始：左边三步，右边新建任务弹窗
+6. 开源与隐私：四条事实
+7. 安装：两个页签（让 AI 装 / 自己装）。长代码块默认只显示前几行，「展开全部（共 N 行）」按钮带 `aria-expanded`，可用键盘操作，收起时按钮在屏幕上的位置不变；复制按钮始终复制全文。旁边是「装之前要知道」
+8. FAQ（`<details>`，无需 JS）与页脚
 
 ## 设计决定
 
@@ -56,8 +69,10 @@ site/
 - **字体用系统字体栈。** 英文走 SF Pro，中文走苹方，等宽走 SF Mono；不需要自托管字体，零字体请求，没有字体加载导致的跳动。
 - **字号与间距。** 字号约 1.25 倍阶梯（13/15/17/20/24/30/38/48/64，标题用 clamp 随视口缩放）；间距以 4px 为基数（4/8/12/16/24/32/48/64/96/128），定义在 `:root` 变量里。
 - **对比度。** 正文 #ecedf0、次要文字 #b4b8c2、弱化文字 #8e94a0，在背景 #0b0c0f 上分别约 16:1、9.6:1、6.3:1，在卡片底色上也高于 WCAG AA 的 4.5:1。
-- **双语。** 中英文都直接写在 HTML 里（`data-l="zh"` / `data-l="en"`），按 `<html lang>` 用 CSS 隐藏另一种。`<head>` 里的内联脚本在首次绘制前决定语言：先看 localStorage 里保存的选择，没有就看浏览器语言（zh 开头用中文，其他用英文）。切换时同步更新 `<title>`、meta description、图片 alt 和示意图的 aria-label。没有 JS 时显示中文。
-- **如实。** 截图都标注了演示数据；通知卡片是示意图，也标了「非真实截图」。没有编造数字、用户评价或价格。App 自己的界面文字是中文，英文页的截图只翻译了演示内容，图注里说明了这一点。
+- **统一缩放。** 所有产品截图都按首屏截图的缩放比例显示：一张宽 N 像素的裁图显示为 N ×（首屏宽度 / 1200）。CSS 里是 `.scaled { width: calc(var(--w) / 1200 * min(1120px, 100vw - 2 * var(--pad))) }`，`--w` 写在每张图上。桌面上实测所有截图都是 0.933 倍。
+- **手机用紧凑裁图。** 390px 宽时不再缩小整个窗口，而是用 `<picture>` + `media="(max-width: 600px)"` 换成只含一个元素的裁图：首屏是 Codex 请求批准的终端，「在等你」只有等待列表，「真终端」是一个终端，新建任务只有弹窗。各张显示宽度不超过原图，文字可读。
+- **页面长度。** 第三轮把功能收成三大块 + 一个紧凑网格，去掉两张框图和结尾下载区，FAQ 留 6 条。高度：桌面中文 10134 → 6295 px，英文 10633 → 6607 px；手机中文 13851 → 7840 px，英文 15363 → 8755 px。
+- **如实。** 首屏脚注说明全站截图都是演示数据，英文页还说明 App 自己的界面文字是中文。没有编造数字、用户评价或价格。
 - **无障碍。** 跳到正文链接、所有交互元素有可见焦点框、安装页签按 WAI-ARIA tabs 模式实现（左右方向键切换）、装饰元素 `aria-hidden`、示意图有文字描述。`prefers-reduced-motion` 下关闭所有动画和淡入。
 - **性能。** 无框架、无外部请求、无统计脚本。首屏图 `fetchpriority="high"` 并 preload，其余图片 `loading="lazy"`；所有图片写了宽高，实测 CLS 为 0。
 - **没用 docs/images 里的旧截图和 shifu-workflow.gif。** 它们来自较早版本；全部改用当前版本的新截图。
@@ -69,7 +84,7 @@ cd site && python3 -m http.server 62200 --bind 127.0.0.1
 # 打开 http://127.0.0.1:62200/
 ```
 
-强制看英文：在浏览器控制台运行 `localStorage.setItem('shifu-lang','en')` 后刷新，或点右上角「EN」。
+英文页在 http://127.0.0.1:62200/en/ 。改了 `src/index.html` 后先运行 `python3 tools/build.py` 再刷新。
 
 ## 以后部署
 
@@ -80,13 +95,13 @@ cd site && python3 -m http.server 62200 --bind 127.0.0.1
 
 部署前要改的：
 
-1. `og:image` 和 `twitter:image` 现在是相对路径 `assets/og.png`。多数社交平台要求绝对地址，拿到域名后改成 `https://<域名>/assets/og.png`，并加上 `<link rel="canonical">` 和 `og:url`。
-2. 新版本发布时，全局替换 Release 链接 `remote-v0.4.2-preview.1` 以及页面上的「0.4.2」字样。
+1. canonical、hreflang、`og:image` 现在是相对地址（源文件和 build.py 里都有 TODO）。拿到域名后在 `tools/build.py` 里设 `SITE_URL = "https://<域名>"`，canonical 和 hreflang 会变成绝对地址；`og:image` / `twitter:image` 也要改成绝对地址，并补 `og:url`。
+2. 新版本发布时只改 `tools/build.py` 顶部的 `RELEASE`，然后重新生成。
 
 ## 还没做的
 
 - 分享预览图 `og.png` 是仓库原图，左下角写的是旧地址 `github.com/Longado/shifu`（目前会跳转到 Nalu-Lab/shifu）。需要时重新导出一张。
-- 没有真实的通知、进度页、远程连接、电脑操作截图；这些功能用文字、示意图或命令示例表达。
+- 「还有这些」网格里的功能（通知、进度页、远程、电脑操作等）没有截图，只有一两行说明和文档链接。
 - 截图是 1x 分辨率（拍摄机器是 1080p 外接屏，窗口 1200×800），在 Retina 屏上略软；换 Retina 屏重拍会更清晰。
 - Gemini CLI 在演示里作为普通命令显示，侧栏没有它的图标，这和当前源码的实际表现一致。
 - 没有浅色模式、没有站内搜索、没有独立的文档页（文档链接都指向 GitHub 上的 docs/）。

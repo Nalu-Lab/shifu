@@ -1,51 +1,21 @@
 // Shifu site — small progressive enhancements. The page works without this file
-// (Chinese shown by default, install tabs fall back to the first panel).
+// (install tabs fall back to the first panel; long code blocks stay expanded).
 (function () {
   'use strict';
 
   var root = document.documentElement;
+  // Each language has its own pre-rendered page (/ is Chinese, /en/ is English); the URL decides.
   var META = {
-    'zh-CN': {
-      title: 'Shifu — macOS 编程 Agent 工作台',
-      desc: 'Shifu 把 Claude Code、Codex 等编程 Agent 放进同一个 macOS 窗口：一眼看到谁在等你，各家终端原样保留，关掉窗口会话继续运行。开源，数据留在本机。',
-      copy: '复制', copied: '已复制', failed: '复制失败'
-    },
-    en: {
-      title: 'Shifu — a macOS workbench for coding agents',
-      desc: 'Shifu puts Claude Code, Codex and other coding agents in one macOS window: see which one is waiting for you, keep each agent\'s real terminal, and keep sessions running after you close the window. Open source and local-first.',
-      copy: 'Copy', copied: 'Copied', failed: 'Copy failed'
-    }
+    'zh-CN': { copy: '复制', copied: '已复制', failed: '复制失败' },
+    en: { copy: 'Copy', copied: 'Copied', failed: 'Copy failed' }
   };
-
   function isEn() { return root.lang.indexOf('en') === 0; }
 
-  function applyLang(lang, persist) {
-    root.lang = lang;
-    var m = META[lang] || META['zh-CN'];
-    var key = lang === 'en' ? 'en' : 'zh';
-    document.title = m.title;
-    var d = document.querySelector('meta[name="description"]');
-    if (d) d.setAttribute('content', m.desc);
-    document.querySelectorAll('[data-alt-' + key + ']').forEach(function (el) {
-      el.setAttribute('alt', el.getAttribute('data-alt-' + key));
-    });
-    document.querySelectorAll('[data-label-' + key + ']').forEach(function (el) {
-      el.setAttribute('aria-label', el.getAttribute('data-label-' + key));
-    });
-    document.querySelectorAll('.copy').forEach(function (b) {
-      if (!b.querySelector('[data-l]')) b.textContent = m.copy;
-    });
-    if (persist) {
-      try { localStorage.setItem('shifu-lang', lang); } catch (e) {}
-    }
-  }
-
-  applyLang(isEn() ? 'en' : 'zh-CN', false);
-
+  // The toggle is a plain link to the other page; remember the choice for later visits.
   var toggle = document.getElementById('lang-toggle');
   if (toggle) {
     toggle.addEventListener('click', function () {
-      applyLang(isEn() ? 'zh-CN' : 'en', true);
+      try { localStorage.setItem('shifu-lang', toggle.getAttribute('data-lang')); } catch (e) {}
     });
   }
 
