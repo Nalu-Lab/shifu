@@ -37,7 +37,6 @@ function putAwayItem(run: () => void): MenuItem {
 export function agentMenuItems(name: string, hooks: AgentMenuHooks): MenuItem[] {
   const agent = findAgent(name);
   const items: MenuItem[] = [{ label: "重命名", run: hooks.rename }];
-  if (agent?.label) items.push({ label: "用回话题名", run: () => void renameAgent(name, "") });
   items.push(...unreadItem(agent), ...pinItem(taskOfAgent(getTasks(), name)?.id));
   if (agent) items.push(...endItems(agent, hooks.putAway, hooks.end));
   else if (hooks.putAway) items.push(putAwayItem(hooks.putAway));

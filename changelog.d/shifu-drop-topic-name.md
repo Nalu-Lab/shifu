@@ -1,0 +1,2 @@
+- 对话的右键菜单（侧栏和标签）去掉了「用回话题名」。
+- The conversation right-click menu (sidebar and tab) no longer shows 用回话题名 (use topic name).
