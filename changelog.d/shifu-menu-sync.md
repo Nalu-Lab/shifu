@@ -1,2 +1,2 @@
-- 左边侧栏对话行的右键菜单改成和标签右键一样：重命名、用回话题名、标为未读、置顶、收起（对话开着时）、结束；去掉了在右边打开、在下面打开、在 Finder 中显示和恢复会话（点开就会恢复）。结束正在干活的对话要点两下，和标签一致。（还没装）
-- The right-click menu on a sidebar conversation row now matches the tab's: rename, use topic name, mark unread, pin, put away (when its panel is open) and end. Open right, open below, show in Finder and resume are gone (opening a row resumes it). Ending a working conversation takes two clicks, as on the tab. (not installed yet)
+- 左边侧栏对话行的右键菜单改成和标签右键一样：重命名、用回话题名、标为未读、置顶、收起（对话开着时）、结束；去掉了在右边打开、在下面打开、在 Finder 中显示和恢复会话（点开就会恢复）。结束正在干活的对话要点两下，和标签一致。
+- The right-click menu on a sidebar conversation row now matches the tab's: rename, use topic name, mark unread, pin, put away (when its panel is open) and end. Open right, open below, show in Finder and resume are gone (opening a row resumes it). Ending a working conversation takes two clicks, as on the tab.
