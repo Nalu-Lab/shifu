@@ -7,7 +7,7 @@ import { AccountStore } from '../store.mjs';
 const app = fileURLToPath(new URL('../../app/', import.meta.url));
 const requireApp = createRequire(new URL('../../app/package.json', import.meta.url));
 const { createServer } = await import(pathToFileURL(requireApp.resolve('vite')).href);
-const store = new AccountStore(':memory:');
+const store = new AccountStore(':memory:', Date.now, { review: false });
 const users = new Map([
   ['alex', 'alex@example.test'],
   ['sam', 'sam@example.test']

@@ -77,7 +77,7 @@ test('a new Google account must enter a valid invite on the site, and a spent co
 
   const ok = await browser.post('/join', { code: code.toLowerCase() });
   assert.equal(ok.statusCode, 200);
-  assert.match(ok.body, /You're in/);
+  assert.match(ok.body, /Waiting for approval/);
   assert.equal(browser.cookies.shifu_ticket, undefined);
   // Joining on the web registers no Mac and issues no session.
   assert.equal(store.db.prepare('SELECT count(*) AS n FROM macs').get().n, 0);
@@ -93,6 +93,7 @@ test('a member signs in with Google again on every visit and on the Mac, without
   const code = store.issueInvite();
   const first = await signIn('alice');
   await first.browser.post('/join', { code });
+  assert.ok(store.approve('alice@example.test'));
 
   const again = await signIn('alice');
   assert.equal(again.back.statusCode, 200);

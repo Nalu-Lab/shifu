@@ -9,12 +9,15 @@ import { accountApi } from '../api.mjs';
 import { googleIdentity } from '../google.mjs';
 import { AccountStore, digest } from '../store.mjs';
 
+// These tests cover invite mechanics; review.test.mjs covers the approval step.
+const open = { review: false };
+
 const first = 'a'.repeat(32);
 const second = 'b'.repeat(32);
 const id = (who) => ({ subject: who, email: who + '@example.test' });
 async function fixture(t) {
   let time = Date.now();
-  const store = new AccountStore(':memory:', () => time);
+  const store = new AccountStore(':memory:', () => time, open);
   const google = {
     authorization: ({ nonce }) => 'https://accounts.google.com/o/oauth2/v2/auth?nonce=' + nonce,
     identify: async (code) => {
@@ -141,8 +144,8 @@ test('the callback, admission ticket, invite, and session have independent lifet
 test('a second SQLite connection and a restarted server both observe the redeemed invite', () => {
   const folder = mkdtempSync(join(tmpdir(), 'shifu-accounts-'));
   const file = join(folder, 'accounts.sqlite');
-  const db = new AccountStore(file);
-  const other = new AccountStore(file);
+  const db = new AccountStore(file, Date.now, open);
+  const other = new AccountStore(file, Date.now, open);
   try {
     const code = db.issueInvite();
     const user = { device: first, name: 'Mac' };
@@ -150,7 +153,7 @@ test('a second SQLite connection and a restarted server both observe the redeeme
     const b = other.identified(id('bob'), user);
     assert.equal(other.redeem(b.ticket, code).status, 'signed_in');
     assert.equal(db.redeem(a.ticket, code).status, 'invalid_invite');
-    const reopened = new AccountStore(file);
+    const reopened = new AccountStore(file, Date.now, open);
     try {
       assert.equal(reopened.identified(id('bob'), user).status, 'signed_in');
     } finally {
@@ -216,7 +219,7 @@ test('Google verification binds the authorization code, signature, audience and 
 });
 
 test('membership follows the verified Google subject even when email addresses change or match', () => {
-  const store = new AccountStore(':memory:');
+  const store = new AccountStore(':memory:', Date.now, open);
   try {
     const mac = { device: first, name: 'Studio' };
     const one = store.identified({ subject: 'member', email: 'shared@example.test' }, mac);

@@ -9,8 +9,10 @@ const minute = 60_000;
 const day = 24 * 60 * minute;
 
 export class AccountStore {
-  constructor(path, now = Date.now) {
+  // review: new accounts wait for approve() before they can sign in. Only tests and the local preview turn it off.
+  constructor(path, now = Date.now, { review = true } = {}) {
     this.now = now;
+    this.review = review;
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
     this.db = new DatabaseSync(path);
     this.db.exec(`
@@ -36,6 +38,28 @@ export class AccountStore {
       CREATE INDEX IF NOT EXISTS flows_expiry ON flows(expires);
       CREATE INDEX IF NOT EXISTS admissions_expiry ON admissions(expires);
     `);
+    // Every account needs the operator's approval. Accounts made before review existed keep their access.
+    if (!this.db.prepare("SELECT 1 FROM pragma_table_info('accounts') WHERE name = 'approved'").get()) {
+      this.db.exec('ALTER TABLE accounts ADD COLUMN approved INTEGER NOT NULL DEFAULT 0; UPDATE accounts SET approved = 1;');
+    }
+  }
+
+  approved(subject) {
+    return this.db.prepare('SELECT approved FROM accounts WHERE subject = ?').get(subject)?.approved === 1;
+  }
+
+  pending() {
+    return this.db.prepare('SELECT email FROM accounts WHERE approved = 0 ORDER BY rowid').all().map((r) => r.email);
+  }
+
+  // Returns true when exactly one waiting account has this email.
+  approve(email) {
+    return this.db.prepare('UPDATE accounts SET approved = 1 WHERE email = ? AND approved = 0').run(email).changes === 1;
+  }
+
+  // Refuses a waiting account. Its invite stays spent, and the Google account cannot try again.
+  reject(email) {
+    return this.db.prepare('UPDATE accounts SET approved = -1 WHERE email = ? AND approved = 0').run(email).changes === 1;
   }
 
   transaction(work) {
@@ -81,6 +105,7 @@ export class AccountStore {
   identified({ subject, email }, { device, name }) {
     return this.transaction(() => {
       if (this.db.prepare('SELECT 1 FROM accounts WHERE subject = ?').get(subject)) {
+        if (!this.approved(subject)) return { status: 'awaiting_approval' };
         return this.signIn({ subject, email, device, name });
       }
       const ticket = secret();
@@ -100,7 +125,7 @@ export class AccountStore {
   identifiedWeb({ subject, email }) {
     if (this.db.prepare('SELECT 1 FROM accounts WHERE subject = ?').get(subject)) {
       this.db.prepare('UPDATE accounts SET email = ? WHERE subject = ?').run(email, subject);
-      return { status: 'member', email };
+      return { status: this.approved(subject) ? 'member' : 'awaiting_approval', email };
     }
     const ticket = secret();
     this.db
@@ -133,10 +158,13 @@ export class AccountStore {
           this.db.prepare('UPDATE admissions SET attempts = attempts - 1 WHERE hash = ?').run(hash);
           return { status: user.attempts === 1 ? 'login_expired' : 'invalid_invite' };
         }
-        this.db.prepare('INSERT INTO accounts VALUES (?, ?)').run(user.subject, user.email);
+        this.db
+          .prepare('INSERT INTO accounts(subject, email, approved) VALUES (?, ?, ?)')
+          .run(user.subject, user.email, this.review ? 0 : 1);
         this.db.prepare('UPDATE invites SET claimed_by = ? WHERE hash = ?').run(user.subject, codeHash);
       }
       this.db.prepare('DELETE FROM admissions WHERE hash = ?').run(hash);
+      if (!this.approved(user.subject)) return { status: 'awaiting_approval', email: user.email };
       if (web || !user.device) return { status: 'member', email: user.email };
       return this.signIn(user);
     });
@@ -158,7 +186,7 @@ export class AccountStore {
     return this.db
       .prepare(
         `SELECT owner, id, email FROM macs JOIN accounts ON accounts.subject = macs.owner
-      WHERE session_hash = ? AND expires > ?`
+      WHERE session_hash = ? AND expires > ? AND approved = 1`
       )
       .get(digest(session), this.now());
   }

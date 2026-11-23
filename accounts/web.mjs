@@ -69,6 +69,14 @@ ${error ? `<p class="error" id="err" role="alert">${escape(error)}</p>` : ''}
   );
 }
 
+const waiting = (email) =>
+  page(
+    'Waiting for approval',
+    `<h1>Waiting for approval</h1>
+<p><strong>${escape(email)}</strong> has used a valid invite. Eddie reviews every new account before it can sign in to Shifu.</p>
+<p>You can close this page. Once you're approved, sign in again here or in <strong>Shifu → My Macs…</strong>. You won't need the code again.</p>`
+  );
+
 const startOver = (message) =>
   page('Sign in', `<h1>Sign in again</h1><p>${escape(message)}</p>${signInButton}`);
 
@@ -127,6 +135,7 @@ export async function accountWeb(app, store, google, { origin }) {
     }
     const result = store.identifiedWeb(identity);
     if (result.status === 'member') return html(reply, joined(result.email, false));
+    if (result.status === 'awaiting_approval') return html(reply, waiting(result.email));
     reply.header('Set-Cookie', [setCookie(FLOW, '', 0), setCookie(TICKET, result.ticket, 600)]);
     return reply.redirect('/join', 303);
   });
@@ -149,6 +158,7 @@ export async function accountWeb(app, store, google, { origin }) {
     if (result.status === 'invalid_invite')
       return html(reply, invitePage(email, 'That code is not valid, has expired, or was already used.'), 403);
     reply.header('Set-Cookie', setCookie(TICKET, '', 0));
+    if (result.status === 'awaiting_approval') return html(reply, waiting(result.email));
     if (result.status !== 'member') return html(reply, startOver('Too many tries, or this page expired.'), 401);
     return html(reply, joined(result.email, true));
   });

@@ -52,7 +52,9 @@ export async function accountApi(store, google) {
     } catch {
       return fail(reply, 401, 'google_sign_in_failed');
     }
-    return store.identified(identity, entry);
+    const result = store.identified(identity, entry);
+    if (result.status === 'awaiting_approval') return fail(reply, 403, result.status);
+    return result;
   });
 
   app.post('/v1/login/invite', loginLimit, (request, reply) => {
@@ -61,7 +63,7 @@ export async function accountApi(store, google) {
       return fail(reply, 400, 'invalid_request');
     const result = store.redeem(ticket, code.trim());
     if (result.status === 'login_expired') return fail(reply, 401, result.status);
-    if (result.status === 'invalid_invite') return fail(reply, 403, result.status);
+    if (result.status === 'invalid_invite' || result.status === 'awaiting_approval') return fail(reply, 403, result.status);
     return result;
   });
 

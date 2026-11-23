@@ -13,6 +13,7 @@ type Action = { kind: "refresh" | "cancel" | "sign_out" } | { kind: "sign_in"; n
 const tr = (en: string, zh: string) => navigator.language.toLowerCase().startsWith("zh") ? zh : en;
 const messages: Record<string, () => string> = {
   invalid_invite: () => tr("Check the invite code. It may have expired or already been used.", "请核对邀请码，它可能已过期或已使用。"),
+  awaiting_approval: () => tr("Your invite was accepted. Shifu will work on this Mac once your account is approved.", "邀请码已通过，账号获批后即可在这台 Mac 上使用。"),
   login_expired: () => tr("Sign in with Google again to continue.", "请重新用 Google 登录。"),
   google_cancelled: () => tr("Google sign-in was cancelled.", "已取消 Google 登录。"),
   google_sign_in_failed: () => tr("Google could not confirm this account. Try signing in again.", "Google 未能确认此账号，请重试。"),

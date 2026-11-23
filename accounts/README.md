@@ -55,6 +55,17 @@ sudo -u shifu-accounts env SHIFU_ACCOUNTS_DB=/var/lib/shifu-accounts/accounts.sq
 
 Each invocation prints a fresh code for one Google account, valid for seven days. Give it privately to one tester. Issuing and redeeming codes works across service restarts. Only a digest of the code is stored. A missing, invalid, expired or previously redeemed code leaves a new user outside the pilot.
 
+## Approve new accounts
+
+A valid invite is not enough on its own. After someone redeems one, their account waits for your review and cannot sign in on the site or any Mac until you approve it. List who is waiting, then approve or reject each by email:
+
+```sh
+sudo -u shifu-accounts env SHIFU_ACCOUNTS_DB=/var/lib/shifu-accounts/accounts.sqlite /usr/bin/node /opt/shifu-accounts/review.mjs
+sudo -u shifu-accounts env SHIFU_ACCOUNTS_DB=/var/lib/shifu-accounts/accounts.sqlite /usr/bin/node /opt/shifu-accounts/review.mjs approve friend@example.com
+```
+
+`reject` keeps that Google account out for good, and its invite stays spent. Accounts that existed before review was added stay approved.
+
 ## Connect the desktop app
 
 Set the public account origin when building the pilot app, replacing the example hostname with your own:
