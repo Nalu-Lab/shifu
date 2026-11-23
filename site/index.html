@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // Pick the language before first paint: saved choice, else browser language.
+  (function () {
+    var lang = 'zh-CN';
+    try {
+      var saved = localStorage.getItem('shifu-lang');
+      if (saved === 'en' || saved === 'zh-CN') {
+        lang = saved;
+      } else {
+        var nav = ((navigator.languages && navigator.languages[0]) || navigator.language || 'zh').toLowerCase();
+        lang = nav.indexOf('zh') === 0 ? 'zh-CN' : 'en';
+      }
+    } catch (e) {}
+    document.documentElement.lang = lang;
+    document.documentElement.className += ' js';
+  })();
+</script>
+<title>Shifu — macOS 编程 Agent 工作台</title>
+<meta name="description" content="Shifu 把 Claude Code、Codex 等编程 Agent 放进同一个 macOS 窗口：一眼看到谁在等你，各家终端原样保留，关掉窗口会话继续运行。开源，数据留在本机。">
+<meta name="theme-color" content="#0b0c0f">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Shifu">
+<meta property="og:title" content="Shifu — a macOS workbench for coding agents">
+<meta property="og:description" content="Run Claude Code, Codex and other coding agents in one Mac window. See which one is waiting for you. Real terminals, persistent sessions, open source.">
+<meta property="og:image" content="assets/og.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Shifu: Claude Code and Codex side by side in one Mac window.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Shifu — a macOS workbench for coding agents">
+<meta name="twitter:description" content="Run Claude Code, Codex and other coding agents in one Mac window. See which one is waiting for you.">
+<meta name="twitter:image" content="assets/og.png">
+<link rel="preload" as="image" href="assets/workspace-1600.webp" imagesrcset="assets/workspace-960.webp 960w, assets/workspace-1600.webp 1600w" imagesizes="(max-width: 1180px) 92vw, 1120px">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main"><span data-l="zh">跳到正文</span><span data-l="en">Skip to content</span></a>
+
+<header class="site-header" id="top">
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="Shifu">
+      <img src="assets/logo-96.webp" width="28" height="28" alt="">
+      <span>Shifu</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#features"><span data-l="zh">功能</span><span data-l="en">Features</span></a>
+      <a href="#how"><span data-l="zh">怎么用</span><span data-l="en">How it works</span></a>
+      <a href="#privacy"><span data-l="zh">隐私</span><span data-l="en">Privacy</span></a>
+      <a href="#install"><span data-l="zh">安装</span><span data-l="en">Install</span></a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-right">
+      <button class="lang-toggle" type="button" id="lang-toggle" aria-label="Switch language / 切换语言">
+        <span data-l="zh">EN</span><span data-l="en">中文</span>
+      </button>
+      <a class="gh-link" href="https://github.com/Nalu-Lab/shifu" aria-label="GitHub">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+      <a class="btn btn-primary btn-sm" href="#install">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
+        <span class="dl-label"><span data-l="zh">下载</span><span data-l="en">Download</span></span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ============ Hero ============ -->
+<section class="hero">
+  <div class="wrap hero-inner">
+    <p class="eyebrow">
+      <span data-l="zh">开源 · MIT</span><span data-l="en">Open source · MIT</span>
+      <span class="sep" aria-hidden="true">/</span>
+      <span class="hide-sm">macOS · Apple Silicon</span>
+      <span class="sep hide-sm" aria-hidden="true">/</span>
+      <span data-l="zh">0.4.2 预览版</span><span data-l="en">0.4.2 preview</span>
+    </p>
+    <h1>
+      <span data-l="zh">所有编程 Agent，<br>一个 Mac 窗口。</span>
+      <span data-l="en">All your coding agents in one Mac window.</span>
+    </h1>
+    <p class="hero-sub">
+      <span data-l="zh">Claude Code、Codex 等同时工作时，Shifu 把需要你接手的会话排在一起。每个 Agent 保留自己的真终端，关掉窗口后会话继续运行。</span>
+      <span data-l="en">When Claude Code, Codex and others run at once, Shifu puts the conversations that need you in one list. Each agent keeps its own real terminal, and sessions keep running after you close the window.</span>
+    </p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.2-preview.1">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
+        <span data-l="zh">下载 macOS 预览版</span><span data-l="en">Download for macOS</span>
+      </a>
+      <a class="btn btn-secondary" href="https://github.com/Nalu-Lab/shifu">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span data-l="zh">在 GitHub 查看源码</span><span data-l="en">View on GitHub</span>
+      </a>
+    </div>
+    <p class="hero-note">
+      <span data-l="zh">Apple Silicon 预览包，自签名、未经 Apple 公证。安装前请看<a href="#install">安装说明</a>。</span>
+      <span data-l="en">Apple Silicon preview, self-signed and not notarized by Apple. Read the <a href="#install">install notes</a> first.</span>
+    </p>
+
+    <ul class="legend" aria-label="Session states">
+      <li><span class="dot dot-green-ring spin" aria-hidden="true"></span><span data-l="zh">运行中</span><span data-l="en">Running</span></li>
+      <li><span class="dot dot-amber pulse" aria-hidden="true"></span><span data-l="zh">等你批准</span><span data-l="en">Waiting for approval</span></li>
+      <li><span class="dot dot-blue" aria-hidden="true"></span><span data-l="zh">在问你</span><span data-l="en">Asking you</span></li>
+      <li><span class="check" aria-hidden="true">✓</span><span data-l="zh">做完了</span><span data-l="en">Done</span></li>
+    </ul>
+
+    <figure class="hero-shot hero-glow">
+      <div class="window">
+        <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+        <img src="assets/workspace-1600.webp"
+             srcset="assets/workspace-960.webp 960w, assets/workspace-1600.webp 1600w"
+             sizes="(max-width: 1180px) 92vw, 1120px"
+             width="1600" height="933" fetchpriority="high" decoding="async"
+             data-alt-zh="Shifu 界面：左侧侧栏按项目列出会话和它们的状态，右侧 Claude Code 与 Codex 的终端左右并排，Codex 正在等你批准一条命令。"
+             data-alt-en="The Shifu window: the sidebar lists conversations by project with their states; Claude Code and Codex terminals sit side by side, and Codex is waiting for approval to run a command."
+             alt="Shifu 界面：左侧侧栏按项目列出会话和它们的状态，右侧 Claude Code 与 Codex 的终端左右并排，Codex 正在等你批准一条命令。">
+      </div>
+      <figcaption>
+        <span data-l="zh">当前界面的模拟演示，终端内容、状态与额度为演示数据。应用窗口目前是中文界面。</span>
+        <span data-l="en">Simulated demo in the current UI; terminal content, states and quotas are demo data. The app window is in Chinese for now.</span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ Agents ============ -->
+<section class="agents" aria-labelledby="agents-title">
+  <div class="wrap">
+    <p class="agents-head" id="agents-title">
+      <span data-l="zh">运行这些 Agent 自己的命令行</span>
+      <span data-l="en">Runs each agent's own CLI</span>
+    </p>
+    <ul class="agent-list">
+      <li>Claude Code</li>
+      <li>Codex</li>
+      <li>Kimi Code</li>
+      <li>CodeBuddy</li>
+      <li>Antigravity</li>
+      <li class="sup">Qwen Code <small data-l="zh">可选</small><small data-l="en">optional</small></li>
+      <li class="sup">StepFun <small data-l="zh">可选</small><small data-l="en">optional</small></li>
+      <li class="sup">Gemini CLI <small data-l="zh">当前源码</small><small data-l="en">current source</small></li>
+    </ul>
+    <p class="agents-note">
+      <span data-l="zh">Qwen Code 和 StepFun 需另备各自的 CLI 与密钥。Gemini CLI 刚加入源码、尚未进入下载包，目前作为普通命令启动，侧栏还看不到它的等待状态。</span>
+      <span data-l="en">Qwen Code and StepFun need their own CLI and key. Gemini CLI was just added to the source and is not in the download yet; it starts as a plain command, so the sidebar does not show when it is waiting.</span>
+    </p>
+  </div>
+</section>
+
+<!-- ============ Features ============ -->
+<section class="section" id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <p class="kicker"><span data-l="zh">功能</span><span data-l="en">Features</span></p>
+    <h2 id="features-title">
+      <span data-l="zh">不用再逐个翻终端</span>
+      <span data-l="en">Stop checking terminals one by one</span>
+    </h2>
+    <p class="lead">
+      <span data-l="zh">Shifu 不替代任何 Agent，也不模仿聊天界面。它只做一件事：让你同时管住好几个 Agent。</span>
+      <span data-l="en">Shifu does not replace any agent or imitate a chat UI. It does one job: lets you keep several agents going at once.</span>
+    </p>
+
+    <!-- Waiting for you -->
+    <div class="feature reveal">
+      <div class="feature-text">
+        <h3><span data-l="zh">一眼看到谁在等你</span><span data-l="en">See who is waiting for you</span></h3>
+        <p>
+          <span data-l="zh">侧栏按项目和任务分组，标出谁在运行、谁在等批准、谁在等你回复。需要你的会话集中在顶部「在等你」。</span>
+          <span data-l="en">The sidebar groups conversations by project and task and marks who is running, waiting for approval or waiting for your reply. The ones that need you collect at the top under “waiting for you”.</span>
+        </p>
+        <ul>
+          <li><span data-l="zh">按 <kbd>⌘J</kbd> 跳到等待中的会话，批准请求优先</span><span data-l="en"><kbd>⌘J</kbd> jumps to a waiting conversation, approvals first</span></li>
+          <li><span data-l="zh">状态来自各家 Agent 的 hooks 事件，不靠识别屏幕文字</span><span data-l="en">States come from each agent's hook events, not from reading the screen</span></li>
+          <li><span data-l="zh">右键「标为未读」「置顶」，<kbd>⌘K</kbd> 搜索对话</span><span data-l="en">Right-click to mark unread or pin; <kbd>⌘K</kbd> searches conversations</span></li>
+        </ul>
+      </div>
+      <div class="feature-media">
+        <div class="shots-2">
+          <div class="shot">
+            <img src="assets/crop-waiting.webp" width="495" height="1000" loading="lazy" decoding="async"
+                 data-alt-zh="侧栏特写：「在等你」下列出两条会话，下面按项目和任务分组，每条显示运行、等你批准或空闲等状态。"
+                 data-alt-en="Sidebar close-up: two conversations under “waiting for you”, then conversations grouped by project and task with states such as running, waiting for approval and idle."
+                 alt="侧栏特写：「在等你」下列出两条会话，下面按项目和任务分组，每条显示运行、等你批准或空闲等状态。">
+          </div>
+          <div class="shot">
+            <img src="assets/crop-approval.webp" width="950" height="1060" loading="lazy" decoding="async"
+                 data-alt-zh="Codex 终端特写：Codex 准备运行测试命令，提示需要你批准这一步。"
+                 data-alt-en="Codex terminal close-up: Codex is about to run a test command and asks for your approval."
+                 alt="Codex 终端特写：Codex 准备运行测试命令，提示需要你批准这一步。">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real terminals -->
+    <div class="feature flip reveal">
+      <div class="feature-text">
+        <h3><span data-l="zh">真终端，不是聊天仿制品</span><span data-l="en">Real terminals, not a chat imitation</span></h3>
+        <p>
+          <span data-l="zh">每个 Agent 跑在自己的终端里，界面、快捷键和确认框都是它本来的样子。同一个任务可以开好几个 Agent，拖动标签就能左右或上下分屏。</span>
+          <span data-l="en">Each agent runs in its own terminal, with its own interface, shortcuts and prompts. Put several agents in one task and drag tabs to split them side by side or stacked.</span>
+        </p>
+        <ul>
+          <li><span data-l="zh">终端里的文件路径可以点开：在 Shifu、默认程序或 Finder 中打开</span><span data-l="en">Click file paths in a terminal to open them in Shifu, the default app or Finder</span></li>
+          <li><span data-l="zh">新建任务时选项目、Agent、模型和思考档位</span><span data-l="en">Pick project, agent, model and thinking level when you create a task</span></li>
+          <li><span data-l="zh">终端字号 10–24 可调，支持 <kbd>⌘=</kbd> <kbd>⌘-</kbd> <kbd>⌘0</kbd></span><span data-l="en">Terminal text 10–24 pt, with <kbd>⌘=</kbd> <kbd>⌘-</kbd> <kbd>⌘0</kbd></span></li>
+        </ul>
+      </div>
+      <div class="feature-media">
+        <div class="window">
+          <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <img src="assets/crop-split.webp" width="1280" height="726" loading="lazy" decoding="async"
+               data-alt-zh="两个 Agent 分屏：左边 Claude Code 在重构登录流程，右边 Codex 在补接口测试。"
+               data-alt-en="Two agents split side by side: Claude Code refactoring a login flow on the left, Codex adding API tests on the right."
+               alt="两个 Agent 分屏：左边 Claude Code 在重构登录流程，右边 Codex 在补接口测试。">
+        </div>
+      </div>
+    </div>
+
+    <!-- Persistent sessions -->
+    <div class="feature reveal">
+      <div class="feature-text">
+        <h3><span data-l="zh">关掉窗口，Agent 继续跑</span><span data-l="en">Close the window. Agents keep running.</span></h3>
+        <p>
+          <span data-l="zh">会话由 Shifu 专用的 tmux 服务管理，桌面窗口只负责显示和操作。退出、重开甚至崩溃都不会结束 Agent；回来时任务和分屏布局恢复。</span>
+          <span data-l="en">A dedicated tmux server owns the sessions; the desktop window only displays and controls them. Quitting, reopening or even a crash does not end an agent; tasks and split layouts come back.</span>
+        </p>
+        <ul>
+          <li><span data-l="zh">重启电脑后，点开哪个对话就接回哪个原来的会话</span><span data-l="en">After a restart, the conversation you open resumes its own session</span></li>
+          <li><span data-l="zh">用自己的 tmux socket（<code>shifu-app</code>），不碰你原来的 tmux</span><span data-l="en">Uses its own tmux socket (<code>shifu-app</code>) and leaves your tmux alone</span></li>
+          <li><span data-l="zh">也能只用命令行：<code>shifu new claude ~/proj</code></span><span data-l="en">CLI on its own works too: <code>shifu new claude ~/proj</code></span></li>
+        </ul>
+      </div>
+      <div class="feature-media">
+        <div class="diagram" role="img"
+             data-label-zh="示意图：各个 Agent 运行在 Shifu 专用的 tmux 服务里，hooks 把状态写成本机文件，Shifu 窗口读取状态并连上终端；窗口可以随时关掉。"
+             data-label-en="Diagram: each agent runs inside Shifu's dedicated tmux server, hooks write state to local files, and the Shifu window reads that state and attaches to the terminals; the window can close at any time."
+             aria-label="示意图：各个 Agent 运行在 Shifu 专用的 tmux 服务里，hooks 把状态写成本机文件，Shifu 窗口读取状态并连上终端；窗口可以随时关掉。">
+          <div class="d-row" aria-hidden="true">
+            <div class="d-box d-agent">claude</div>
+            <div class="d-box d-agent">codex</div>
+            <div class="d-box d-agent">kimi</div>
+            <div class="d-box d-agent">…</div>
+          </div>
+          <div class="d-arrow" aria-hidden="true">hooks → ~/.shifu/app/agents/*.json</div>
+          <div class="d-box d-core" aria-hidden="true">
+            <b><span data-l="zh">tmux 服务（专用 socket）</span><span data-l="en">tmux server (own socket)</span></b>
+            <span data-l="zh">持有每个 Agent 的进程，窗口关掉也不停</span><span data-l="en">Owns every agent process; keeps going when the window closes</span>
+          </div>
+          <div class="d-arrow" aria-hidden="true">tmux attach</div>
+          <div class="d-box d-window" aria-hidden="true">
+            <b><span data-l="zh">Shifu 窗口</span><span data-l="en">Shifu window</span></b>
+            <span data-l="zh">只负责显示和操作，可以随时关掉、重开</span><span data-l="en">Only displays and controls; close and reopen any time</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card grid -->
+    <div class="grid">
+      <article class="card reveal">
+        <div class="icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 5h14M3 10h9M3 15h11"/><path d="m14 13 1.5 1.5L18 12"/></svg></div>
+        <h3><span data-l="zh">任务与进度</span><span data-l="en">Tasks and progress</span></h3>
+        <p>
+          <span data-l="zh">会话按项目和任务归类，一个任务可以放多个 Agent。进度页每个任务一张卡：终点、当前重点和清单；可以自己写，也可以让会话起草，再一键告诉这个任务的会话。</span>
+          <span data-l="en">Conversations sit under projects and tasks, and one task can hold several agents. The progress page gives each task a card with its end goal, current focus and checklist; write it yourself or have a conversation draft it, then tell the task's conversations in one click.</span>
+        </p>
+        <div class="card-media shot">
+          <img src="assets/crop-projects.webp" width="495" height="470" loading="lazy" decoding="async" style="width:100%"
+               data-alt-zh="侧栏特写：api、docs、webapp 三个项目下的任务，各自显示 Agent 图标和状态。"
+               data-alt-en="Sidebar close-up: tasks under the api, docs and webapp projects, each with its agent icon and state."
+               alt="侧栏特写：api、docs、webapp 三个项目下的任务，各自显示 Agent 图标和状态。">
+        </div>
+      </article>
+
+      <article class="card reveal">
+        <div class="icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 16V9M8 16V5M13 16v-5M18 16V3" /></svg></div>
+        <h3><span data-l="zh">额度和用量</span><span data-l="en">Quotas and usage</span></h3>
+        <p>
+          <span data-l="zh">Claude、Codex、Kimi、CodeBuddy 的额度和下次重置时间显示在侧栏底部；会话搜索和进程占用也在同一个窗口里。数据取自各家本机的记录或登录状态。</span>
+          <span data-l="en">Claude, Codex, Kimi and CodeBuddy quotas and their next reset sit at the bottom of the sidebar; conversation search and process usage live in the same window. Data comes from each agent's local records or sign-in.</span>
+        </p>
+        <div class="card-media shot">
+          <img src="assets/crop-quota.webp" width="495" height="515" loading="lazy" decoding="async" style="width:100%"
+               data-alt-zh="额度特写：Claude 5 小时与 7 天用量、Codex 本周用量与 credits、Kimi 和 CodeBuddy 的用量条。"
+               data-alt-en="Quota close-up: Claude 5-hour and 7-day usage, Codex weekly usage and credits, and usage bars for Kimi and CodeBuddy."
+               alt="额度特写：Claude 5 小时与 7 天用量、Codex 本周用量与 credits、Kimi 和 CodeBuddy 的用量条。">
+        </div>
+        <p class="caption" style="text-align:left">
+          <span data-l="zh">演示数据。</span><span data-l="en">Demo data.</span>
+        </p>
+      </article>
+
+      <article class="card reveal">
+        <div class="icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8a5 5 0 0 1 10 0c0 4 1.5 5.5 1.5 5.5h-13S5 12 5 8Z"/><path d="M8.5 16.5a1.6 1.6 0 0 0 3 0"/></svg></div>
+        <h3><span data-l="zh">需要你时才提醒</span><span data-l="en">Notified when you are needed</span></h3>
+        <p>
+          <span data-l="zh">会话停下来等批准或等回复时，发一条 macOS 系统通知。打开一个会话只清掉它自己的通知；同一会话有了新通知会替换旧的。</span>
+          <span data-l="en">When a conversation stops for approval or a reply, you get a macOS notification. Opening one conversation clears only its own notification, and a newer one for the same conversation replaces the old.</span>
+        </p>
+        <div class="notif" aria-hidden="true">
+          <img src="assets/logo-96.webp" width="32" height="32" alt="" loading="lazy">
+          <div>
+            <b>Shifu</b>
+            <span data-l="zh">补齐接口测试 · 等你批准</span><span data-l="en">Add API tests · waiting for approval</span>
+            <small data-l="zh">示意，非真实截图</small><small data-l="en">Illustration, not a screenshot</small>
+          </div>
+        </div>
+        <p class="muted" style="font-size:14px;margin-top:var(--s5)">
+          <span data-l="zh">长任务需要电脑不睡：菜单栏的杯子可以保持唤醒、定时，或合盖运行。</span>
+          <span data-l="en">For long runs, the cup in the menu bar keeps the Mac awake, on a timer or with the lid closed.</span>
+        </p>
+      </article>
+
+
+      <article class="card reveal">
+        <div class="icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="9" height="7" rx="1.5"/><rect x="13" y="7" width="5" height="9" rx="1.2"/><path d="M5 14h4"/></svg></div>
+        <h3><span data-l="zh">从另一台 Mac 或手机接回会话</span><span data-l="en">Reach sessions from another Mac or a phone</span></h3>
+        <p>
+          <span data-l="zh">两台 Mac 都向你自己的 HTTPS 中继发起连接，终端数据和操作走端到端加密通道，远端 Mac 不需要开放入站端口。手机则通过本机服务和你的私有网络（例如 Tailscale）打开同一个终端。</span>
+          <span data-l="en">Both Macs connect out to your own HTTPS relay; terminal data and input travel in an end-to-end encrypted channel, and the remote Mac needs no inbound port. A phone opens the same terminal through a local service on your private network, such as Tailscale.</span>
+        </p>
+        <div class="diagram" style="margin-top:var(--s5)" role="img"
+             data-label-zh="示意图：本机 Mac 与远端 Mac 通过你自己的 HTTPS 中继连接，通道端到端加密。"
+             data-label-en="Diagram: your Mac and a remote Mac connect through your own HTTPS relay, end-to-end encrypted."
+             aria-label="示意图：本机 Mac 与远端 Mac 通过你自己的 HTTPS 中继连接，通道端到端加密。">
+          <div class="d-flow" aria-hidden="true">
+            <div class="d-box"><b><span data-l="zh">本机 Mac</span><span data-l="en">Your Mac</span></b><span data-l="zh">控制端</span><span data-l="en">Controller</span></div>
+            <div class="d-link">E2E</div>
+            <div class="d-box d-core"><b><span data-l="zh">你的中继</span><span data-l="en">Your relay</span></b><span>HTTPS</span></div>
+            <div class="d-link">E2E</div>
+            <div class="d-box"><b><span data-l="zh">远端 Mac</span><span data-l="en">Remote Mac</span></b><span data-l="zh">运行 Agent</span><span data-l="en">Runs agents</span></div>
+          </div>
+        </div>
+        <p class="muted" style="font-size:14px;margin-top:var(--s4)">
+          <span data-l="zh">不提供公共中继，需自己部署（有 Docker 配置）。<code>shifu remote</code> 命令行和 <code>shifu remote mcp</code> 让 Agent 也能指挥远端会话。<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.md">远程设置</a></span>
+          <span data-l="en">There is no public relay; you host your own (a Docker setup is included). The <code>shifu remote</code> CLI and <code>shifu remote mcp</code> let agents drive remote sessions too. <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.en.md">Remote setup</a></span>
+        </p>
+      </article>
+
+      <article class="card reveal" style="grid-column: 1 / -1">
+        <div class="card-split">
+          <div>
+            <div class="icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="16" height="11" rx="1.5"/><path d="M7 17h6M10 14v3"/><path d="m9 7 3 2-3 2"/></svg></div>
+            <h3><span data-l="zh">让 Agent 操作窗口和网页</span><span data-l="en">Let agents use the Mac and the browser</span></h3>
+            <p>
+              <span data-l="zh"><code>shifu computer</code> 让 Agent 查看和操作本机窗口，使用独立的辅助程序，需要你授权辅助功能和屏幕录制。<code>shifu browser</code> 基于固定版本的官方 Playwright CLI，读网页、点按输入、管理标签页，默认用专用浏览器，不接管你日常的 Chrome。</span>
+              <span data-l="en"><code>shifu computer</code> lets agents inspect and operate local windows through a separate helper app that you grant Accessibility and Screen Recording. <code>shifu browser</code> uses a pinned official Playwright CLI to read pages, click, type and manage tabs, in a dedicated browser that leaves your everyday Chrome alone.</span>
+            </p>
+            <p class="muted" style="font-size:14px">
+              <span data-l="zh">两者都是可选组件，按需安装：<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/COMPUTER-USE.md">电脑操作</a> · <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/BROWSER-USE.md">浏览器操作</a></span>
+              <span data-l="en">Both are optional; install them when you need them: <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/COMPUTER-USE.md">Computer use</a> · <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/BROWSER-USE.md">Browser use</a> (docs in Chinese)</span>
+            </p>
+          </div>
+          <pre class="term" aria-label="Example commands"><span class="p">$ </span><span class="c">shifu computer guide</span>
+<span class="g"># <span data-l="zh">选窗口、执行单次动作、核对结果</span><span data-l="en">pick a window, act once, check the result</span></span>
+<span class="p">$ </span><span class="c">shifu browser open</span> <span class="k">https://example.com</span>
+<span class="g"># <span data-l="zh">返回 DOM 快照和元素引用</span><span data-l="en">returns a DOM snapshot with element refs</span></span>
+<span class="p">$ </span><span class="c">shifu browser click</span> <span class="k">e3</span></pre>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ How it works ============ -->
+<section class="section" id="how" aria-labelledby="how-title">
+  <div class="wrap">
+    <p class="kicker"><span data-l="zh">怎么用</span><span data-l="en">How it works</span></p>
+    <h2 id="how-title"><span data-l="zh">三步开始</span><span data-l="en">Three steps</span></h2>
+
+    <ol class="steps">
+      <li class="step reveal" style="list-style:none">
+        <span class="step-n">01</span>
+        <h3><span data-l="zh">安装</span><span data-l="en">Install</span></h3>
+        <p>
+          <span data-l="zh">下载预览包并校验，把 <code>Shifu.app</code> 放进 <code>~/Applications</code>，同包的 <code>shifu</code> 命令行放进 <code>~/.cargo/bin</code>。另装 tmux 和你要用的 Agent，并先登录。不需要 Rust。</span>
+          <span data-l="en">Download and verify the preview, move <code>Shifu.app</code> to <code>~/Applications</code> and the matching <code>shifu</code> CLI to <code>~/.cargo/bin</code>. Install tmux and your agents separately and sign in. No Rust needed.</span>
+        </p>
+      </li>
+      <li class="step reveal" style="list-style:none">
+        <span class="step-n">02</span>
+        <h3><span data-l="zh">选项目和 Agent</span><span data-l="en">Pick a project and an agent</span></h3>
+        <p>
+          <span data-l="zh">Shifu 按你终端的 PATH 找出这台 Mac 装了哪些 Agent（nvm、volta、bun 装的也算），只列出装了的；没装的列在「未安装」里，点名字打开安装说明。</span>
+          <span data-l="en">Shifu looks up your terminal's PATH to find which agent CLIs are installed (nvm, volta and bun installs included) and lists only those; missing ones sit under “not installed” with a link to their install page.</span>
+        </p>
+      </li>
+      <li class="step reveal" style="list-style:none">
+        <span class="step-n">03</span>
+        <h3><span data-l="zh">开始工作</span><span data-l="en">Work</span></h3>
+        <p>
+          <span data-l="zh">给一个任务加几个 Agent（<kbd>⌘T</kbd>），分屏并排看。谁停下来，就在「在等你」里出现；<kbd>⌘J</kbd> 跳过去处理。</span>
+          <span data-l="en">Add agents to a task (<kbd>⌘T</kbd>) and split them side by side. Whoever stops shows up under “waiting for you”; <kbd>⌘J</kbd> takes you there.</span>
+        </p>
+      </li>
+    </ol>
+
+    <div class="how-shot reveal">
+      <div class="shot">
+        <img src="assets/new-task.webp" width="1200" height="940" loading="lazy" decoding="async"
+             data-alt-zh="新建任务弹窗：选择项目、填写任务名、选择 Agent、模型和思考档位，然后点「建立」。"
+             data-alt-en="The new-task popover: choose a project, name the task, pick an agent, model and thinking level, then create."
+             alt="新建任务弹窗：选择项目、填写任务名、选择 Agent、模型和思考档位，然后点「建立」。">
+      </div>
+      <div>
+        <h3><span data-l="zh">一张表单建好任务</span><span data-l="en">One form to start a task</span></h3>
+        <p class="lead" style="font-size:16px">
+          <span data-l="zh">项目、任务名、Agent、模型、思考档位，以及权限：默认「免确认（全权）」，也可以改成「用 Agent 自己的设置」。</span>
+          <span data-l="en">Project, task name, agent, model, thinking level, and permissions: no-approval by default, or each agent's own settings.</span>
+        </p>
+        <p class="caption" style="text-align:left">
+          <span data-l="zh">截图来自较早版本；0.4.2 起 Agent 改为下拉菜单，并加了权限选项。</span>
+          <span data-l="en">Screenshot from an earlier version; since 0.4.2 the agent is a dropdown and there is a permission choice.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Open source & privacy ============ -->
+<section class="section" id="privacy" aria-labelledby="privacy-title">
+  <div class="wrap">
+    <p class="kicker"><span data-l="zh">开源与隐私</span><span data-l="en">Open source and privacy</span></p>
+    <h2 id="privacy-title"><span data-l="zh">本机优先，代码公开</span><span data-l="en">Local first, source in the open</span></h2>
+    <p class="lead">
+      <span data-l="zh">Shifu 以 MIT 许可证开源。下载包由 GitHub Actions 从公开源码构建，构建来源记录在包内的 <code>BUILD-INFO.json</code>。</span>
+      <span data-l="en">Shifu is MIT-licensed. Download packages are built by GitHub Actions from the public source, with the build source recorded in <code>BUILD-INFO.json</code> inside the package.</span>
+    </p>
+    <div class="facts">
+      <div class="fact reveal">
+        <h3><span data-l="zh">没有账号，没有遥测</span><span data-l="en">No account, no telemetry</span></h3>
+        <p>
+          <span data-l="zh">Shifu 不提供托管账号，不收集遥测。状态、任务和布局保存在本机 <code>~/.shifu/app</code>。</span>
+          <span data-l="en">No hosted account and no telemetry. State, tasks and layouts stay on your Mac in <code>~/.shifu/app</code>.</span>
+        </p>
+      </div>
+      <div class="fact reveal">
+        <h3><span data-l="zh">不改你的全局设置</span><span data-l="en">Your global settings stay as they are</span></h3>
+        <p>
+          <span data-l="zh">Claude Code、Codex、CodeBuddy 的 hooks 只挂在 Shifu 启动的那个进程上，不改 <code>~/.claude/settings.json</code> 或 <code>~/.codex/config.toml</code>。</span>
+          <span data-l="en">Hooks for Claude Code, Codex and CodeBuddy are passed to the processes Shifu starts; it does not change <code>~/.claude/settings.json</code> or <code>~/.codex/config.toml</code>.</span>
+        </p>
+      </div>
+      <div class="fact reveal">
+        <h3><span data-l="zh">例外会先备份</span><span data-l="en">Exceptions are backed up first</span></h3>
+        <p>
+          <span data-l="zh">Kimi 只认自己的配置文件，Shifu 会写入 <code>~/.kimi-code/config.toml</code>；Antigravity 会在 <code>~/.gemini/config/hooks.json</code> 加一个分组。两者都保留你原有的内容，首次写入前备份。</span>
+          <span data-l="en">Kimi only reads its own config, so Shifu writes hooks into <code>~/.kimi-code/config.toml</code>; Antigravity gets a group in <code>~/.gemini/config/hooks.json</code>. Your own entries stay, and both files are backed up before the first write.</span>
+        </p>
+      </div>
+      <div class="fact reveal">
+        <h3><span data-l="zh">远程走你自己的线路</span><span data-l="en">Remote runs on your own route</span></h3>
+        <p>
+          <span data-l="zh">手机入口只监听 <code>127.0.0.1</code>；Mac 之间用你自己配置的 HTTPS 中继，终端数据端到端加密。中继的网页也应来自你信任的服务器。</span>
+          <span data-l="en">The phone gateway listens on <code>127.0.0.1</code>; Mac-to-Mac uses your own HTTPS relay with end-to-end encrypted terminal data. Use a relay whose web client you trust.</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Install ============ -->
+<section class="section" id="install" aria-labelledby="install-title">
+  <div class="wrap">
+    <p class="kicker"><span data-l="zh">安装</span><span data-l="en">Install</span></p>
+    <h2 id="install-title"><span data-l="zh">下载 Apple Silicon 预览版</span><span data-l="en">Get the Apple Silicon preview</span></h2>
+    <p class="lead">
+      <span data-l="zh">预览包内含 App、配套的 <code>shifu</code> 命令行和安装说明。早期版本，请先读完「装之前要知道」。</span>
+      <span data-l="en">The preview contains the app, the matching <code>shifu</code> CLI and setup instructions. It is an early version; read “Before you install” first.</span>
+    </p>
+
+    <div class="install-grid">
+      <div>
+        <div class="tabs" role="tablist" aria-label="Install method">
+          <button class="tab" role="tab" type="button" id="tab-ai" aria-controls="panel-ai" aria-selected="true">
+            <span data-l="zh">让你的 AI 帮你装</span><span data-l="en">Let your AI install it</span>
+          </button>
+          <button class="tab" role="tab" type="button" id="tab-manual" aria-controls="panel-manual" aria-selected="false" tabindex="-1">
+            <span data-l="zh">自己装</span><span data-l="en">Install it yourself</span>
+          </button>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-ai" aria-labelledby="tab-ai" tabindex="0">
+          <p>
+            <span data-l="zh">把下面这段贴进 Claude Code 或 Codex：</span>
+            <span data-l="en">Paste this into Claude Code or Codex:</span>
+          </p>
+          <div class="code" data-l="zh">
+            <pre class="wrap-text">帮我安装 Shifu（https://github.com/Nalu-Lab/shifu）。先读 README 和 docs/INSTALL.md。
+1. 确认当前 Mac 使用 Apple Silicon，检查 tmux 和我要使用的 Agent 是否已安装、登录；缺什么先告诉我。
+2. 下载 README 指向的同一 Release 中的 ZIP 和 SHA256SUMS，核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
+3. 按包内说明，将 Shifu.app 放到 ~/Applications，将同包 bin/shifu 装到 ~/.cargo/bin/shifu。将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
+4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证，且默认用免确认模式启动 Agent；系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
+5. 打开后带我选一个项目、创建第一条 Agent 对话；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。</pre>
+            <button class="copy" type="button">复制</button>
+          </div>
+          <div class="code" data-l="en">
+            <pre class="wrap-text">Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and docs/INSTALL.en.md first.
+1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
+2. Download the ZIP and SHA256SUMS from the same release linked in the README. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
+3. Follow the package instructions: put Shifu.app in ~/Applications and its matching bin/shifu in ~/.cargo/bin/shifu. Add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
+4. Explain that the app is signed with Shifu's own certificate, not notarized by Apple, and starts agents in no-confirmation mode. Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
+5. Help me choose a project and start my first agent conversation. On the first Codex launch, let me review its hooks before deciding whether to trust them.</pre>
+            <button class="copy" type="button">Copy</button>
+          </div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-manual" aria-labelledby="tab-manual" tabindex="0" hidden>
+          <ol>
+            <li>
+              <span data-l="zh">从 <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.2-preview.1">0.4.2 预览版 Release</a> 下载 ZIP 和 <code>SHA256SUMS</code>，在下载目录先运行 <code>shasum -a 256 -c SHA256SUMS</code>，再解压。</span>
+              <span data-l="en">Download the ZIP and <code>SHA256SUMS</code> from the <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.2-preview.1">0.4.2 preview release</a>. Run <code>shasum -a 256 -c SHA256SUMS</code> in the download folder, then unzip.</span>
+            </li>
+            <li>
+              <span data-l="zh">已有 Shifu 时，先退出并备份旧 App 与 CLI。在解压后的包目录里运行：</span>
+              <span data-l="en">For an existing install, quit it and back up the old app and CLI first. In the extracted folder, run:</span>
+            </li>
+          </ol>
+          <div class="code">
+            <pre>shasum -a 256 -c SHA256SUMS
+mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
+install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"
+rm -rf "$HOME/.cargo/bin/web" &amp;&amp; ditto bin/web "$HOME/.cargo/bin/web"
+export PATH="$HOME/.cargo/bin:$PATH"
+brew install tmux   # skip if already installed</pre>
+            <button class="copy" type="button"><span data-l="zh">复制</span><span data-l="en">Copy</span></button>
+          </div>
+          <ol start="3">
+            <li>
+              <span data-l="zh">校验通过后，把 <code>Shifu.app</code> 移到 <code>~/Applications</code> 并打开，选择项目和已登录的 Agent。</span>
+              <span data-l="en">After verification, move <code>Shifu.app</code> to <code>~/Applications</code>, open it, and pick a project and a signed-in agent.</span>
+            </li>
+          </ol>
+          <p class="after-install">
+            <span data-l="zh"><code>export PATH</code> 只对当前终端生效；新终端可用 <code>"$HOME/.cargo/bin/shifu"</code>，或把该目录加进 shell 配置。完整说明见<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/INSTALL.md">安装指南</a>。</span>
+            <span data-l="en"><code>export PATH</code> only affects the current terminal; in a new one use <code>"$HOME/.cargo/bin/shifu"</code> or add the folder to your shell config. Full details in the <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/INSTALL.en.md">install guide</a>.</span>
+          </p>
+        </div>
+      </div>
+
+      <aside class="notice" aria-labelledby="notice-title">
+        <h3 id="notice-title"><span class="dot dot-amber" aria-hidden="true"></span><span data-l="zh">装之前要知道</span><span data-l="en">Before you install</span></h3>
+        <ul>
+          <li><span data-l="zh"><b>只支持 Apple Silicon。</b>Intel、Linux、Windows 都没试过，没有对应的包。</span><span data-l="en"><b>Apple Silicon only.</b> Intel, Linux and Windows are untried and have no package.</span></li>
+          <li><span data-l="zh"><b>未经 Apple 公证。</b>App 用 Shifu 自己的固定证书签名。若被 macOS 拦下，确认来源后在「系统设置 → 隐私与安全性」里按提示放行。</span><span data-l="en"><b>Not notarized.</b> The app is signed with Shifu's own fixed certificate. If macOS blocks it, confirm the source and allow it under System Settings → Privacy &amp; Security.</span></li>
+          <li><span data-l="zh"><b>默认免确认。</b>Claude、Codex、CodeBuddy、Kimi、Qwen Code 默认以免确认模式启动，改文件、跑命令不会逐项询问。新建任务时可把「权限」改成「用 Agent 自己的设置」。</span><span data-l="en"><b>No approvals by default.</b> Claude, Codex, CodeBuddy, Kimi and Qwen Code start in no-approval mode and edit files and run commands without asking. In the new-task form, set permissions to each agent's own settings to change this.</span></li>
+          <li><span data-l="zh"><b>需要 tmux 和已登录的 Agent。</b>Shifu 不附带任何 Agent 或账号。</span><span data-l="en"><b>Needs tmux and signed-in agents.</b> Shifu ships no agents or accounts.</span></li>
+          <li><span data-l="zh"><b>Codex 首次启动</b>会让你检查 Shifu 传入的 hooks，读过再决定是否信任。</span><span data-l="en"><b>On first Codex launch</b> you are asked to review the hooks Shifu passes; read them before trusting.</span></li>
+          <li><span data-l="zh"><b>窗口界面目前是中文。</b>菜单栏跟随系统语言。</span><span data-l="en"><b>The window UI is in Chinese for now.</b> The menu bar follows the system language.</span></li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="section" id="faq" aria-labelledby="faq-title">
+  <div class="wrap">
+    <p class="kicker">FAQ</p>
+    <h2 id="faq-title"><span data-l="zh">常见问题</span><span data-l="en">Questions</span></h2>
+    <div class="faq">
+      <details>
+        <summary><span data-l="zh">Shifu 收费吗？</span><span data-l="en">Does Shifu cost anything?</span></summary>
+        <div class="a">
+          <span data-l="zh">不收费。Shifu 以 MIT 许可证开源。你用的 Agent 本身怎么计费，仍按各家自己的订阅或额度。</span>
+          <span data-l="en">No. Shifu is open source under the MIT license. The agents you run are still billed by their own subscriptions or quotas.</span>
+        </div>
+      </details>
+      <details>
+        <summary><span data-l="zh">它会替代 Claude Code 或 Codex 吗？</span><span data-l="en">Does it replace Claude Code or Codex?</span></summary>
+        <div class="a">
+          <span data-l="zh">不会。Shifu 启动的就是这些 Agent 自己的命令行，你在终端里看到和操作的是它们原本的界面。Shifu 负责组织会话、显示状态和保持进程运行。</span>
+          <span data-l="en">No. Shifu starts each agent's own CLI, and what you see in the terminal is that agent's own interface. Shifu organizes conversations, shows their state and keeps the processes running.</span>
+        </div>
+      </details>
+      <details>
+        <summary><span data-l="zh">关掉窗口或退出 Shifu 后会怎样？</span><span data-l="en">What happens when I close or quit Shifu?</span></summary>
+        <div class="a">
+          <span data-l="zh">Agent 继续在 Shifu 专用的 tmux 服务里运行。重新打开时任务和分屏布局恢复。重启电脑后，点开哪个对话就接回哪个原来的会话。标签上的 × 可以选择「收起，继续运行」或「结束」。</span>
+          <span data-l="en">Agents keep running in Shifu's own tmux server. Reopen it and tasks and split layouts come back. After a reboot, the conversation you open resumes its own session. The × on a tab lets you hide it and keep it running, or end it.</span>
+        </div>
+      </details>
+      <details>
+        <summary><span data-l="zh">Shifu 怎么知道 Agent 在等我？</span><span data-l="en">How does Shifu know an agent is waiting?</span></summary>
+        <div class="a">
+          <span data-l="zh">通过各家 Agent 正式提供的 hooks 事件（例如请求权限、本轮结束），而不是识别屏幕文字。每次事件由 <code>shifu hook</code> 写成本机的一个 JSON 文件，界面读这些文件。</span>
+          <span data-l="en">Through the hook events each agent officially provides (such as a permission request or the end of a turn), not by reading the screen. Each event is written by <code>shifu hook</code> to a local JSON file that the window reads.</span>
+        </div>
+      </details>
+      <details>
+        <summary><span data-l="zh">支持 Intel Mac、Linux 或 Windows 吗？</span><span data-l="en">Intel Mac, Linux or Windows?</span></summary>
+        <div class="a">
+          <span data-l="zh">目前只有 Apple Silicon 的包，也只在 Apple Silicon 上用过。通知、拖放等用的是 macOS 接口。欢迎在 GitHub 上一起做跨平台。</span>
+          <span data-l="en">Only an Apple Silicon package for now, and it has only been used there. Notifications and drag and drop use macOS interfaces. Cross-platform help is welcome on GitHub.</span>
+        </div>
+      </details>
+      <details>
+        <summary><span data-l="zh">有英文界面吗？</span><span data-l="en">Is the app available in English?</span></summary>
+        <div class="a">
+          <span data-l="zh">菜单栏跟随系统语言；窗口内的界面暂时只有中文。Agent 终端里的内容由各家 Agent 决定。</span>
+          <span data-l="en">The menu bar follows the system language; the window's own UI is Chinese only for now. Terminal content comes from each agent and is unaffected.</span>
+        </div>
+      </details>
+      <details>
+        <summary><span data-l="zh">远程访问需要什么？</span><span data-l="en">What does remote access need?</span></summary>
+        <div class="a">
+          <span data-l="zh">连另一台 Mac：两边都装 Shifu，再准备一个两边都能访问的 HTTPS 中继（可用仓库里的 Docker 配置自建），然后配对。连手机：在电脑上装本机服务，再用 Tailscale 等私有网络从手机打开。都不提供公共托管服务。<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.md">远程设置</a> · <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE.md">手机连接</a></span>
+          <span data-l="en">Another Mac: install Shifu on both, run an HTTPS relay both can reach (the repo has a Docker setup), then pair them. A phone: install the local service on the Mac and open it over a private network such as Tailscale. No hosted service is provided. <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.en.md">Remote setup</a> · <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE.md">Phone access</a> (Chinese)</span>
+        </div>
+      </details>
+      <details>
+        <summary><span data-l="zh">可以只用命令行吗？</span><span data-l="en">Can I use only the CLI?</span></summary>
+        <div class="a">
+          <span data-l="zh">可以。<code>shifu</code> 打开工作台，<code>shifu new claude ~/proj</code> 开一个 Agent，<code>shifu ls</code> 列出会话，<code>shifu jump</code> 跳到等待中的会话。命令行版用自己的 socket 和目录（<code>~/.shifu</code>）。</span>
+          <span data-l="en">Yes. <code>shifu</code> opens the workbench, <code>shifu new claude ~/proj</code> starts an agent, <code>shifu ls</code> lists sessions and <code>shifu jump</code> opens a waiting one. The CLI uses its own socket and folder (<code>~/.shifu</code>).</span>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA band ============ -->
+<section class="cta-band" aria-labelledby="cta-title">
+  <div class="wrap">
+    <h2 id="cta-title"><span data-l="zh">把 Agent 们放进一个窗口</span><span data-l="en">Put your agents in one window</span></h2>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.2-preview.1">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
+        <span data-l="zh">下载 macOS 预览版</span><span data-l="en">Download for macOS</span>
+      </a>
+      <a class="btn btn-secondary" href="https://github.com/Nalu-Lab/shifu/issues">
+        <span data-l="zh">提 issue 或 PR</span><span data-l="en">Open an issue or PR</span>
+      </a>
+    </div>
+    <p class="hero-note"><span data-l="zh">Apple Silicon · 0.4.2 预览版 · 未公证</span><span data-l="en">Apple Silicon · 0.4.2 preview · not notarized</span></p>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <p>
+      <span data-l="zh">MIT © Yutai Lin · Shifu 与 Anthropic、OpenAI 等 Agent 厂商无关联。</span>
+      <span data-l="en">MIT © Yutai Lin · Shifu is not affiliated with Anthropic, OpenAI or other agent vendors.</span>
+    </p>
+    <nav aria-label="Footer">
+      <a href="https://github.com/Nalu-Lab/shifu">GitHub</a>
+      <a href="https://github.com/Nalu-Lab/shifu/releases"><span data-l="zh">所有版本</span><span data-l="en">Releases</span></a>
+      <a href="https://github.com/Nalu-Lab/shifu/blob/main/CHANGELOG.md"><span data-l="zh">改动记录</span><span data-l="en">Changelog</span></a>
+      <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/ARCHITECTURE.md"><span data-l="zh">架构</span><span data-l="en">Architecture</span></a>
+      <a href="https://github.com/Nalu-Lab/shifu/blob/main/LICENSE"><span data-l="zh">许可证</span><span data-l="en">License</span></a>
+    </nav>
+  </div>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>
