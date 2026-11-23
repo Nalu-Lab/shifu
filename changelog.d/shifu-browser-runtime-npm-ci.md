@@ -1,0 +1,2 @@
+- 使用 npm 12 的电脑可以从任意目录安装 Shifu 的浏览器运行时。
+- Computers using npm 12 can install the Shifu browser runtime from any working directory.

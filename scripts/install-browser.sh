@@ -9,7 +9,10 @@ if ! command -v node >/dev/null || ! command -v npm >/dev/null; then
 fi
 node -e 'if (Number(process.versions.node.split(".")[0]) < 20) { console.error("需要 Node.js 20+"); process.exit(1); }'
 node_source=$(node -p 'process.execPath')
-npm --prefix "$repo_dir/browser" ci --ignore-scripts --no-audit --no-fund
+(
+  cd "$repo_dir/browser"
+  npm ci --ignore-scripts --no-audit --no-fund
+)
 mkdir -p "$browser_home" "$browser_home/backups"
 chmod 700 "$browser_home" "$browser_home/backups"
 stage=$(mktemp -d "$browser_home/runtime.install.XXXXXX")
