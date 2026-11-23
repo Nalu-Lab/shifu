@@ -326,24 +326,23 @@ fn markdown_links(text: &str, mut visit: impl FnMut(&str, &str)) {
     }
 }
 
-/// Web citations and bookmarks do not consume the bounded local file label slots.
+/// Web citations and bookmarks do not consume the bounded local file label slots. One label may name several
+/// files (a reply with "PDF" under each of two résumés): each distinct file is kept, and the click offers them all.
 fn file_link_labels(text: &str, labels: &mut Vec<CodexFileLink>) {
     markdown_links(text, |label, target| {
-        if !local_file_target(target) { return }
-        if let Some(existing) = labels.iter_mut().find(|link| link.label == label) {
-            if existing.target != target { existing.target.clear(); }
-        } else if labels.len() < 128 {
+        if !local_file_target(target) || labels.iter().any(|link| link.label == label && link.target == target) { return }
+        if labels.len() < 128 {
             labels.push(CodexFileLink { label: label.to_string(), target: target.to_string() });
         }
     });
 }
 
-/// Scan all recent links after collection so a preceding web or bookmark label also marks ambiguity.
+/// Scan all recent links after collection: a label also used for a web page or bookmark could be either, so the
+/// click stays with Codex.
 fn reject_conflicting_file_labels(text: &str, labels: &mut [CodexFileLink]) {
     markdown_links(text, |label, target| {
-        if let Some(existing) = labels.iter_mut().find(|link| link.label == label) {
-            if existing.target != target { existing.target.clear(); }
-        }
+        if local_file_target(target) { return }
+        for existing in labels.iter_mut().filter(|link| link.label == label) { existing.target.clear(); }
     });
 }
 
@@ -563,11 +562,13 @@ mod tests {
         let reply = format!("{} [研究结果](</reports/a file.docx>) [研究结果](/reports/again.docx) [网站](https://example.com/a) ![图片](/reports/a.png) [邮件](mailto:a@example.com)", "长".repeat(400));
         let mut labels = Vec::new();
         file_link_labels(&reply, &mut labels);
-        assert_eq!(labels[0], CodexFileLink { label: "研究结果".into(), target: String::new() });
-        assert!(!local_file_target(&labels[0].target));
+        assert_eq!(labels, vec![
+            CodexFileLink { label: "研究结果".into(), target: "/reports/a file.docx".into() },
+            CodexFileLink { label: "研究结果".into(), target: "/reports/again.docx".into() },
+        ]);
         file_link_labels("[普通标题](reports/a(1).md) [另一个](plain.docx)", &mut labels);
         labels.retain(|link| local_file_target(&link.target));
-        assert_eq!(labels, vec![
+        assert_eq!(labels[2..], [
             CodexFileLink { label: "普通标题".into(), target: "reports/a(1).md".into() },
             CodexFileLink { label: "另一个".into(), target: "plain.docx".into() },
         ]);
@@ -602,14 +603,15 @@ mod tests {
     }
 
     #[test]
-    fn file_labels_reject_conflicts_including_web_targets_after_the_bound() {
+    fn file_labels_reject_web_conflicts_after_the_bound_but_keep_every_file() {
         let mut labels = Vec::new();
         file_link_labels("[相同](file:///reports/a.docx) [相同](file:///reports/a.docx) [冲突](/reports/b.docx)", &mut labels);
         for i in 0..126 { file_link_labels(&format!("[file{i}](a.md)"), &mut labels); }
         assert_eq!(labels.len(), 128);
         reject_conflicting_file_labels("[冲突](https://example.com/b) [相同](/reports/other.docx)", &mut labels);
         labels.retain(|link| local_file_target(&link.target));
-        assert!(!labels.iter().any(|link| link.label == "冲突" || link.label == "相同"));
+        assert!(!labels.iter().any(|link| link.label == "冲突"));
+        assert_eq!(labels.iter().filter(|link| link.label == "相同").count(), 1);
     }
 
     #[test]
@@ -623,7 +625,7 @@ mod tests {
             labels.retain(|link| local_file_target(&link.target));
             assert_eq!(labels, vec![CodexFileLink { label: "Word".into(), target: "/reports/report.docx".into() }]);
         }
-        for conflict in ["[Word](https://example.com/report)", "[Word](#section)", "[Word](/reports/other.docx)"] {
+        for conflict in ["[Word](https://example.com/report)", "[Word](#section)"] {
             for texts in [[conflict, document], [document, conflict]] {
                 let mut labels = Vec::new();
                 for text in texts { file_link_labels(text, &mut labels); }
@@ -632,6 +634,15 @@ mod tests {
                 assert!(labels.is_empty());
             }
         }
+        // The same title under two files (two résumés, each with "PDF") keeps both, in reply order.
+        let mut labels = Vec::new();
+        let both = "- 应用开发 [PDF 审阅](</cv/agent.pdf>)\n- 数据分析 [PDF 审阅](</cv/data.pdf>)";
+        file_link_labels(both, &mut labels);
+        reject_conflicting_file_labels(both, &mut labels);
+        assert_eq!(labels, vec![
+            CodexFileLink { label: "PDF 审阅".into(), target: "/cv/agent.pdf".into() },
+            CodexFileLink { label: "PDF 审阅".into(), target: "/cv/data.pdf".into() },
+        ]);
     }
 
     #[test]

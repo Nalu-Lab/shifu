@@ -1,0 +1,2 @@
+- Codex 一条回复里同一个链接标题对应几个文件时（比如两份简历各有一个「PDF 审阅」），点标题不再落进 Codex 自带的右侧查看器、报「Not a UTF-8 text file」，而是弹出 Shifu 菜单，按文件名列出每个文件；选一个就在 Shifu 里开标签页（PDF、图片、Markdown、Word 预览），Shifu 看不了的用默认程序打开。
+- When one Codex reply uses the same link title for several files (each résumé's "PDF 审阅"), clicking it no longer falls into Codex's own side viewer with "Not a UTF-8 text file". A Shifu menu lists each file by name; picking one opens it in a Shifu tab (PDF, images, Markdown, Word preview), or in the default app when Shifu cannot show it.
