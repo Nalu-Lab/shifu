@@ -37,7 +37,6 @@
 <meta name="twitter:title" content="Shifu — a macOS workbench for coding agents">
 <meta name="twitter:description" content="Run Claude Code, Codex and other coding agents in one Mac window. See which one is waiting for you.">
 <meta name="twitter:image" content="assets/og.png">
-<link rel="preload" as="image" href="assets/workspace-1600.webp" imagesrcset="assets/workspace-960.webp 960w, assets/workspace-1600.webp 1600w" imagesizes="(max-width: 1180px) 92vw, 1120px">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -115,18 +114,11 @@
 
     <figure class="hero-shot hero-glow">
       <div class="window">
-        <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-        <img src="assets/workspace-1600.webp"
-             srcset="assets/workspace-960.webp 960w, assets/workspace-1600.webp 1600w"
-             sizes="(max-width: 1180px) 92vw, 1120px"
-             width="1600" height="933" fetchpriority="high" decoding="async"
-             data-alt-zh="Shifu 界面：左侧侧栏按项目列出会话和它们的状态，右侧 Claude Code 与 Codex 的终端左右并排，Codex 正在等你批准一条命令。"
-             data-alt-en="The Shifu window: the sidebar lists conversations by project with their states; Claude Code and Codex terminals sit side by side, and Codex is waiting for approval to run a command."
-             alt="Shifu 界面：左侧侧栏按项目列出会话和它们的状态，右侧 Claude Code 与 Codex 的终端左右并排，Codex 正在等你批准一条命令。">
+        <img data-l="zh" src="assets/main-zh.webp" width="1200" height="770" loading="lazy" decoding="async" fetchpriority="high" alt="Shifu 主窗口：侧栏「在等你」列出等批准、做完了和在问你的会话，下面按项目分组；右侧 Claude Code 和 Gemini CLI 左右分屏，一个在改限流中间件，一个在写压测脚本。"><img data-l="en" src="assets/main-en.webp" width="1200" height="770" loading="lazy" decoding="async" fetchpriority="high" alt="The Shifu window: the sidebar lists conversations waiting for approval, finished or asking a question, then groups them by project; on the right, Claude Code and Gemini CLI run side by side, one changing the rate-limit middleware and one writing a load test.">
       </div>
       <figcaption>
-        <span data-l="zh">当前界面的模拟演示，终端内容、状态与额度为演示数据。应用窗口目前是中文界面。</span>
-        <span data-l="en">Simulated demo in the current UI; terminal content, states and quotas are demo data. The app window is in Chinese for now.</span>
+        <span data-l="zh">当前版本在独立演示环境中运行，项目、任务和终端内容为演示数据。</span>
+        <span data-l="en">The current version running in an isolated demo; projects, tasks and terminal content are demo data. The app's own labels are in Chinese for now.</span>
       </figcaption>
     </figure>
   </div>
@@ -139,19 +131,36 @@
       <span data-l="zh">运行这些 Agent 自己的命令行</span>
       <span data-l="en">Runs each agent's own CLI</span>
     </p>
-    <ul class="agent-list">
-      <li>Claude Code</li>
-      <li>Codex</li>
-      <li>Kimi Code</li>
-      <li>CodeBuddy</li>
-      <li>Antigravity</li>
-      <li class="sup">Qwen Code <small data-l="zh">可选</small><small data-l="en">optional</small></li>
-      <li class="sup">StepFun <small data-l="zh">可选</small><small data-l="en">optional</small></li>
-      <li class="sup">Gemini CLI <small data-l="zh">当前源码</small><small data-l="en">current source</small></li>
-    </ul>
+    <div class="marquee" tabindex="0" role="region"
+         data-label-zh="支持的编程工具（悬停或聚焦时暂停滚动）"
+         data-label-en="Supported coding tools (scrolling pauses on hover or focus)"
+         aria-label="支持的编程工具（悬停或聚焦时暂停滚动）">
+     <div class="marquee-track">
+      <ul class="marquee-list">
+        <li class="tool"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/></svg><span class="tool-name">Claude Code</span></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.75 6.0L11.75 6.5L11.75 7.01L11.6 7.5L11.46 7.99L11.23 8.44L10.85 8.8L10.38 9.07L9.94 9.3L9.47 9.47L9.33 9.97L9.02 10.31L8.72 10.71L8.31 10.96L7.9 11.21L7.4 11.21L6.96 11.46L6.48 11.46L6.0 11.2L5.54 11.2L5.13 10.96L4.74 10.7L4.29 10.71L3.81 10.7L3.28 10.71L2.88 10.45L2.48 10.2L2.04 9.96L1.59 9.7L1.27 9.31L1.11 8.82L0.96 8.35L0.97 7.83L0.95 7.35L0.77 6.92L0.52 6.48L0.21 6.0L0.21 5.49L0.21 4.98L0.34 4.48L0.52 4.0L0.94 3.64L1.11 3.18L1.56 2.89L2.18 2.79L2.48 2.48L2.63 1.98L2.94 1.63L3.32 1.37L3.72 1.11L4.13 0.87L4.63 0.87L5.05 0.61L5.53 0.61L6.0 0.86L6.45 0.86L6.86 1.12L7.24 1.38L7.69 1.37L8.15 1.38L8.68 1.37L9.07 1.62L9.48 1.85L9.92 2.08L10.31 2.38L10.69 2.71L10.85 3.2L10.98 3.68L10.99 4.18L10.99 4.66L11.15 5.09L11.46 5.52Z"/><path d="M3.6 4.8L5 6L3.6 7.2M6.3 7.3H8.4" fill="none" style="stroke:var(--chip)" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="tool-name">Codex</span></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M0.0001 5.9182L0.0001 6.0001L0.0001 6.0821C0 8.8444 0 10.2426 0.8788 11.1214C1.0848 11.3274 1.3193 11.4851 1.5932 11.6058C1.5625 11.2148 1.6512 10.8775 1.855 10.6444C1.9344 10.5539 1.9369 10.5501 1.9196 10.398C1.8909 10.149 1.878 9.7805 1.891 9.5427L1.9014 9.3205L1.5679 8.7305C1.0513 7.8115 0.7233 7.0398 0.5967 6.4501C0.5299 6.1268 0.534 5.9834 0.6161 5.8773C0.6661 5.8132 0.8298 5.7469 1.0273 5.7104C1.5245 5.6231 2.6087 5.7021 3.815 5.9151L3.9403 5.9367L4.2156 5.6931C4.6728 5.2883 4.9764 5.0612 5.5363 4.7122C6.1198 4.3471 6.7783 4.0468 7.5198 3.809L7.7578 3.7327L7.8885 3.3893C8.3568 2.1531 8.8364 1.2418 9.1784 0.9386C9.296 0.8331 9.3031 0.829 9.3894 0.8238C9.5292 0.8136 9.6572 0.8807 9.8752 1.0791C10.3844 1.5418 11.0934 2.4931 11.5342 3.3054L11.7045 3.6207L11.9451 3.7403C11.955 3.7453 11.9652 3.7505 11.9756 3.756C11.9193 2.3548 11.7335 1.4908 11.1214 0.8788C10.2426 0 8.8444 0 6.0821 0.0001L6.0001 0.0001L5.9182 0.0001C3.1558 0 1.7576 0 0.8788 0.8788C0 1.7576 0 3.1558 0.0001 5.9182ZM12.0001 5.5869C11.3059 4.9017 10.2729 4.6581 9.3399 4.9737C9.0955 5.0564 8.8304 5.2094 8.3004 5.5154L5.2558 7.2732C4.7258 7.5792 4.4608 7.7322 4.2669 7.9026C3.481 8.5933 3.1852 9.6974 3.5204 10.6886C3.6031 10.9331 3.7561 11.1981 4.0621 11.7281C4.1171 11.8234 4.1672 11.9101 4.2133 11.9894C4.7159 12.0002 5.2807 12.0001 5.9182 12.0001L6.0001 12.0001L6.0821 12.0001C8.8444 12.0002 10.2426 12.0003 11.1214 11.1214C12.0003 10.2426 12.0002 8.8444 12.0001 6.0821L12.0001 6.0001L12.0001 5.9182C12.0001 5.8055 12.0001 5.6951 12.0001 5.5869ZM9.3152 7.2263Q9.5309 7.1018 9.7715 7.1662Q10.0122 7.2307 10.1367 7.4464L10.7843 8.5681Q10.9089 8.7838 10.8444 9.0245Q10.7799 9.2651 10.5642 9.3896Q10.4606 9.4494 10.342 9.465Q10.2234 9.4806 10.1079 9.4497Q9.9923 9.4187 9.8974 9.3459Q9.8025 9.2731 9.7427 9.1695L9.0951 8.0478Q9.0353 7.9442 9.0197 7.8256Q9.0041 7.707 9.035 7.5915Q9.066 7.4759 9.1388 7.381Q9.2116 7.2861 9.3152 7.2263ZM6.5262 9.0398Q6.4107 9.0088 6.2921 9.0244Q6.1735 9.0401 6.0699 9.0999Q5.9663 9.1597 5.8935 9.2546Q5.8207 9.3495 5.7897 9.465Q5.7588 9.5806 5.7744 9.6992Q5.79 9.8177 5.8498 9.9213L6.4974 11.043Q6.6219 11.2588 6.8625 11.3232Q7.1031 11.3877 7.3189 11.2632Q7.4225 11.2033 7.4953 11.1084Q7.5681 11.0135 7.5991 10.898Q7.63 10.7825 7.6144 10.6639Q7.5988 10.5453 7.539 10.4417L6.8914 9.32Q6.8316 9.2164 6.7367 9.1436Q6.6418 9.0708 6.5262 9.0398Z"/></svg><span class="tool-name">CodeBuddy</span></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2.6 0h6.8A2.6 2.6 0 0 1 12 2.6v6.8A2.6 2.6 0 0 1 9.4 12H2.6A2.6 2.6 0 0 1 0 9.4V2.6A2.6 2.6 0 0 1 2.6 0z"/><path style="fill:var(--chip)" d="M3.3 3.2h1.35v2.5L7 3.2h1.75L6.1 6l2.85 2.8H7.1L5.15 6.85l-.5.52V8.8H3.3z"/><circle cx="9.25" cy="2.85" r="0.8" style="fill:var(--chip)"/></svg><span class="tool-name">Kimi Code</span></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 180 180" aria-hidden="true" focusable="false"><path fill="currentColor" d="M144.248 149.062C151.748 154.688 162.998 150.938 152.685 140.625C121.748 110.625 128.31 28.125 89.8727 28.125C51.4352 28.125 57.9977 110.625 27.0602 140.625C15.8102 151.875 27.9977 154.688 35.4977 149.062C64.5602 129.375 62.6852 94.6875 89.8727 94.6875C117.06 94.6875 115.185 129.375 144.248 149.062Z"/></svg><span class="tool-name">Antigravity</span></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9.5 2H4a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H2.5V8.5H8a.5.5 0 0 0 0-1H4a3.5 3.5 0 0 1 0-7h5.5z"/></svg><span class="tool-name">StepFun</span><small data-l="zh">可选</small><small data-l="en">optional</small></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5.5 1a4.5 4.5 0 1 0 2.65 8.14L10 11l1-1-1.86-1.85A4.5 4.5 0 0 0 5.5 1zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg><span class="tool-name">Qwen Code</span><small data-l="zh">可选</small><small data-l="en">optional</small></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 0C6.45 3.35 8.65 5.55 12 6C8.65 6.45 6.45 8.65 6 12C5.55 8.65 3.35 6.45 0 6C3.35 5.55 5.55 3.35 6 0Z"/></svg><span class="tool-name">Gemini CLI</span><small class="next" data-l="zh">下个版本</small><small class="next" data-l="en">next release</small></li>
+      </ul>
+      <ul class="marquee-list marquee-dup" aria-hidden="true">
+        <li class="tool"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/></svg><span class="tool-name">Claude Code</span></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.75 6.0L11.75 6.5L11.75 7.01L11.6 7.5L11.46 7.99L11.23 8.44L10.85 8.8L10.38 9.07L9.94 9.3L9.47 9.47L9.33 9.97L9.02 10.31L8.72 10.71L8.31 10.96L7.9 11.21L7.4 11.21L6.96 11.46L6.48 11.46L6.0 11.2L5.54 11.2L5.13 10.96L4.74 10.7L4.29 10.71L3.81 10.7L3.28 10.71L2.88 10.45L2.48 10.2L2.04 9.96L1.59 9.7L1.27 9.31L1.11 8.82L0.96 8.35L0.97 7.83L0.95 7.35L0.77 6.92L0.52 6.48L0.21 6.0L0.21 5.49L0.21 4.98L0.34 4.48L0.52 4.0L0.94 3.64L1.11 3.18L1.56 2.89L2.18 2.79L2.48 2.48L2.63 1.98L2.94 1.63L3.32 1.37L3.72 1.11L4.13 0.87L4.63 0.87L5.05 0.61L5.53 0.61L6.0 0.86L6.45 0.86L6.86 1.12L7.24 1.38L7.69 1.37L8.15 1.38L8.68 1.37L9.07 1.62L9.48 1.85L9.92 2.08L10.31 2.38L10.69 2.71L10.85 3.2L10.98 3.68L10.99 4.18L10.99 4.66L11.15 5.09L11.46 5.52Z"/><path d="M3.6 4.8L5 6L3.6 7.2M6.3 7.3H8.4" fill="none" style="stroke:var(--chip)" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="tool-name">Codex</span></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M0.0001 5.9182L0.0001 6.0001L0.0001 6.0821C0 8.8444 0 10.2426 0.8788 11.1214C1.0848 11.3274 1.3193 11.4851 1.5932 11.6058C1.5625 11.2148 1.6512 10.8775 1.855 10.6444C1.9344 10.5539 1.9369 10.5501 1.9196 10.398C1.8909 10.149 1.878 9.7805 1.891 9.5427L1.9014 9.3205L1.5679 8.7305C1.0513 7.8115 0.7233 7.0398 0.5967 6.4501C0.5299 6.1268 0.534 5.9834 0.6161 5.8773C0.6661 5.8132 0.8298 5.7469 1.0273 5.7104C1.5245 5.6231 2.6087 5.7021 3.815 5.9151L3.9403 5.9367L4.2156 5.6931C4.6728 5.2883 4.9764 5.0612 5.5363 4.7122C6.1198 4.3471 6.7783 4.0468 7.5198 3.809L7.7578 3.7327L7.8885 3.3893C8.3568 2.1531 8.8364 1.2418 9.1784 0.9386C9.296 0.8331 9.3031 0.829 9.3894 0.8238C9.5292 0.8136 9.6572 0.8807 9.8752 1.0791C10.3844 1.5418 11.0934 2.4931 11.5342 3.3054L11.7045 3.6207L11.9451 3.7403C11.955 3.7453 11.9652 3.7505 11.9756 3.756C11.9193 2.3548 11.7335 1.4908 11.1214 0.8788C10.2426 0 8.8444 0 6.0821 0.0001L6.0001 0.0001L5.9182 0.0001C3.1558 0 1.7576 0 0.8788 0.8788C0 1.7576 0 3.1558 0.0001 5.9182ZM12.0001 5.5869C11.3059 4.9017 10.2729 4.6581 9.3399 4.9737C9.0955 5.0564 8.8304 5.2094 8.3004 5.5154L5.2558 7.2732C4.7258 7.5792 4.4608 7.7322 4.2669 7.9026C3.481 8.5933 3.1852 9.6974 3.5204 10.6886C3.6031 10.9331 3.7561 11.1981 4.0621 11.7281C4.1171 11.8234 4.1672 11.9101 4.2133 11.9894C4.7159 12.0002 5.2807 12.0001 5.9182 12.0001L6.0001 12.0001L6.0821 12.0001C8.8444 12.0002 10.2426 12.0003 11.1214 11.1214C12.0003 10.2426 12.0002 8.8444 12.0001 6.0821L12.0001 6.0001L12.0001 5.9182C12.0001 5.8055 12.0001 5.6951 12.0001 5.5869ZM9.3152 7.2263Q9.5309 7.1018 9.7715 7.1662Q10.0122 7.2307 10.1367 7.4464L10.7843 8.5681Q10.9089 8.7838 10.8444 9.0245Q10.7799 9.2651 10.5642 9.3896Q10.4606 9.4494 10.342 9.465Q10.2234 9.4806 10.1079 9.4497Q9.9923 9.4187 9.8974 9.3459Q9.8025 9.2731 9.7427 9.1695L9.0951 8.0478Q9.0353 7.9442 9.0197 7.8256Q9.0041 7.707 9.035 7.5915Q9.066 7.4759 9.1388 7.381Q9.2116 7.2861 9.3152 7.2263ZM6.5262 9.0398Q6.4107 9.0088 6.2921 9.0244Q6.1735 9.0401 6.0699 9.0999Q5.9663 9.1597 5.8935 9.2546Q5.8207 9.3495 5.7897 9.465Q5.7588 9.5806 5.7744 9.6992Q5.79 9.8177 5.8498 9.9213L6.4974 11.043Q6.6219 11.2588 6.8625 11.3232Q7.1031 11.3877 7.3189 11.2632Q7.4225 11.2033 7.4953 11.1084Q7.5681 11.0135 7.5991 10.898Q7.63 10.7825 7.6144 10.6639Q7.5988 10.5453 7.539 10.4417L6.8914 9.32Q6.8316 9.2164 6.7367 9.1436Q6.6418 9.0708 6.5262 9.0398Z"/></svg><span class="tool-name">CodeBuddy</span></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2.6 0h6.8A2.6 2.6 0 0 1 12 2.6v6.8A2.6 2.6 0 0 1 9.4 12H2.6A2.6 2.6 0 0 1 0 9.4V2.6A2.6 2.6 0 0 1 2.6 0z"/><path style="fill:var(--chip)" d="M3.3 3.2h1.35v2.5L7 3.2h1.75L6.1 6l2.85 2.8H7.1L5.15 6.85l-.5.52V8.8H3.3z"/><circle cx="9.25" cy="2.85" r="0.8" style="fill:var(--chip)"/></svg><span class="tool-name">Kimi Code</span></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 180 180" aria-hidden="true" focusable="false"><path fill="currentColor" d="M144.248 149.062C151.748 154.688 162.998 150.938 152.685 140.625C121.748 110.625 128.31 28.125 89.8727 28.125C51.4352 28.125 57.9977 110.625 27.0602 140.625C15.8102 151.875 27.9977 154.688 35.4977 149.062C64.5602 129.375 62.6852 94.6875 89.8727 94.6875C117.06 94.6875 115.185 129.375 144.248 149.062Z"/></svg><span class="tool-name">Antigravity</span></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9.5 2H4a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H2.5V8.5H8a.5.5 0 0 0 0-1H4a3.5 3.5 0 0 1 0-7h5.5z"/></svg><span class="tool-name">StepFun</span><small data-l="zh">可选</small><small data-l="en">optional</small></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5.5 1a4.5 4.5 0 1 0 2.65 8.14L10 11l1-1-1.86-1.85A4.5 4.5 0 0 0 5.5 1zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg><span class="tool-name">Qwen Code</span><small data-l="zh">可选</small><small data-l="en">optional</small></li>
+        <li class="tool"><svg class="mark" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 0C6.45 3.35 8.65 5.55 12 6C8.65 6.45 6.45 8.65 6 12C5.55 8.65 3.35 6.45 0 6C3.35 5.55 5.55 3.35 6 0Z"/></svg><span class="tool-name">Gemini CLI</span><small class="next" data-l="zh">下个版本</small><small class="next" data-l="en">next release</small></li>
+      </ul>
+     </div>
+    </div>
     <p class="agents-note">
-      <span data-l="zh">Qwen Code 和 StepFun 需另备各自的 CLI 与密钥。Gemini CLI 刚加入源码、尚未进入下载包，目前作为普通命令启动，侧栏还看不到它的等待状态。</span>
-      <span data-l="en">Qwen Code and StepFun need their own CLI and key. Gemini CLI was just added to the source and is not in the download yet; it starts as a plain command, so the sidebar does not show when it is waiting.</span>
+      <span data-l="zh">Qwen Code 和 StepFun 需另备各自的 CLI 与密钥。Gemini CLI 已在源码中，会随下个版本提供；目前作为普通命令启动，侧栏还看不到它的等待状态。图标取自 Shifu 应用内的标记（单色显示），归各自公司所有；Qwen Code 和 StepFun 用的是中性字母标记。</span>
+      <span data-l="en">Qwen Code and StepFun need their own CLI and key. Gemini CLI is in the source and ships in the next release; it starts as a plain command, so the sidebar does not show when it is waiting yet. Marks are the ones the Shifu app uses, shown in one colour, and belong to their owners; Qwen Code and StepFun use neutral letter marks.</span>
     </p>
   </div>
 </section>
@@ -186,16 +195,10 @@
       <div class="feature-media">
         <div class="shots-2">
           <div class="shot">
-            <img src="assets/crop-waiting.webp" width="495" height="1000" loading="lazy" decoding="async"
-                 data-alt-zh="侧栏特写：「在等你」下列出两条会话，下面按项目和任务分组，每条显示运行、等你批准或空闲等状态。"
-                 data-alt-en="Sidebar close-up: two conversations under “waiting for you”, then conversations grouped by project and task with states such as running, waiting for approval and idle."
-                 alt="侧栏特写：「在等你」下列出两条会话，下面按项目和任务分组，每条显示运行、等你批准或空闲等状态。">
+            <img data-l="zh" src="assets/waiting-zh.webp" width="248" height="560" loading="lazy" decoding="async" alt="侧栏特写：「在等你」下有等批准的依赖升级、做完了的调研和订单分析、在问你的登录问题。"><img data-l="en" src="assets/waiting-en.webp" width="248" height="560" loading="lazy" decoding="async" alt="Sidebar close-up: under “waiting for you”, a dependency upgrade waiting for approval, a finished research task and order analysis, and a login question.">
           </div>
           <div class="shot">
-            <img src="assets/crop-approval.webp" width="950" height="1060" loading="lazy" decoding="async"
-                 data-alt-zh="Codex 终端特写：Codex 准备运行测试命令，提示需要你批准这一步。"
-                 data-alt-en="Codex terminal close-up: Codex is about to run a test command and asks for your approval."
-                 alt="Codex 终端特写：Codex 准备运行测试命令，提示需要你批准这一步。">
+            <img data-l="zh" src="assets/approval-zh.webp" width="480" height="440" loading="lazy" decoding="async" alt="Codex 终端：依赖升级后 186 个测试通过，Codex 请求批准运行 git push。"><img data-l="en" src="assets/approval-en.webp" width="480" height="440" loading="lazy" decoding="async" alt="Codex terminal: after the dependency upgrade 186 tests pass, and Codex asks for approval to run git push.">
           </div>
         </div>
       </div>
@@ -218,10 +221,7 @@
       <div class="feature-media">
         <div class="window">
           <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-          <img src="assets/crop-split.webp" width="1280" height="726" loading="lazy" decoding="async"
-               data-alt-zh="两个 Agent 分屏：左边 Claude Code 在重构登录流程，右边 Codex 在补接口测试。"
-               data-alt-en="Two agents split side by side: Claude Code refactoring a login flow on the left, Codex adding API tests on the right."
-               alt="两个 Agent 分屏：左边 Claude Code 在重构登录流程，右边 Codex 在补接口测试。">
+          <img data-l="zh" src="assets/split-zh.webp" width="952" height="540" loading="lazy" decoding="async" alt="左右分屏：左边 Claude Code 修改限流中间件并跑通测试，右边 Gemini CLI 写压测脚本。"><img data-l="en" src="assets/split-en.webp" width="952" height="540" loading="lazy" decoding="async" alt="Split view: Claude Code edits the rate-limit middleware and passes its tests on the left; Gemini CLI writes a load test on the right.">
         </div>
       </div>
     </div>
@@ -265,6 +265,24 @@
       </div>
     </div>
 
+    <!-- Everyday work -->
+    <div class="everyday reveal">
+      <h3><span data-l="zh">不只是写代码</span><span data-l="en">Not just code</span></h3>
+      <p class="muted">
+        <span data-l="zh">同一个窗口里，有的 Agent 在分析数据，有的在做调研，有的停下来等你拿主意。</span>
+        <span data-l="en">In the same window, one agent analyzes data, another researches, and another stops to ask you a question.</span>
+      </p>
+      <div class="gallery">
+        <figure class="shot-fig"><div class="shot"><img data-l="zh" src="assets/orders-zh.webp" width="480" height="400" loading="lazy" decoding="async" alt="Codex 分析 10 月订单：按渠道汇总订单数、GMV、客单价和退款率，并指出分销渠道退款率异常。"><img data-l="en" src="assets/orders-en.webp" width="480" height="400" loading="lazy" decoding="async" alt="Codex analyzes October orders: orders, GMV, AOV and refund rate by channel, flagging the reseller channel."></div>
+          <figcaption><span data-l="zh">数据：分析上月订单</span><span data-l="en">Data: last month's orders</span></figcaption></figure>
+        <figure class="shot-fig"><div class="shot"><img data-l="zh" src="assets/research-zh.webp" width="480" height="400" loading="lazy" decoding="async" alt="Claude Code 调研三个向量数据库，给出对比表和结论。"><img data-l="en" src="assets/research-en.webp" width="480" height="400" loading="lazy" decoding="async" alt="Claude Code compares three vector databases and gives a table and a recommendation."></div>
+          <figcaption><span data-l="zh">调研：比较三个向量数据库</span><span data-l="en">Research: three vector databases</span></figcaption></figure>
+        <figure class="shot-fig"><div class="shot"><img data-l="zh" src="assets/question-zh.webp" width="480" height="400" loading="lazy" decoding="async" alt="Claude Code 查明登录重定向的原因，并问你 session cookie 要设 SameSite=Lax 还是 Strict。"><img data-l="en" src="assets/question-en.webp" width="480" height="400" loading="lazy" decoding="async" alt="Claude Code finds the cause of the login redirect and asks whether the session cookie should use SameSite=Lax or Strict."></div>
+          <figcaption><span data-l="zh">提问：等你拿主意</span><span data-l="en">A question for you</span></figcaption></figure>
+      </div>
+      <p class="caption"><span data-l="zh">演示数据。</span><span data-l="en">Demo data.</span></p>
+    </div>
+
     <!-- Card grid -->
     <div class="grid">
       <article class="card reveal">
@@ -274,11 +292,8 @@
           <span data-l="zh">会话按项目和任务归类，一个任务可以放多个 Agent。进度页每个任务一张卡：终点、当前重点和清单；可以自己写，也可以让会话起草，再一键告诉这个任务的会话。</span>
           <span data-l="en">Conversations sit under projects and tasks, and one task can hold several agents. The progress page gives each task a card with its end goal, current focus and checklist; write it yourself or have a conversation draft it, then tell the task's conversations in one click.</span>
         </p>
-        <div class="card-media shot">
-          <img src="assets/crop-projects.webp" width="495" height="470" loading="lazy" decoding="async" style="width:100%"
-               data-alt-zh="侧栏特写：api、docs、webapp 三个项目下的任务，各自显示 Agent 图标和状态。"
-               data-alt-en="Sidebar close-up: tasks under the api, docs and webapp projects, each with its agent icon and state."
-               alt="侧栏特写：api、docs、webapp 三个项目下的任务，各自显示 Agent 图标和状态。">
+        <div class="card-media shot shot-narrow">
+          <img data-l="zh" src="assets/projects-zh.webp" width="248" height="352" loading="lazy" decoding="async" alt="侧栏特写：billing-service、data-reports、notes 三个项目下的任务，各自显示 Agent 图标和状态。"><img data-l="en" src="assets/projects-en.webp" width="248" height="352" loading="lazy" decoding="async" alt="Sidebar close-up: tasks under the billing-service, data-reports and notes projects, each with its agent icon and state.">
         </div>
       </article>
 
@@ -289,16 +304,7 @@
           <span data-l="zh">Claude、Codex、Kimi、CodeBuddy 的额度和下次重置时间显示在侧栏底部；会话搜索和进程占用也在同一个窗口里。数据取自各家本机的记录或登录状态。</span>
           <span data-l="en">Claude, Codex, Kimi and CodeBuddy quotas and their next reset sit at the bottom of the sidebar; conversation search and process usage live in the same window. Data comes from each agent's local records or sign-in.</span>
         </p>
-        <div class="card-media shot">
-          <img src="assets/crop-quota.webp" width="495" height="515" loading="lazy" decoding="async" style="width:100%"
-               data-alt-zh="额度特写：Claude 5 小时与 7 天用量、Codex 本周用量与 credits、Kimi 和 CodeBuddy 的用量条。"
-               data-alt-en="Quota close-up: Claude 5-hour and 7-day usage, Codex weekly usage and credits, and usage bars for Kimi and CodeBuddy."
-               alt="额度特写：Claude 5 小时与 7 天用量、Codex 本周用量与 credits、Kimi 和 CodeBuddy 的用量条。">
-        </div>
-        <p class="caption" style="text-align:left">
-          <span data-l="zh">演示数据。</span><span data-l="en">Demo data.</span>
-        </p>
-      </article>
+              </article>
 
       <article class="card reveal">
         <div class="icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8a5 5 0 0 1 10 0c0 4 1.5 5.5 1.5 5.5h-13S5 12 5 8Z"/><path d="M8.5 16.5a1.6 1.6 0 0 0 3 0"/></svg></div>
@@ -311,7 +317,7 @@
           <img src="assets/logo-96.webp" width="32" height="32" alt="" loading="lazy">
           <div>
             <b>Shifu</b>
-            <span data-l="zh">补齐接口测试 · 等你批准</span><span data-l="en">Add API tests · waiting for approval</span>
+            <span data-l="zh">升级依赖 · 等你批准</span><span data-l="en">Dependency upgrade · waiting for approval</span>
             <small data-l="zh">示意，非真实截图</small><small data-l="en">Illustration, not a screenshot</small>
           </div>
         </div>
@@ -406,23 +412,20 @@
     </ol>
 
     <div class="how-shot reveal">
-      <div class="shot">
-        <img src="assets/new-task.webp" width="1200" height="940" loading="lazy" decoding="async"
-             data-alt-zh="新建任务弹窗：选择项目、填写任务名、选择 Agent、模型和思考档位，然后点「建立」。"
-             data-alt-en="The new-task popover: choose a project, name the task, pick an agent, model and thinking level, then create."
-             alt="新建任务弹窗：选择项目、填写任务名、选择 Agent、模型和思考档位，然后点「建立」。">
-      </div>
-      <div>
-        <h3><span data-l="zh">一张表单建好任务</span><span data-l="en">One form to start a task</span></h3>
-        <p class="lead" style="font-size:16px">
-          <span data-l="zh">项目、任务名、Agent、模型、思考档位，以及权限：默认「免确认（全权）」，也可以改成「用 Agent 自己的设置」。</span>
-          <span data-l="en">Project, task name, agent, model, thinking level, and permissions: no-approval by default, or each agent's own settings.</span>
-        </p>
-        <p class="caption" style="text-align:left">
-          <span data-l="zh">截图来自较早版本；0.4.2 起 Agent 改为下拉菜单，并加了权限选项。</span>
-          <span data-l="en">Screenshot from an earlier version; since 0.4.2 the agent is a dropdown and there is a permission choice.</span>
-        </p>
-      </div>
+      <figure class="shot-fig">
+        <div class="shot"><img data-l="zh" src="assets/newtask-zh.webp" width="440" height="400" loading="lazy" decoding="async" alt="新建任务弹窗：项目下拉、任务名、Agent 类型下拉、模型和思考档位、未安装的 Agent 列表，以及「权限（所有对话）」。"><img data-l="en" src="assets/newtask-en.webp" width="440" height="400" loading="lazy" decoding="async" alt="The new-task popover: project dropdown, task name, agent dropdown, model and thinking level, the list of agents not installed, and the permission setting for all conversations."></div>
+        <figcaption>
+          <span data-l="zh">新建任务：项目、Agent、模型、思考档位和权限（默认免确认，可改为用 Agent 自己的设置）。没装的 Agent 列在「未安装」里。</span>
+          <span data-l="en">New task: project, agent, model, thinking level and permissions (no approvals by default, or each agent's own settings). Agents that aren't installed are listed separately.</span>
+        </figcaption>
+      </figure>
+      <figure class="shot-fig">
+        <div class="shot"><img data-l="zh" src="assets/appearance-zh.webp" width="380" height="392" loading="lazy" decoding="async" alt="外观弹窗：六种配色、自定义背景/文字/强调色，以及终端字号和侧栏缩放。"><img data-l="en" src="assets/appearance-en.webp" width="380" height="392" loading="lazy" decoding="async" alt="The appearance popover: six colour themes, custom background, text and accent colours, and terminal text size and sidebar scale."></div>
+        <figcaption>
+          <span data-l="zh">外观（<kbd>⌘,</kbd>）：配色、终端字号 10–24、侧栏 80%–150%。</span>
+          <span data-l="en">Appearance (<kbd>⌘,</kbd>): themes, terminal text 10–24 pt, sidebar 80%–150%.</span>
+        </figcaption>
+      </figure>
     </div>
   </div>
 </section>
@@ -495,7 +498,7 @@
             <span data-l="zh">把下面这段贴进 Claude Code 或 Codex：</span>
             <span data-l="en">Paste this into Claude Code or Codex:</span>
           </p>
-          <div class="code" data-l="zh">
+          <div class="code" data-l="zh" data-collapse>
             <pre class="wrap-text">帮我安装 Shifu（https://github.com/Nalu-Lab/shifu）。先读 README 和 docs/INSTALL.md。
 1. 确认当前 Mac 使用 Apple Silicon，检查 tmux 和我要使用的 Agent 是否已安装、登录；缺什么先告诉我。
 2. 下载 README 指向的同一 Release 中的 ZIP 和 SHA256SUMS，核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
@@ -504,7 +507,7 @@
 5. 打开后带我选一个项目、创建第一条 Agent 对话；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。</pre>
             <button class="copy" type="button">复制</button>
           </div>
-          <div class="code" data-l="en">
+          <div class="code" data-l="en" data-collapse>
             <pre class="wrap-text">Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and docs/INSTALL.en.md first.
 1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
 2. Download the ZIP and SHA256SUMS from the same release linked in the README. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
@@ -526,7 +529,7 @@
               <span data-l="en">For an existing install, quit it and back up the old app and CLI first. In the extracted folder, run:</span>
             </li>
           </ol>
-          <div class="code">
+          <div class="code" data-collapse>
             <pre>shasum -a 256 -c SHA256SUMS
 mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
 install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"

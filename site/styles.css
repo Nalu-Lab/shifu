@@ -180,7 +180,7 @@ h1 {
 .window-bar i { width: 11px; height: 11px; border-radius: 50%; background: #3a3d45; display: block; }
 .hero-shot { margin: var(--s8) auto 0; max-width: 1120px; }
 .hero-shot .window { aspect-ratio: auto; }
-.hero-shot img { width: 100%; aspect-ratio: 2400 / 1400; }
+.hero-shot img { width: 100%; aspect-ratio: 1200 / 770; }
 .hero-glow { position: relative; }
 .hero-glow::before {
   content: ""; position: absolute; left: 10%; right: 10%; top: -40px; height: 220px; z-index: -1;
@@ -192,16 +192,26 @@ figcaption, .caption { margin-top: var(--s3); color: var(--muted); font-size: 13
 /* ---------- Agents strip ---------- */
 .agents { padding: var(--s7) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg-raised); }
 .agents-head { text-align: center; color: var(--muted); font-size: 14px; }
-.agent-list {
-  margin-top: var(--s5); display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s3);
+/* Marquee of supported tools: two identical lists, the track slides by exactly one list width. */
+.marquee {
+  --chip: var(--surface);
+  margin-top: var(--s5); overflow: hidden; position: relative; border-radius: 12px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }
-.agent-list li {
-  list-style: none; display: inline-flex; align-items: center; gap: 8px;
-  padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px;
-  font: 500 15px/1.2 var(--mono); color: var(--text); background: var(--surface);
+.marquee:focus-visible { outline-offset: 2px; -webkit-mask-image: none; mask-image: none; }
+.marquee-track { display: flex; width: max-content; animation: marquee 38s linear infinite; }
+.marquee:hover .marquee-track, .marquee:focus-within .marquee-track { animation-play-state: paused; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+.marquee-list { display: flex; gap: var(--s3); padding: 6px var(--s3) 6px 0; margin: 0; }
+.tool {
+  list-style: none; flex: none; display: inline-flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--chip); color: var(--text); font: 500 15px/1.2 var(--font); white-space: nowrap;
 }
-.agent-list li small { font: 400 12px/1 var(--font); color: var(--muted); }
-.agent-list .sup { border-style: dashed; }
+.tool .mark { width: 18px; height: 18px; flex: none; color: var(--text); }
+.tool small { font: 400 12px/1 var(--font); color: var(--muted); padding: 3px 7px; border-radius: 999px; background: rgba(255,255,255,.05); }
+.tool small.next { color: var(--amber); background: rgba(242,181,68,.1); }
 .agents-note { margin: var(--s4) auto 0; max-width: 60em; text-align: center; color: var(--muted); font-size: 13px; }
 
 /* ---------- Sections ---------- */
@@ -247,7 +257,7 @@ kbd {
   padding: var(--s5); overflow: hidden;
 }
 .feature-media .window img { width: 100%; }
-.shots-2 { display: grid; grid-template-columns: 1fr 1.6fr; gap: var(--s4); align-items: start; }
+.shots-2 { display: grid; grid-template-columns: 248fr 480fr; gap: var(--s4); align-items: start; }
 .shot { border-radius: 10px; overflow: hidden; border: 1px solid var(--line-strong); background: #1c1d25; }
 
 /* Diagram (persistent sessions) */
@@ -315,7 +325,16 @@ kbd {
 .step h3 { margin-top: var(--s3); font-size: 20px; }
 .step p { margin-top: var(--s3); color: var(--text-2); font-size: 16px; }
 .how-shot { margin-top: var(--s5); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s6); align-items: center; }
-.how-shot .shot img { width: 100%; aspect-ratio: 1200 / 940; }
+.how-shot { grid-template-columns: minmax(0, 440fr) minmax(0, 380fr); align-items: start; }
+.shot img { width: 100%; }
+.shot-fig { margin: 0; }
+.shot-fig figcaption { text-align: left; }
+.shot-narrow { max-width: 300px; }
+.everyday { margin-top: var(--s9); }
+.everyday h3 { font-size: clamp(24px, 2.4vw, 30px); }
+.everyday > p { margin-top: var(--s3); }
+.gallery { margin-top: var(--s6); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); }
+.everyday .caption { text-align: left; }
 
 /* Privacy */
 .facts { margin-top: var(--s7); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4) var(--s7); }
@@ -360,6 +379,20 @@ kbd {
   padding: 7px 10px; border-radius: 7px; cursor: pointer;
 }
 .copy:hover { color: var(--text); }
+/* Collapsible long blocks (only when JS adds the toggle) */
+.code.is-collapsed pre { max-height: calc(3 * 1.7em + 16px); overflow: hidden; }
+.code.is-collapsed::after {
+  content: ""; position: absolute; left: 1px; right: 1px; bottom: 45px; height: 44px; pointer-events: none;
+  background: linear-gradient(rgba(13,14,18,0), #0d0e12);
+}
+.code-toggle {
+  display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 44px;
+  appearance: none; border: 0; border-top: 1px solid var(--line); border-radius: 0 0 10px 10px;
+  background: rgba(255,255,255,.02); color: var(--text-2); font: 500 14px/1 var(--font); cursor: pointer;
+}
+.code-toggle:hover { color: var(--text); background: rgba(255,255,255,.05); }
+.code-toggle svg { width: 14px; height: 14px; transition: transform .2s ease; }
+.code-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .after-install { margin-top: var(--s5); color: var(--muted); font-size: 14px; }
 .after-install a { color: var(--text-2); }
 
@@ -410,6 +443,7 @@ kbd {
   .card, .card.third { grid-column: span 6; }
   .steps { grid-template-columns: 1fr; }
   .how-shot { grid-template-columns: 1fr; }
+  .gallery { grid-template-columns: 1fr; }
   .install-grid { grid-template-columns: 1fr; }
   .facts { grid-template-columns: 1fr; }
 }
@@ -444,6 +478,10 @@ kbd {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .marquee { -webkit-mask-image: none; mask-image: none; }
+  .marquee-track { width: auto; justify-content: center; }
+  .marquee-list { flex-wrap: wrap; justify-content: center; padding: 6px 0; }
+  .marquee-dup { display: none; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js .reveal { opacity: 1; transform: none; }
