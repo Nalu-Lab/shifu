@@ -46,20 +46,6 @@ fn size(cols: u16, rows: u16) -> PtySize {
 }
 
 #[tauri::command]
-async fn inbox_recent(cfg: State<'_, Config>, agent: String) -> Result<Vec<shifu::inbox::ReceiptSummary>, String> {
-    let home = cfg.home.clone();
-    tauri::async_runtime::spawn_blocking(move || shifu::inbox::recent(&home, &agent))
-        .await.map_err(|e| e.to_string())?
-}
-
-#[tauri::command]
-async fn inbox_cancel(cfg: State<'_, Config>, agent: String, id: String) -> Result<shifu::inbox::ReceiptSummary, String> {
-    let home = cfg.home.clone();
-    tauri::async_runtime::spawn_blocking(move || shifu::inbox::cancel_current(&home, &agent, &id))
-        .await.map_err(|e| e.to_string())?
-}
-
-#[tauri::command]
 async fn pty_write(ptys: State<'_, Ptys>, id: u32, data: String) -> Result<(), String> {
     let ptys = ptys.inner().clone();
     tauri::async_runtime::spawn_blocking(move || ptys.write(id, &data)).await.map_err(|e| e.to_string())?
@@ -768,8 +754,6 @@ fn main() {
             project_reorder,
             task_reorder,
             agent_reorder,
-            inbox_recent,
-            inbox_cancel,
             task_goals_get,
             task_goal_save,
             task_goal_tell,
