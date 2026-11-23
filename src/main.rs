@@ -44,7 +44,28 @@ fn cmd_resume(args: &[String]) -> Result<(), String> {
     shifu::app_session::resume_agent(&cfg, name)
 }
 
+/// 会建、改或发东西的子命令：第一个参数是 -h/--help 时只打印用法，不能把它当成对话名或 agent 名。
+fn subcommand_usage(cmd: &str) -> Option<&'static str> {
+    Some(match cmd {
+        "new" => commands::NEW_USAGE,
+        "tell" => "用法: shifu tell <对话名或话题里的几个字> [--from 谁] <要说的话>\n  加 --queue --id <ID> [--expires-at 秒] [--stop-file 路径] 可向原会话排队追加",
+        "resume" => "用法: shifu resume <对话名>\n  恢复进程已退出的桌面会话",
+        "inbox" => "用法: shifu inbox <对话名> [消息ID] [--cancel]",
+        "act" => "用法: shifu act jump|right|below|own|even|finder|resume|close <名字> [页]",
+        "status" => "用法: shifu status [--json]",
+        _ => return None,
+    })
+}
+
+fn wants_help(args: &[String]) -> bool {
+    matches!(args.get(1).map(String::as_str), Some("-h" | "--help"))
+}
+
 fn dispatch(args: &[String]) -> Result<(), String> {
+    if let Some(usage) = args.first().and_then(|c| subcommand_usage(c)).filter(|_| wants_help(args)) {
+        println!("{usage}");
+        return Ok(());
+    }
     match args.first().map(String::as_str) {
         None => commands::cmd_open(),
         Some("new") => commands::cmd_new(&args[1..]),
@@ -86,6 +107,33 @@ fn dispatch(args: &[String]) -> Result<(), String> {
             Ok(())
         }
         Some(other) => Err(format!("不认识的命令 {other:?}。运行 shifu help 看用法。")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn s(items: &[&str]) -> Vec<String> {
+        items.iter().map(|x| x.to_string()).collect()
+    }
+
+    #[test]
+    fn help_flag_is_usage_for_commands_that_create_or_send() {
+        for cmd in ["new", "tell", "resume", "inbox", "act", "status"] {
+            assert!(subcommand_usage(cmd).is_some(), "{cmd}");
+            assert!(wants_help(&s(&[cmd, "--help"])));
+            assert!(wants_help(&s(&[cmd, "-h"])));
+        }
+        // 只有紧跟子命令的 --help 才算：发给对话的话里可以出现 --help
+        assert!(!wants_help(&s(&["tell", "codex-1", "试试", "--help"])));
+    }
+
+    #[test]
+    fn help_dispatch_does_not_touch_sessions() {
+        for cmd in ["new", "tell", "resume", "inbox", "act", "status"] {
+            assert_eq!(dispatch(&s(&[cmd, "--help"])), Ok(()), "{cmd}");
+        }
     }
 }
 

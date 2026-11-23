@@ -1,0 +1,2 @@
+- `shifu new --help`（和 `-h`）现在打印用法，不再开出一个叫 help-<目录> 的会话和空任务；`shifu new` 遇到不认识的 `-` 选项会报错，给 Agent 的参数照旧放在 `--` 后面。`tell`、`resume`、`inbox`、`act`、`status` 紧跟 `--help` 时也只打印用法。只需要更新 `shifu` 命令行。
+- `shifu new --help` (and `-h`) now prints usage instead of opening a session named help-<folder> and an empty task; unknown `-` options to `shifu new` are rejected, and agent arguments still go after `--`. `tell`, `resume`, `inbox`, `act` and `status` followed by `--help` also just print usage. Only the `shifu` CLI needs updating.

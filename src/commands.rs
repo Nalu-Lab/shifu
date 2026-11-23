@@ -18,7 +18,14 @@ pub struct NewArgs {
     pub extra: Vec<String>,
 }
 
-pub fn parse_new(args: &[String]) -> Res<NewArgs> {
+pub const NEW_USAGE: &str = "用法: shifu new <agent> [目录] [--focus] [-- 额外参数...]
+  <agent>   claude、codex 或任意命令名
+  [目录]    默认当前目录
+  --focus   建好后切到它
+  --        之后的参数原样交给 agent";
+
+/// `Ok(None)` 表示用户要看用法（-h / --help），调用方打印 [`NEW_USAGE`]，不建会话。
+pub fn parse_new(args: &[String]) -> Res<Option<NewArgs>> {
     let mut positional: Vec<String> = Vec::new();
     let mut focus = false;
     let mut extra = Vec::new();
@@ -29,16 +36,21 @@ pub fn parse_new(args: &[String]) -> Res<NewArgs> {
                 extra.extend(iter.by_ref().cloned());
             }
             "--focus" => focus = true,
+            "-h" | "--help" => return Ok(None),
+            // 不认识的选项不能当成 agent 名或目录，否则会开出 help-<目录> 这样的会话
+            a if a.starts_with('-') && a.len() > 1 => {
+                return Err(format!("shifu new 不认识选项 {a:?}；给 agent 的参数请放在 -- 后面\n{NEW_USAGE}"));
+            }
             _ => positional.push(arg.clone()),
         }
     }
     let mut positional = positional.into_iter();
-    let agent = positional.next().filter(|a| !a.is_empty()).ok_or("用法: shifu new <agent> [目录] [-- 额外参数...]")?;
+    let agent = positional.next().filter(|a| !a.is_empty()).ok_or(NEW_USAGE)?;
     let dir = positional.next().filter(|d| !d.is_empty());
     if let Some(extra_arg) = positional.next() {
         return Err(format!("多余的参数 {extra_arg:?}；额外参数请放在 -- 后面"));
     }
-    Ok(NewArgs { agent, dir, focus, extra })
+    Ok(Some(NewArgs { agent, dir, focus, extra }))
 }
 
 /// 相对路径按当前目录解析，`~/` 展开；不存在就报错。
@@ -62,7 +74,10 @@ pub fn shifu_exe() -> Res<PathBuf> {
 }
 
 pub fn cmd_new(args: &[String]) -> Res<()> {
-    let parsed = parse_new(args)?;
+    let Some(parsed) = parse_new(args)? else {
+        println!("{NEW_USAGE}");
+        return Ok(());
+    };
     let dir = resolve_dir(parsed.dir.as_deref())?;
     let shifu = shifu_exe()?;
     let shifu_str = shifu.to_string_lossy().to_string();
@@ -329,13 +344,13 @@ mod tests {
 
     #[test]
     fn parse_new_basic() {
-        let p = parse_new(&s(&["claude"])).unwrap();
+        let p = parse_new(&s(&["claude"])).unwrap().unwrap();
         assert_eq!(p, NewArgs { agent: "claude".into(), dir: None, focus: false, extra: vec![] });
     }
 
     #[test]
     fn parse_new_dir_focus_extra() {
-        let p = parse_new(&s(&["sh", "/tmp/x/中文 目录", "--focus", "--", "-c", "sleep 600"])).unwrap();
+        let p = parse_new(&s(&["sh", "/tmp/x/中文 目录", "--focus", "--", "-c", "sleep 600"])).unwrap().unwrap();
         assert_eq!(p.agent, "sh");
         assert_eq!(p.dir.as_deref(), Some("/tmp/x/中文 目录"));
         assert!(p.focus);
@@ -344,7 +359,7 @@ mod tests {
 
     #[test]
     fn parse_new_tmux_binding_form_with_empty_dir() {
-        let p = parse_new(&s(&["claude", "", "--focus"])).unwrap();
+        let p = parse_new(&s(&["claude", "", "--focus"])).unwrap().unwrap();
         assert_eq!(p.dir, None);
         assert!(p.focus);
     }
@@ -356,8 +371,29 @@ mod tests {
     }
 
     #[test]
+    fn help_shows_usage_instead_of_opening_an_agent() {
+        for args in [&["--help"][..], &["-h"], &["claude", "--help"], &["claude", "~/proj", "-h"]] {
+            assert_eq!(parse_new(&s(args)).unwrap(), None, "{args:?}");
+        }
+    }
+
+    #[test]
+    fn unknown_options_are_rejected_not_used_as_names() {
+        for args in [&["--version"][..], &["-v"], &["claude", "--model"], &["claude", "-x", "~/proj"]] {
+            assert!(parse_new(&s(args)).is_err(), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn help_after_double_dash_belongs_to_agent() {
+        let p = parse_new(&s(&["claude", "--", "--help"])).unwrap().unwrap();
+        assert_eq!(p.agent, "claude");
+        assert_eq!(p.extra, s(&["--help"]));
+    }
+
+    #[test]
     fn focus_after_double_dash_belongs_to_agent() {
-        let p = parse_new(&s(&["codex", "--", "--focus"])).unwrap();
+        let p = parse_new(&s(&["codex", "--", "--focus"])).unwrap().unwrap();
         assert!(!p.focus);
         assert_eq!(p.extra, s(&["--focus"]));
     }
