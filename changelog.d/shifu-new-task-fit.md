@@ -1,0 +1,2 @@
+- 新建任务窗口在窗口偏矮或文件夹列表较长时，「建立」按钮不再被挤到屏幕外：弹窗会跟着内容变高重新摆位，放不下就在弹窗里滚动。（还没装）
+- The new-task popover no longer pushes the 建立 (Create) button off screen in a short window or with a long folder list: it repositions as its content grows and scrolls inside when it cannot fit. (not installed yet)
