@@ -363,6 +363,21 @@ fn styled(line: &str) -> Vec<(char, bool)> {
 }
 
 pub fn composer_empty(kind: Kind, screen: &str) -> bool {
+    composer_empty_at(kind, screen, None)
+}
+
+/// Where tmux has the pane's cursor: column and row of the visible screen.
+pub fn cursor(tmux: &Tmux, pane: &str) -> Option<(usize, usize)> {
+    let out = tmux.run(["display-message", "-p", "-t", pane, "#{cursor_x} #{cursor_y}"]).ok()?;
+    let (x, y) = out.trim().split_once(' ')?;
+    Some((x.parse().ok()?, y.parse().ok()?))
+}
+
+/// `composer_empty`, also given the pane's cursor. With colour turned off (`NO_COLOR=1`, seen on the Mac mini
+/// 11-23) Claude's suggested next message is not drawn dim, so it looked like a draft and queued messages
+/// waited forever. With an empty box Claude keeps the cursor at the start of the suggestion; typed text leaves it
+/// after the text. That is only consulted when the screen carries no colour at all.
+pub fn composer_empty_at(kind: Kind, screen: &str, cursor: Option<(usize, usize)>) -> bool {
     let styled: Vec<Vec<(char, bool)>> = screen.lines().map(styled).collect();
     let plain: Vec<String> = styled.iter().map(|line| line.iter().map(|(c, _)| c).collect()).collect();
     let lines: Vec<&str> = plain.iter().map(String::as_str).collect();
@@ -380,7 +395,9 @@ pub fn composer_empty(kind: Kind, screen: &str) -> bool {
     let prompt = lines[at].trim().strip_prefix(marker).unwrap().trim();
     // Dim text in the box is the agent's own: Codex's placeholder, or the next message Claude suggests.
     let typed = styled[at].iter().skip_while(|(c, _)| *c != marker).skip(1).any(|(c, dim)| !c.is_whitespace() && !dim);
-    let blank = !typed || (kind == Kind::Codex && prompt == "Ask Codex to do anything");
+    let start = lines[at].chars().take_while(|c| *c != marker).count() + 2;
+    let suggestion_without_colour = kind == Kind::Claude && !screen.contains('\x1b') && cursor == Some((start, at));
+    let blank = !typed || suggestion_without_colour || (kind == Kind::Codex && prompt == "Ask Codex to do anything");
     blank
         && lines[at + 1..]
             .iter()
@@ -607,7 +624,7 @@ impl InboxPump {
             let pane = input.pane.clone();
             serialize(&pane, &mut || {
                 let screen = tmux.run(["capture-pane", "-e", "-p", "-t", &input.pane])?;
-                if !composer_empty(agent.kind, &screen) {
+                if !composer_empty_at(agent.kind, &screen, cursor(tmux, &input.pane)) {
                     return Ok(());
                 }
                 if !current_target(&input, tmux)? {
@@ -1157,6 +1174,14 @@ mod tests {
         assert!(!composer_empty(Kind::Claude, &format!("{rule}\n\x1b[39m❯\u{a0}确认\x1b[0m\n{rule}\n  ⏵⏵ bypass permissions on")));
         assert!(!composer_empty(Kind::Claude, &format!("{rule}\n❯\u{a0}\x1b[38;2;200;200;200m写到一半\x1b[0m\n{rule}")));
         assert!(!composer_empty(Kind::Claude, &format!("{rule}\n❯\u{a0}\x1b[2m建议\x1b[22m又打了字\x1b[0m\n{rule}")));
+        // NO_COLOR=1: the suggestion is plain text; the cursor at its start tells it from a draft.
+        let plain = format!("{rule}\n❯\u{a0}continue\n{rule}\n  ⏵⏵ bypass permissions on");
+        assert!(composer_empty_at(Kind::Claude, &plain, Some((2, 1))));
+        assert!(!composer_empty_at(Kind::Claude, &plain, Some((10, 1))), "cursor after the text: a draft");
+        assert!(!composer_empty_at(Kind::Claude, &plain, None));
+        assert!(!composer_empty_at(Kind::Claude, &format!("{rule}\n❯\u{a0}continue\n  second line\n{rule}"), Some((2, 1))));
+        // With colour on, a normal-coloured word stays a draft wherever the cursor is.
+        assert!(!composer_empty_at(Kind::Claude, &format!("{rule}\n\x1b[39m❯\u{a0}确认\x1b[0m\n{rule}"), Some((2, 1))));
         for screen in [
             "› my unfinished draft",
             "›\n  second line draft\nGPT-6",
