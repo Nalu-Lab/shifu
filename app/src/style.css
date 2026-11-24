@@ -2565,6 +2565,6 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   display: none;
 }
 
-.project.empty .project-add {
+.project.no-tasks .project-add {
   opacity: 1;
 }

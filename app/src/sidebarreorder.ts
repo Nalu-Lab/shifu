@@ -84,7 +84,7 @@ export function bindSidebarReorder(
       : target.closest(".project-row")?.parentElement;
     const list = source?.parentElement;
     // A picked folder with no task yet has no place in the saved order, so it is not dragged.
-    if (!source || !list || list.childElementCount < 2 || source.classList.contains("empty")) return;
+    if (!source || !list || list.childElementCount < 2 || source.classList.contains("no-tasks")) return;
     drag = { id: event.pointerId, source, list, x: event.clientX, startY: event.clientY, y: event.clientY, active: false };
   });
 

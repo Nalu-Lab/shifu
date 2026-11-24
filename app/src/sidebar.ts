@@ -626,7 +626,7 @@ class ProjectView {
     this.name.textContent = project.name;
     // A folder just picked for a new task, with no task in it yet (see `withPickedFolders`).
     const empty = project.tasks.length === 0;
-    this.element.classList.toggle("empty", empty);
+    this.element.classList.toggle("no-tasks", empty);
     this.emptyNote.hidden = !empty;
     this.head.title = this.path;
     this.element.classList.toggle("collapsed", collapsed);
