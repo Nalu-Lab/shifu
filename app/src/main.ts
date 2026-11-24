@@ -13,6 +13,12 @@ import {
   agentKill,
   agentResume,
   agentsList,
+  botList,
+  botJoin,
+  botLeave,
+  botOpen,
+  botSave,
+  type ResidentBot,
   goalsGet,
   jevLogTail,
   notifyRemove,
@@ -51,6 +57,7 @@ import { closeNewPopover, showAddAgentPopover, showNewTaskPopover } from "./newp
 import { shouldShowGuide, showGuide } from "./onboarding";
 import { startPtyBus } from "./ptybus";
 import { Sidebar, type Role } from "./sidebar";
+import { botKindKey } from "./botpicker";
 import { MemoryBar } from "./memory";
 import { LimitsBar } from "./limitsbar";
 import { PowerButton } from "./power";
@@ -244,6 +251,26 @@ async function main() {
     }, { agentsOnly: true });
   };
 
+  const openBot = async (bot: ResidentBot, anchor: HTMLElement) => {
+    const existing = getTasks().find((task) => task.project === bot.dir);
+    if (existing?.agents.length) return focusAgent(existing.id, existing.agents[0]);
+
+    const kindKey = botKindKey(bot.id);
+    const start = async (kind: string) => {
+      const { file, agent } = await botOpen(bot.id, kind, pickArgs(pickFor(kind)));
+      if (agent) setAgents(await agentsList());
+      setTaskFile(file);
+      const task = file.tasks.find((item) => item.project === bot.dir);
+      const name = agent ?? task?.agents[0];
+      if (!task || !name) throw new Error(`无法打开${bot.name}的对话`);
+      localStorage.setItem(kindKey, kind);
+      await focusAgent(task.id, name);
+    };
+    const kind = localStorage.getItem(kindKey);
+    if (kind) await start(kind);
+    else showAddAgentPopover(anchor, start, { agentsOnly: true });
+  };
+
   const deleteTask = async (id: string) => {
     const task = getTasks().find((t) => t.id === id);
     const wasCurrent = getCurrentId() === id;
@@ -301,7 +328,19 @@ async function main() {
       void openRole(role, anchor).catch(reportError);
     },
     repickRole: (role) => localStorage.removeItem(ROLES[role].kindKey),
+    listBots: botList,
+    joinBot: botJoin,
+    leaveBot: botLeave,
+    saveBot: botSave,
+    openBot: (bot, anchor) => void openBot(bot, anchor).catch(reportError),
   });
+  try {
+    const bots = await botList();
+    if (bots) sidebar.setBots(bots);
+  } catch (error) {
+    reportError(error);
+    // The cat retries the catalog if the initial read failed.
+  }
   void pmDir().then((dir) => sidebar.setRoleDir("pm", dir)).catch(reportError);
   void cliMismatch().then((why) => why && sidebar.setNotice(why)).catch(reportError);
   // Preview mocks answer unknown commands with null; the 每日分析 row then stays hidden.

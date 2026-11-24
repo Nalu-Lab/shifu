@@ -7,6 +7,7 @@ import type { Limits } from "./limits";
 import type { Goals, TaskGoal } from "./progress";
 import type { AgentModels } from "./models";
 import type { Changed, TaskFile } from "./tasks";
+import type { CatAppearance } from "./cattraits";
 
 export const agentsList = () => invoke<AgentView[]>("agents_list");
 export const agentNew = (kind: string, cwd: string) => invoke<string>("agent_new", { kind, cwd });
@@ -41,6 +42,23 @@ export const powerSet = (mode: PowerMode) => invoke<PowerStatus>("power_set", { 
 export const powerTimer = (minutes: number | null) => invoke<PowerStatus>("power_timer", { minutes });
 export const powerLid = (enabled: boolean) => invoke<PowerStatus>("power_lid", { enabled });
 export const powerLidSetup = () => invoke<PowerStatus>("power_lid_setup");
+export type BotId = string;
+export interface BotProfile {
+  name: string;
+  purpose: string;
+  appearance: CatAppearance | null;
+}
+export interface ResidentBot extends BotProfile {
+  id: BotId;
+  dir: string;
+  joined: boolean;
+}
+export const botList = () => invoke<ResidentBot[]>("bot_list");
+export const botJoin = (id: BotId) => invoke<ResidentBot[]>("bot_join", { id });
+export const botLeave = (id: BotId) => invoke<ResidentBot[]>("bot_leave", { id });
+export const botSave = (id: BotId, profile: BotProfile) => invoke<ResidentBot[]>("bot_save", { id, profile });
+export const botOpen = (id: BotId, kind: string, pick: PickArgs) => invoke<Changed>("bot_open", { id, kind, ...pick });
+
 export const pmDir = () => invoke<string>("pm_dir");
 /** Why the installed `shifu` CLI does not match this app, or null when it does. */
 export const cliMismatch = () => invoke<string | null>("cli_mismatch");

@@ -1,4 +1,5 @@
 mod agents;
+mod bots;
 mod antigravity;
 mod clamshell;
 mod clis;
@@ -253,6 +254,43 @@ fn cli_mismatch(cfg: State<Config>) -> Option<String> {
         return Some(pm::NO_CLI.into());
     }
     cli_notice(&cfg.shifu_bin, std::process::Command::new(&cfg.shifu_bin).arg("version").output())
+}
+
+/// Personal resident bots can be joined without starting a CLI session.
+#[tauri::command]
+fn bot_list(cfg: State<Config>, bots: State<bots::Bots>) -> Result<Vec<bots::ResidentBot>, String> {
+    bots.list(&cfg)
+}
+
+#[tauri::command]
+fn bot_join(cfg: State<Config>, bots: State<bots::Bots>, id: String) -> Result<Vec<bots::ResidentBot>, String> {
+    bots.join(&cfg, &id)
+}
+
+#[tauri::command]
+fn bot_leave(cfg: State<Config>, bots: State<bots::Bots>, id: String) -> Result<Vec<bots::ResidentBot>, String> {
+    bots.leave(&cfg, &id)
+}
+
+#[tauri::command]
+fn bot_save(cfg: State<Config>, bots: State<bots::Bots>, id: String, profile: bots::Profile) -> Result<Vec<bots::ResidentBot>, String> {
+    bots.save(&cfg, &id, profile)
+}
+
+#[tauri::command]
+fn bot_open(
+    cfg: State<Config>,
+    tasks: State<Tasks>,
+    bots: State<bots::Bots>,
+    id: String,
+    kind: String,
+    model: Option<String>,
+    effort: Option<String>,
+) -> Result<Changed, String> {
+    bots.open(&cfg, &id, |bot| {
+        open_pinned(&cfg, &tasks, &bot.dir, &bot.name, &kind,
+            Pick { model: model.as_deref(), effort: effort.as_deref() })
+    })
 }
 
 /// The project manager's folder (its task is the one whose project is this folder).
@@ -692,6 +730,7 @@ fn main() {
         .manage(Branches::default())
         .manage(PendingQuestions::default())
         .manage(Tasks::default())
+        .manage(bots::Bots::default())
         .manage(limits::SlowLimits::default())
         .manage(search::SearchCache::default())
         .manage(power)
@@ -757,6 +796,11 @@ fn main() {
             search_conversations,
             codex_file_link_labels,
             cli_mismatch,
+            bot_list,
+            bot_join,
+            bot_leave,
+            bot_save,
+            bot_open,
             pm_dir,
             resources_get,
             pm_open,
