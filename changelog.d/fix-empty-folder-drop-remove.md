@@ -1,0 +1,2 @@
+- 侧栏里还没有任务的文件夹：把对话拖上去，就在这个文件夹建一个同名任务并把对话移进去（不开新对话）；文件夹右边的 × 可以把它从侧栏拿掉，磁盘上的文件不动。
+- A folder in the sidebar with no task yet: drop a conversation on it to make a task there, named after the folder, holding that conversation (no new session starts). The × next to it removes the folder from the sidebar; nothing on disk changes.
