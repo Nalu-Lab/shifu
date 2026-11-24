@@ -2733,6 +2733,27 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   opacity: 1;
 }
 
+.project-remove {
+  display: none;
+}
+
+.project.no-tasks .project-remove {
+  display: inline-flex;
+  opacity: 0;
+}
+
+.project.no-tasks .project-row:hover .project-remove,
+.project-remove:focus-visible {
+  opacity: 1;
+}
+
+/* A conversation is dragged over a folder with no task: dropping makes its first task. */
+.project.drop-target {
+  border-radius: var(--radius);
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 1px var(--line-focus);
+}
+
 /* ---------- first-run guide (onboarding.ts) ---------- */
 
 .guide {

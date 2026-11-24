@@ -38,6 +38,7 @@ import {
   taskAddAgent,
   taskDelete,
   taskMoveAgent,
+  taskNewWithAgent,
   taskNew,
   taskRename,
   taskReorder,
@@ -314,6 +315,16 @@ async function main() {
           return workspace.moved(name, toId, file.tasks.map((task) => task.id));
         })
         .catch(reportError),
+    moveAgentToFolder: (name, project) =>
+      void taskNewWithAgent(project, name)
+        .then((file) => {
+          setTaskFile(file);
+          dropPickedFolder(project);
+          const made = file.tasks.find((task) => task.agents.includes(name));
+          return made ? workspace.moved(name, made.id, file.tasks.map((task) => task.id)) : undefined;
+        })
+        .catch(reportError),
+    removeEmptyFolder: (project) => dropPickedFolder(project),
     killAgent: endAgent,
     reorderProject: (paths) => void projectReorder(paths).then(setTaskFile).catch(reportError),
     reorderTask: (project, ids) => void taskReorder(project, ids).then(setTaskFile).catch(reportError),

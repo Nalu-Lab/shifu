@@ -34,6 +34,10 @@ export interface SidebarActions {
   killAgent(name: string): void;
   /** An agent's tab or row was dropped on another task: it now belongs there. */
   moveAgent(name: string, taskId: string): void;
+  /** An agent was dropped on a folder with no task yet: a new task there, named after the folder, takes it. */
+  moveAgentToFolder(name: string, project: string): void;
+  /** Take a picked folder with no task off the sidebar. Nothing on disk changes. */
+  removeEmptyFolder(project: string): void;
   /** A project folder was dropped on another: this is the whole new sidebar order, by path. */
   reorderProject(paths: string[]): void;
   reorderTask(project: string, ids: string[]): void;
@@ -161,6 +165,8 @@ function cached<V>(cache: Map<string, V>, keys: readonly string[], make: (key: s
 
 const chevron =
   '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2l3 3-3 3"/></svg>';
+const cross =
+  '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6"/></svg>';
 const plus =
   '<svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M7 2.5v9M2.5 7h9"/></svg>';
 
@@ -631,9 +637,37 @@ class ProjectView {
       e.stopPropagation();
       actions.requestNewTask(add, path);
     });
-    this.head.append(this.arrow, this.name, add);
+    // Only a folder with no task yet can be removed; it was only picked, so there is nothing to lose.
+    const remove = el("button", "icon-btn project-remove");
+    remove.innerHTML = cross;
+    remove.title = "从侧栏移除这个空文件夹";
+    remove.setAttribute("aria-label", "从侧栏移除这个空文件夹");
+    remove.addEventListener("click", (e) => {
+      e.stopPropagation();
+      actions.removeEmptyFolder(path);
+    });
+    this.head.append(this.arrow, this.name, remove, add);
     this.head.addEventListener("click", toggle);
     this.element.append(this.head, this.emptyNote, this.list);
+    // A conversation dropped on a folder with no task yet starts that folder's first task (用户 11-23).
+    this.element.addEventListener("dragover", (e) => {
+      if (!this.element.classList.contains("no-tasks") || draggedAgent(e) === null) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+      this.element.classList.add("drop-target");
+    });
+    this.element.addEventListener("dragleave", (e) => {
+      if (!this.element.contains(e.relatedTarget as Node | null)) this.element.classList.remove("drop-target");
+    });
+    this.element.addEventListener("drop", (e) => {
+      this.element.classList.remove("drop-target");
+      if (!this.element.classList.contains("no-tasks")) return;
+      const name = e.dataTransfer?.getData(AGENT_MIME) || getPanelData()?.panelId;
+      if (!name || !getAgents().some((a) => a.name === name)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      actions.moveAgentToFolder(name, path);
+    });
   }
 
   update(project: Project, collapsed: boolean, ctx: Ctx): void {

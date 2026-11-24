@@ -80,6 +80,7 @@ export const taskRename = (id: string, name: string) => invoke<TaskFile>("task_r
 export const taskSetCurrent = (id: string) => invoke<TaskFile>("task_set_current", { id });
 /** Drag an agent's tab onto another task: only its ownership changes, the agent keeps running. */
 export const taskMoveAgent = (name: string, toId: string) => invoke<TaskFile>("task_move_agent", { name, toId });
+export const taskNewWithAgent = (project: string, name: string) => invoke<TaskFile>("task_new_with_agent", { project, name });
 export const taskDelete = (id: string) => invoke<TaskFile>("task_delete", { id });
 /** Drag a project folder onto another: the whole displayed order is sent, and only the order changes. */
 export const projectReorder = (paths: string[]) => invoke<TaskFile>("project_reorder", { paths });
