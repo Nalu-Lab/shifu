@@ -186,3 +186,22 @@ export function limitLines(limits: Limits, now: number): LimitLine[] {
   }
   return lines;
 }
+
+/** A row of the usage panel: `vendor` is the agent kind whose CLI it belongs to (`AGENTS` in models.ts), `empty` when
+ *  it has no numbers to show. */
+export interface PanelItem {
+  vendor: string;
+  empty?: boolean;
+}
+
+/** What the panel lists: only vendors whose CLI is installed, the active conversation's vendor first (the rest keep
+ *  their order), and those with numbers apart from those without, which stay folded away until asked for. The folded
+ *  line turns through those with numbers; while none has any yet it shows the first one without, not a blank line. */
+export function arrangePanel<T extends PanelItem>(items: readonly T[], installed: (kind: string) => boolean,
+  active: string | null): { full: T[]; empty: T[]; turning: T[] } {
+  const kept = items.filter((item) => installed(item.vendor));
+  const ordered = [...kept.filter((item) => item.vendor === active), ...kept.filter((item) => item.vendor !== active)];
+  const full = ordered.filter((item) => !item.empty);
+  const empty = ordered.filter((item) => item.empty);
+  return { full, empty, turning: full.length ? full : empty.slice(0, 1) };
+}

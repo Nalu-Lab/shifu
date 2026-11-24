@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ACCENT_AT, codebuddySegments, creditsText, isHot, isReset, limitLine, limitLines, resetCountdown, resetText, windowName, type CodeBuddyUse, type VendorLimits } from "./limits";
+import { ACCENT_AT, arrangePanel, codebuddySegments, creditsText, isHot, isReset, limitLine, limitLines, resetCountdown, resetText, windowName, type CodeBuddyUse, type VendorLimits } from "./limits";
+import { isInstalled } from "./models";
+import type { CliReport } from "./api";
 
 /** Local-time seconds, so the tests do not depend on the machine's time zone. */
 const at = (y: number, mo: number, d: number, h: number, mi: number) => new Date(y, mo - 1, d, h, mi).getTime() / 1000;
@@ -198,5 +200,63 @@ describe("codebuddySegments", () => {
 
   it("has no rows when nothing was spent today and the free quota has reset", () => {
     expect(codebuddySegments({ spends: [[ms(0) - 1, 4]], free: { used_percent: 50, resets_at: now - 1 } }, now)).toEqual([]);
+  });
+});
+
+describe("arrangePanel", () => {
+  const report: CliReport = {
+    agents: [
+      { kind: "claude", name: "Claude", path: "/bin/claude", install_url: "" },
+      { kind: "codex", name: "Codex", path: "/bin/codex", install_url: "" },
+      { kind: "codebuddy", name: "CodeBuddy", path: null, install_url: "" },
+      { kind: "kimi", name: "Kimi", path: "/bin/kimi", install_url: "" },
+      { kind: "antigravity", name: "Antigravity", path: null, install_url: "" },
+      { kind: "qwen", name: "Qwen Code", path: "/bin/qwen", install_url: "" },
+    ],
+    tmux: "/bin/tmux",
+    shell_read: true,
+  };
+  const installed = (kind: string) => isInstalled(report, kind);
+  const items = [
+    { key: "claude", vendor: "claude" },
+    { key: "codex", vendor: "codex" },
+    { key: "kimi", vendor: "kimi", empty: true },
+    { key: "qwen", vendor: "qwen", empty: true },
+    { key: "codebuddy", vendor: "codebuddy", empty: true },
+    { key: "antigravity:Gemini Models", vendor: "antigravity" },
+    { key: "antigravity:Claude and GPT models", vendor: "antigravity" },
+  ];
+  const keys = (list: { key: string }[]) => list.map((item) => item.key);
+
+  it("leaves out vendors whose CLI is not installed, with or without numbers", () => {
+    const { full, empty } = arrangePanel(items, installed, null);
+    expect(keys(full)).toEqual(["claude", "codex"]);
+    expect(keys(empty)).toEqual(["kimi", "qwen"]);
+  });
+
+  it("keeps vendors without numbers apart, to be listed only when asked for", () => {
+    const { full, empty } = arrangePanel(items, () => true, null);
+    expect(full.every((item) => !item.empty)).toBe(true);
+    expect(keys(empty)).toEqual(["kimi", "qwen", "codebuddy"]);
+  });
+
+  it("puts the active conversation's vendor first and keeps the others in order", () => {
+    expect(keys(arrangePanel(items, installed, "codex").full)).toEqual(["codex", "claude"]);
+    expect(keys(arrangePanel(items, () => true, "antigravity").full))
+      .toEqual(["antigravity:Gemini Models", "antigravity:Claude and GPT models", "claude", "codex"]);
+    expect(keys(arrangePanel(items, installed, "qwen").empty)).toEqual(["qwen", "kimi"]);
+    expect(keys(arrangePanel(items, installed, "terminal").full)).toEqual(["claude", "codex"]);
+  });
+
+  it("turns through the vendors with numbers, or shows the first one without while none has any", () => {
+    expect(keys(arrangePanel(items, installed, null).turning)).toEqual(["claude", "codex"]);
+    const none = items.map((item) => ({ ...item, empty: true }));
+    expect(keys(arrangePanel(none, installed, "qwen").turning)).toEqual(["qwen"]);
+    expect(arrangePanel(none, () => false, null).turning).toEqual([]);
+  });
+
+  it("hides nothing before the first CLI report arrives", () => {
+    const { full, empty } = arrangePanel(items, (kind) => isInstalled(null, kind), null);
+    expect(full.length + empty.length).toBe(items.length);
   });
 });

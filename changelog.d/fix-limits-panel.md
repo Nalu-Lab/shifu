@@ -1,0 +1,2 @@
+- 侧栏底部的用量面板更清爽：没装的 CLI（如 agy、Kimi、CodeBuddy）不再显示、不再报「未找到」，后台也不再去查它们的额度；暂无数据的几家收在「另有 N 家暂无数据」里，点开才列出；当前对话所用的那家排在最前。
+- The usage panel at the bottom of the sidebar is tidier: CLIs that are not installed (such as agy, Kimi or CodeBuddy) are no longer listed, no longer show a "not found" message, and are no longer polled in the background; vendors without numbers wait behind 「另有 N 家暂无数据」 until clicked; the vendor of the current conversation comes first.
