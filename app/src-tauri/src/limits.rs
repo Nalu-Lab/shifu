@@ -266,16 +266,29 @@ impl Refresh {
     }
 }
 
-fn spawn_reader(slow: &SlowLimits, read: impl Fn() + Send + 'static) {
+/// One round of a reader whose client is the `kind` CLI: it runs only while that CLI is installed. Otherwise nothing
+/// is started and `skip` empties the slot, so neither old numbers nor a "not found" error stay on the panel.
+fn round(kind: &str, installed: impl Fn(&str) -> bool, read: &dyn Fn(), skip: &dyn Fn()) {
+    if installed(kind) { read() } else { skip() }
+}
+
+/// Installation is looked at every round: a CLI installed while Shifu runs is read from the next round on.
+fn spawn_reader(slow: &SlowLimits, kind: &'static str, read: impl Fn() + Send + 'static, skip: impl Fn() + Send + 'static) {
     let slow = slow.clone();
     std::thread::spawn(move || {
         let mut seen = *slow.refresh.generation.lock().expect("quota refresh lock");
         loop {
             let started = Instant::now();
-            read();
+            round(kind, crate::clis::installed, &read, &skip);
             slow.refresh.wait(&mut seen, started);
         }
     });
+}
+
+fn clear<T: Default>(slot: &Mutex<T>) {
+    if let Ok(mut value) = slot.lock() {
+        *value = T::default();
+    }
 }
 
 fn keep_result(slot: &Mutex<Option<VendorLimits>>, result: Result<VendorLimits, String>) {
@@ -482,14 +495,16 @@ pub fn spawn_watcher(app: AppHandle) {
     for (client, name) in [(crate::quota::Client::Codex, "codex"), (crate::quota::Client::Claude, "claude")] {
         let slot = slow.clone();
         let directory = app.state::<Config>().home.join("usage-probe").join(name);
-        spawn_reader(&slow, move || {
+        let empty = slow.clone();
+        spawn_reader(&slow, name, move || {
             let result = crate::quota::read(client, &directory);
             keep_result(match client { crate::quota::Client::Codex => &slot.codex, crate::quota::Client::Claude => &slot.claude }, result);
-        });
+        }, move || clear(match client { crate::quota::Client::Codex => &empty.codex, crate::quota::Client::Claude => &empty.claude }));
     }
     {
         let slot = slow.clone();
-        spawn_reader(&slow, move || {
+        let empty = slow.clone();
+        spawn_reader(&slow, "antigravity", move || {
             let result = crate::antigravity::read_usage();
             if let Ok(mut usage) = slot.antigravity.lock() {
                 match result {
@@ -497,13 +512,14 @@ pub fn spawn_watcher(app: AppHandle) {
                     Err(error) => usage.error = Some(error),
                 }
             }
-        });
+        }, move || clear(&empty.antigravity));
     }
     // The plan quota sits behind a Bailian console login Shifu never performs, so a round that cannot reach it keeps
     // the last numbers instead of emptying the row.
     {
         let slot = slow.clone();
-        spawn_reader(&slow, move || keep_result(&slot.qwen_quota, crate::qwen::read_quota()));
+        let empty = slow.clone();
+        spawn_reader(&slow, "qwen", move || keep_result(&slot.qwen_quota, crate::qwen::read_quota()), move || clear(&empty.qwen_quota));
     }
     {
         let slow = slow.clone();
@@ -522,7 +538,8 @@ pub fn spawn_watcher(app: AppHandle) {
         }
         // Looked for every round: Kimi Code may log in, or start and refresh its login, while Shifu runs.
         let slot = slow.clone();
-        spawn_reader(&slow, move || {
+        let empty = slow.clone();
+        spawn_reader(&slow, "kimi", move || {
             let credentials = std::fs::read_to_string(kimi_home().join("credentials/kimi-code.json")).unwrap_or_default();
             match fresh_kimi_token(&credentials, secs(SystemTime::now())).map(|token| ask_kimi(&token)) {
                 Some(Ok(v)) => {
@@ -534,15 +551,15 @@ pub fn spawn_watcher(app: AppHandle) {
                 Some(Err(e)) => keep_result(&slot.kimi, Err(e)),
                 None => keep_result(&slot.kimi, Err("Kimi 登录已过期或不可用，请先打开 Kimi Code 更新登录".into())),
             }
-        });
+        }, move || clear(&empty.kimi));
     }
     let projects = PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".codebuddy/projects");
     if projects.is_dir() {
         let slow = slow.clone();
         std::thread::spawn(move || loop {
-            let found = read_codebuddy(&projects);
+            let found = crate::clis::installed("codebuddy").then(|| read_codebuddy(&projects));
             if let Ok(mut c) = slow.codebuddy.lock() {
-                *c = Some(found);
+                *c = found;
             }
             std::thread::sleep(CODEBUDDY_EVERY);
         });
@@ -776,6 +793,26 @@ mod tests {
         assert_eq!(chosen.error.as_deref(), Some("查询超时"));
         keep_result(&slot, Ok(VendorLimits { updated_at: 125, ..previous }));
         assert!(slot.lock().unwrap().as_ref().unwrap().error.is_none());
+    }
+
+    #[test]
+    fn a_reader_starts_nothing_for_a_cli_that_is_not_installed_and_empties_its_slot() {
+        use std::cell::Cell;
+        let (reads, skips) = (Cell::new(0), Cell::new(0));
+        let installed = |kind: &str| kind == "claude";
+        for kind in ["claude", "antigravity", "kimi", "claude"] {
+            round(kind, installed, &|| reads.set(reads.get() + 1), &|| skips.set(skips.get() + 1));
+        }
+        assert_eq!((reads.get(), skips.get()), (2, 2));
+
+        let slow = Slow::default();
+        *slow.antigravity.lock().unwrap() =
+            crate::antigravity::Usage { error: Some("未找到 agy，请先安装 Antigravity CLI".into()), ..Default::default() };
+        *slow.kimi.lock().unwrap() = Some(VendorLimits { windows: vec![w(10.0, 300, 1)], ..Default::default() });
+        round("antigravity", installed, &|| panic!("agy is not installed"), &|| clear(&slow.antigravity));
+        round("kimi", installed, &|| panic!("kimi is not installed"), &|| clear(&slow.kimi));
+        assert_eq!(*slow.antigravity.lock().unwrap(), crate::antigravity::Usage::default());
+        assert_eq!(*slow.kimi.lock().unwrap(), None);
     }
 
     #[test]

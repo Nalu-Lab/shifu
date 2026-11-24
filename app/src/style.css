@@ -304,6 +304,17 @@ button {
   color: var(--text-2);
 }
 
+/* "另有 2 家暂无数据": unfolds the vendors without numbers. */
+.limit-nodata {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+}
+
 .limit-refresh {
   display: inline-flex;
   align-items: center;

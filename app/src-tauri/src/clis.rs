@@ -50,6 +50,17 @@ pub fn report() -> Report {
     Report { agents: clis::detect(&path), tmux, shell_read: SHELL_READ.load(Ordering::Relaxed) }
 }
 
+/// Whether `kind`'s CLI was found, as `isInstalled` in models.ts reads the report: an agent the list does not know
+/// about counts as installed.
+pub fn is_installed(found: &[Found], kind: &str) -> bool {
+    found.iter().find(|f| f.kind == kind).is_none_or(|f| f.path.is_some())
+}
+
+/// Whether `kind`'s CLI is on the PATH the app gives its sessions now. Only file checks, like `clis_detect`.
+pub fn installed(kind: &str) -> bool {
+    is_installed(&clis::detect(&current_path()), kind)
+}
+
 /// Asks the login shell for its PATH off the main thread; see the module comment.
 pub fn spawn_shell_read(app: AppHandle, home: PathBuf) {
     std::thread::spawn(move || {
@@ -84,6 +95,20 @@ mod tests {
         let got = startup_path(Some("/Users/e/.nvm/versions/node/v22.0.0/bin:/usr/bin"), "/usr/bin:/bin", "/Users/e");
         assert!(got.starts_with("/Users/e/.nvm/versions/node/v22.0.0/bin:/usr/bin:/bin:/Users/e/.kimi-code/bin:/Users/e/.local/bin:"), "{got}");
         assert!(got.contains(":/opt/homebrew/bin:") && got.contains(":/Users/e/.bun/bin"), "{got}");
+    }
+
+    #[test]
+    fn only_a_known_agent_without_a_path_counts_as_missing() {
+        let found = |kind: &str, path: Option<&str>| Found {
+            kind: kind.into(),
+            name: kind.into(),
+            path: path.map(Into::into),
+            install_url: String::new(),
+        };
+        let report = [found("claude", Some("/bin/claude")), found("antigravity", None)];
+        assert!(is_installed(&report, "claude"));
+        assert!(!is_installed(&report, "antigravity"));
+        assert!(is_installed(&report, "unknown"));
     }
 
     #[test]

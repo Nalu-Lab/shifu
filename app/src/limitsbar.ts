@@ -1,16 +1,18 @@
 import { listen } from "@tauri-apps/api/event";
 import { limitsGet, limitsRefresh } from "./api";
-import { codebuddySegments, fullTime, resetCountdown, resetText, type LimitLine, type LimitSegment, type Limits, type Vendor, limitLines } from "./limits";
+import { arrangePanel, codebuddySegments, fullTime, resetCountdown, resetText, type LimitLine, type LimitSegment, type Limits, type Vendor, limitLines } from "./limits";
 import { mascot } from "./mascots";
 import { vendorIcon } from "./vendoricons";
 import { antigravityLines } from "./antigravity";
-import { getAgents, reportError, subscribe } from "./store";
+import { findAgent, getActiveAgent, getAgents, reportError, subscribe } from "./store";
+import { getClis, isInstalled, onClisChange } from "./models";
 
 const REFRESH_MS = 15000;
 /** How long each vendor stays on the rotating line. Picked by hand. */
 const TURN_MS = 4000;
 
-/** The folded footer shows one usage entry at a time and pauses under the pointer. A click unfolds every entry.
+/** The folded footer shows one usage entry at a time and pauses under the pointer. A click unfolds every entry; vendors
+ *  without numbers stay behind one more click, and CLIs not installed here are not listed at all.
  *  Timer redraws let expired windows stop showing old usage even when no new data arrives. */
 export class LimitsBar {
   readonly element = document.createElement("div");
@@ -19,6 +21,8 @@ export class LimitsBar {
   private current: string | null = null;
   private unfolded = false;
   private pointed = false;
+  /** The unfolded panel also lists the vendors without numbers. */
+  private showEmpty = false;
 
   constructor(onExpand: () => void) {
     this.element.className = "limits";
@@ -56,11 +60,14 @@ export class LimitsBar {
     });
     // Clawd moves more often as soon as a Claude agent starts running; the CodeBuddy and Kimi rows follow theirs.
     subscribe(() => this.render());
+    // A CLI not installed is not listed; the report arrives after start and again once the login shell answers.
+    onClisChange(() => this.render());
   }
 
   close(): void {
     if (!this.unfolded) return;
     this.unfolded = false;
+    this.showEmpty = false;
     this.render();
   }
 
@@ -78,7 +85,7 @@ export class LimitsBar {
   private render(turned = false): void {
     const now = Math.floor(Date.now() / 1000);
     const running = (kind: string) => getAgents().some((a) => a.kind === kind && a.status === "running");
-    const blocks = limitLines(this.limits, now).map((line) => vendorBlock(line, running(line.vendor), now, this.unfolded,
+    const blocks: Block[] = limitLines(this.limits, now).map((line) => vendorBlock(line, running(line.vendor), now, this.unfolded,
       line.vendor === "kimi" && this.limits.kimi?.error?.startsWith("Kimi 登录已过期") ? "待登录" : undefined));
     const codebuddy = this.limits.codebuddy ? codebuddySegments(this.limits.codebuddy, now) : [];
     blocks.push({ ...agentsBlock("codebuddy", "CodeBuddy", codebuddy, now, this.unfolded), empty: codebuddy.length === 0 });
@@ -88,11 +95,12 @@ export class LimitsBar {
       element.classList.add("limit-antigravity");
       element.title = `${line.label.replace("（旧数据）", "")}\n${line.title}`;
       if (this.unfolded) element.setAttribute("aria-label", element.title);
-      blocks.push({ key: line.key, element });
+      blocks.push({ key: line.key, vendor: "antigravity", element, empty: this.limits.antigravity.groups.length === 0 });
     }
-    let shown = blocks;
+    const active = findAgent(getActiveAgent() ?? "")?.kind ?? null;
+    const { full, empty, turning } = arrangePanel(blocks, (kind) => isInstalled(getClis(), kind), active);
+    let shown = [...full, ...(this.showEmpty ? empty : [])];
     if (!this.unfolded) {
-      const turning = blocks.filter((b) => !b.empty);
       const at = turning.findIndex((b) => b.key === this.current);
       const index = at < 0 ? 0 : turned ? (at + 1) % turning.length : at;
       const current = turning[index] ?? null;
@@ -100,7 +108,7 @@ export class LimitsBar {
       if (current && turned && turning.length > 1) current.element.classList.add("turn-in");
       shown = current ? [current] : [];
     }
-    this.element.hidden = blocks.length === 0;
+    this.element.hidden = full.length + empty.length === 0;
     this.element.classList.toggle("unfolded", this.unfolded);
     this.element.title = this.unfolded ? "点一下收起" : "点一下看全部";
     const children = shown.map((b) => b.element);
@@ -108,6 +116,16 @@ export class LimitsBar {
       const head = el("div", "limit-head");
       head.append(el("span", "", "用量"), el("span", "", "周"), el("span", "", "5h"));
       children.unshift(head);
+      if (empty.length > 0) {
+        const more = el("button", "limit-nodata", this.showEmpty ? "收起暂无数据的" : `另有 ${empty.length} 家暂无数据`);
+        more.setAttribute("aria-expanded", String(this.showEmpty));
+        more.addEventListener("click", (event) => {
+          event.stopPropagation();
+          this.showEmpty = !this.showEmpty;
+          this.render();
+        });
+        children.splice(1 + full.length, 0, more);
+      }
       const footer = el("div", "limit-footer");
       const updated = Math.max(this.limits.claude?.updated_at ?? 0, this.limits.codex?.updated_at ?? 0,
         this.limits.kimi?.updated_at ?? 0, this.limits.antigravity.updated_at, this.limits.qwen_quota?.updated_at ?? 0);
@@ -132,8 +150,10 @@ function el(tag: string, className: string, text?: string): HTMLElement {
 
 interface Block {
   key: string;
+  /** The agent kind whose CLI the numbers belong to. */
+  vendor: string;
   element: HTMLElement;
-  /** Nothing to say yet: left out of the turn. */
+  /** Nothing to say yet: left out of the turn, and in the unfolded panel listed only when asked for. */
   empty?: boolean;
 }
 
@@ -145,7 +165,7 @@ function vendorBlock(line: LimitLine, busy: boolean, now: number, table: boolean
   if (table) block.setAttribute("aria-label", line.title);
   const credits = line.segments.find((s) => s.credits);
   if (table && credits) block.append(el("div", "limit-more", `${credits.label} 余额 ${credits.value}`));
-  return { key: line.vendor, element: block };
+  return { key: line.vendor, vendor: line.vendor, element: block, empty: line.segments.length === 0 };
 }
 
 /** CodeBuddy has no plan limit: its free model's quota as the bar, or else the credits spent today. Kimi before its
@@ -158,7 +178,7 @@ function agentsBlock(kind: "codebuddy" | "kimi", label: string, segments: LimitS
   block.title = segments.map((s) => `${s.label} ${s.value ?? ""}${s.resetsAt ? `，${fullTime(s.resetsAt)} 重置` : ""}`)
     .join("\n") || `还没有 ${label} 的用量`;
   if (table) block.setAttribute("aria-label", block.title);
-  return { key: kind, element: block };
+  return { key: kind, vendor: kind, element: block };
 }
 
 /** Short names on the one line: "周" for the week (Claude and Kimi say 7天, Codex 本周), "5h" for five hours. */
