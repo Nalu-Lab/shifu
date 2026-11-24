@@ -170,3 +170,6 @@ export const clisDetect = () => invoke<CliReport>("clis_detect");
 export type Permissions = "bypass" | "own";
 export const permissionsGet = () => invoke<Permissions>("permissions_get");
 export const permissionsSet = (mode: Permissions) => invoke<void>("permissions_set", { mode });
+/** Whether the first-run guide was finished or skipped (`guide_done` in settings.json). */
+export const guideDoneGet = () => invoke<boolean>("guide_done_get");
+export const guideDoneSet = () => invoke<void>("guide_done_set");
