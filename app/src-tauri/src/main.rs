@@ -226,17 +226,21 @@ fn tasks_load(cfg: State<Config>, tasks: State<Tasks>) -> Result<TaskFile, Strin
 /// What to tell the user when the CLI the hooks call is not this app's match, given what `<bin> version` said.
 /// A CLI from before the command existed fails it, which is a mismatch too.
 fn cli_notice(bin: &str, reported: std::io::Result<std::process::Output>) -> Option<String> {
+    const FIX: &str = "请用和 App 同一个安装包里的 bin/shifu 替换它，或从安装包重新把 Shifu.app 拖进「应用程序」（App 里自带配套的命令行），然后重开 Shifu。";
     match reported {
         Ok(out) if out.status.success() && String::from_utf8_lossy(&out.stdout).trim() == shifu::SOURCE => None,
-        Ok(_) => Some(format!("命令行 {bin} 和这个 App 不是同一版，对话状态和提醒可能不准。请装上和 App 配套的 shifu。")),
-        Err(e) => Some(format!("运行不了命令行 {bin}（{e}），对话状态不会更新。请装上和 App 配套的 shifu。")),
+        Ok(_) => Some(format!("命令行 {bin} 和这个 App 不是同一版：对话状态、提醒和项目经理可能出错。{FIX}")),
+        Err(e) => Some(format!("命令行 {bin} 运行不了（{e}）：对话状态不会更新，不会有提醒，项目经理也开不了。{FIX}")),
     }
 }
 
-/// Hooks run `cfg.shifu_bin`, a file installed apart from the app; replacing only one of the two goes unnoticed
-/// until a status looks wrong. `None` when they match.
+/// Hooks and the 项目经理 run `cfg.shifu_bin`: the CLI inside the app, or one installed apart from it. A missing
+/// one, or one from another build, goes unnoticed until a status looks wrong. `None` when it runs and matches.
 #[tauri::command(async)]
 fn cli_mismatch(cfg: State<Config>) -> Option<String> {
+    if !shifu::clis::shifu_usable(&cfg.shifu_bin) {
+        return Some(pm::NO_CLI.into());
+    }
     cli_notice(&cfg.shifu_bin, std::process::Command::new(&cfg.shifu_bin).arg("version").output())
 }
 
@@ -256,6 +260,7 @@ fn pm_open(
     model: Option<String>,
     effort: Option<String>,
 ) -> Result<Changed, String> {
+    pm::require_cli(&cfg)?;
     let dir = pm::ensure_dir(&cfg)?;
     open_pinned(&cfg, &tasks, &dir, pm::TASK_NAME, &kind, Pick { model: model.as_deref(), effort: effort.as_deref() })
 }

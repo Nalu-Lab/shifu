@@ -24,7 +24,7 @@ app=$(ls -dt "$cache"/desktop-*/release/bundle/macos/Shifu.app 2>/dev/null | hea
 ditto "$app" "$pkg/Shifu.app"
 [ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$pkg/Shifu.app/Contents/Info.plist")" = "$version" ]
 
-# Matching CLI and optional Computer Use helper (signed with the same identity, not notarized).
+# Matching CLI for terminal use (the app already carries one, so installing it is optional) and optional Computer Use helper (signed with the same identity, not notarized).
 cargo build --locked --release --manifest-path "$root/Cargo.toml" --bin shifu
 install -m 755 "$root/target/release/shifu" "$pkg/bin/shifu"
 # shifu web looks for web/cli.mjs next to the CLI; ship it with its one pinned dependency (pure JS).
@@ -57,7 +57,7 @@ cat > "$pkg/BUILD-INFO.json" <<JSON
   "notarized": false,
   "built_by": "$built_by",
   "built_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "included": ["Shifu.app", "bin/shifu", "helpers/Shifu Computer Use.app", "scripts/autopilot.py", "public instructions and licenses"],
+  "included": ["Shifu.app (with the matching CLI at Contents/Resources/bin/shifu)", "bin/shifu (optional, for terminal use)", "helpers/Shifu Computer Use.app", "scripts/autopilot.py", "public instructions and licenses"],
   "external_runtimes": ["tmux", "chosen agents", "Node/Pi for StepFun", "browser runtime for Browser Use"]
 }
 JSON

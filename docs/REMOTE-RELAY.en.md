@@ -13,7 +13,7 @@ Install Homebrew tmux and your chosen Claude Code or Codex separately, and sign 
 1. Use an existing remote desktop connection or local access for initial setup. Download the ZIP and `SHA256SUMS` from the same release. Run `shasum -a 256 -c SHA256SUMS` in the download folder, then unzip.
 2. Check that the Mac uses Apple Silicon. Run `shasum -a 256 -c SHA256SUMS` inside the extracted package to verify its files.
 3. In Finder, move `Shifu.app` into your personal Applications folder (`~/Applications`). If Shifu is already installed, quit the old app and back up both it and `~/.cargo/bin/shifu` before replacing them. Do not replace a running app.
-4. For a first CLI installation, run these commands inside the extracted package:
+4. To use the `shifu` command in your terminal, install the CLI the first time by running these commands inside the extracted package (the app carries its matching CLI, so skip the two CLI lines if you only use the app):
 
    ```sh
    mkdir -p "$HOME/.cargo/bin"
@@ -21,7 +21,7 @@ Install Homebrew tmux and your chosen Claude Code or Codex separately, and sign 
    brew install tmux
    ```
 
-   The app looks for the CLI in `~/.cargo/bin` by default; this does not require Rust. Skip the tmux command if it is already installed. See the [Homebrew website](https://brew.sh/) for Homebrew installation.
+   The app uses its own bundled CLI first and then `~/.cargo/bin/shifu`; this does not require Rust. Skip the tmux command if it is already installed. See the [Homebrew website](https://brew.sh/) for Homebrew installation.
 5. Open the app. This package is signed with Shifu's own fixed certificate and not notarized. If macOS blocks it, check the download source and follow the app-specific prompt under System Settings → Privacy & Security. See [Apple's instructions](https://support.apple.com/102445). Initial launch, embedded component permissions and native input still need confirmation on the target Mac.
 6. Install and sign into the chosen agent, then open a project in remote Shifu. When first starting Codex through Shifu, review its displayed hooks before deciding whether to trust them.
 

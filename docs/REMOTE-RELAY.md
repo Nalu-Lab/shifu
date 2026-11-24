@@ -13,7 +13,7 @@
 1. 用已有的远程桌面或本机操作完成首次设置。下载 ZIP 和同一 Release 中的 `SHA256SUMS`，在下载目录执行 `shasum -a 256 -c SHA256SUMS`，再解压。
 2. 先检查 Mac 使用 Apple Silicon。解压后，在包的目录执行 `shasum -a 256 -c SHA256SUMS`，核对包内文件。
 3. 通过 Finder 将 `Shifu.app` 放到个人「应用程序」目录（`~/Applications`）。如果已经安装 Shifu，先退出旧 App，备份旧 App 和 `~/.cargo/bin/shifu` 后再替换；不要覆盖正在运行的 App。
-4. 首次安装 CLI 时，在解压目录执行：
+4. 要在终端里用 `shifu` 命令时，首次安装 CLI 在解压目录执行（App 自带同版命令行，只用 App 可跳过 CLI 这两行）：
 
    ```sh
    mkdir -p "$HOME/.cargo/bin"
@@ -21,7 +21,7 @@
    brew install tmux
    ```
 
-   `~/.cargo/bin` 是 App 默认查找 CLI 的位置，使用这个目录不要求安装 Rust。已有 tmux 时跳过安装命令；Homebrew 的安装参考其[官方网站](https://brew.sh/)。
+   App 先用自带的命令行，没有时再找 `~/.cargo/bin/shifu`，使用这个目录不要求安装 Rust。已有 tmux 时跳过安装命令；Homebrew 的安装参考其[官方网站](https://brew.sh/)。
 5. 打开 App。此包用 Shifu 自己的固定证书签名，尚未公证；若 macOS 拦截，在确认下载来源后按「系统设置 → 隐私与安全性」中的对应提示处理。参见 [Apple 的打开说明](https://support.apple.com/102445)。首次打开、嵌入组件权限和原生输入仍需在目标 Mac 上确认。
 6. 安装并登录所需 Agent，在远端 Shifu 中打开一个项目。首次通过 Shifu 启动 Codex 时，检查它展示的 hooks 后决定是否信任。
 

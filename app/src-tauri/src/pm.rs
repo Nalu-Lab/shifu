@@ -7,6 +7,7 @@ use std::path::Path;
 pub const TASK_NAME: &str = "项目经理";
 
 fn brief(shifu: &str) -> String {
+    let shifu = shifu::launch::sh_word(shifu);
     format!(
         "# 你是 用户 的项目经理
 
@@ -35,6 +36,14 @@ fn brief(shifu: &str) -> String {
 - 不改各个项目的代码和文件，除非他明确让你改。
 "
     )
+}
+
+/// What the user is told when no `shifu` CLI can be run at all (sidebar notice, and why the 项目经理 does not start).
+pub const NO_CLI: &str = "找不到 shifu 命令行：对话状态不会更新，不会有提醒，项目经理也开不了。请从安装包重新把 Shifu.app 拖进「应用程序」（App 里自带配套的命令行），然后重开 Shifu。";
+
+/// The 项目经理 starts only with a `shifu` it can run: its instructions begin with `shifu status`.
+pub fn require_cli(cfg: &Config) -> Result<(), String> {
+    if shifu::clis::shifu_usable(&cfg.shifu_bin) { Ok(()) } else { Err(NO_CLI.into()) }
 }
 
 /// The folder exists and its instructions are current (rewritten when the text or the `shifu` path changed).
@@ -88,6 +97,26 @@ mod tests {
         assert!(b.contains("/Users/e/.cargo/bin/shifu computer guide"));
         assert!(!b.contains(" waimai"));
         assert!(b.contains("/Users/e/.cargo/bin/shifu status"));
+    }
+
+    #[test]
+    fn a_path_with_spaces_is_quoted_so_the_commands_still_run() {
+        assert!(brief("/Users/e/My Apps/Shifu.app/Contents/Resources/bin/shifu").contains("`'/Users/e/My Apps/Shifu.app/Contents/Resources/bin/shifu' status`"));
+    }
+
+    #[test]
+    fn the_project_manager_starts_only_with_a_shifu_cli_that_runs() {
+        use std::os::unix::fs::PermissionsExt;
+        let mut cfg = role_home("gate");
+        cfg.shifu_bin = cfg.home.join("bin/shifu").to_string_lossy().into_owned();
+        assert_eq!(require_cli(&cfg), Err(NO_CLI.to_string()));
+        assert!(NO_CLI.contains("项目经理") && NO_CLI.contains("对话状态") && NO_CLI.contains("提醒"));
+        std::fs::create_dir_all(cfg.home.join("bin")).unwrap();
+        std::fs::write(&cfg.shifu_bin, "#!/bin/sh\n").unwrap();
+        assert!(require_cli(&cfg).is_err(), "not executable yet");
+        std::fs::set_permissions(&cfg.shifu_bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(require_cli(&cfg), Ok(()));
+        std::fs::remove_dir_all(&cfg.home).unwrap();
     }
 
     fn role_home(tag: &str) -> Config {
