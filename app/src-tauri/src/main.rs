@@ -155,6 +155,17 @@ fn permissions_set(mode: shifu::launch::Permissions) -> Result<(), String> {
     shifu::launch::save_permissions(mode)
 }
 
+/// Whether the first-run guide was finished or skipped (settings.json `guide_done`).
+#[tauri::command]
+fn guide_done_get() -> bool {
+    shifu::launch::guide_done()
+}
+
+#[tauri::command]
+fn guide_done_set() -> Result<(), String> {
+    shifu::launch::save_guide_done()
+}
+
 /// Models each agent CLI offers here (Claude, Codex, CodeBuddy). Starts two CLIs briefly, so off the main thread.
 #[tauri::command]
 async fn models_list(cfg: State<'_, Config>) -> Result<Vec<models::AgentModels>, String> {
@@ -738,6 +749,8 @@ fn main() {
             models_list,
             permissions_get,
             permissions_set,
+            guide_done_get,
+            guide_done_set,
             clis::clis_detect,
             agent_new,
             agent_kill,

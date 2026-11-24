@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { type Permissions, pathOpen, permissionsGet, permissionsSet, recentDirs } from "./api";
+import { type CliReport, type Permissions, pathOpen, permissionsGet, permissionsSet, recentDirs } from "./api";
 import { pickFolder, projectName } from "./tasks";
 import { shortPath } from "./format";
 import { addPickedFolder, reportError } from "./store";
@@ -19,7 +19,24 @@ import {
 } from "./models";
 import { vendorIcon } from "./vendoricons";
 
-let kind = "claude";
+/** The agent a new task starts with: the one last picked here or in the first-run guide, kept across restarts. */
+const KIND_KEY = "shifu.defaultKind";
+function storedKind(): string | null {
+  try {
+    return localStorage.getItem(KIND_KEY);
+  } catch {
+    return null; // no storage (tests)
+  }
+}
+let kind = storedKind() ?? "claude";
+
+export function setDefaultKind(picked: string): void {
+  kind = picked;
+  localStorage.setItem(KIND_KEY, picked);
+}
+
+/** The default agent if it is installed, else the first installed one. */
+export const currentDefaultKind = (): string => defaultKind(getClis(), kind);
 let dismiss: (() => void) | null = null;
 let anchorOpen: { anchor: HTMLElement; which: string } | null = null;
 
@@ -75,6 +92,25 @@ export function missingLine(missing: readonly AgentSpec[]): HTMLElement | null {
     line.append(link);
   });
   return line;
+}
+
+/** What was found on this Mac, for the empty page and the first-run guide: tmux missing first (nothing runs
+ *  without it), then the agents found, then the missing ones with their install pages. */
+export function setupNotes(clis: CliReport | null): HTMLElement[] {
+  if (!clis) return [];
+  const notes: HTMLElement[] = [];
+  const note = (text: string) => {
+    const n = document.createElement("div");
+    n.className = "empty-note";
+    n.textContent = text;
+    notes.push(n);
+  };
+  if (!clis.tmux) note("没找到 tmux：Shifu 的每个对话都在 tmux 里运行。在终端运行 brew install tmux，装好后回到这里。");
+  const found = clis.agents.filter((a) => a.path !== null);
+  note(found.length ? `这台 Mac 上找到：${found.map((a) => a.name).join("、")}` : "这台 Mac 上还没找到 Agent 命令行工具，装好一个后回到这里。");
+  const line = missingLine(splitAgents(clis).missing);
+  if (line) notes.push(line);
+  return notes;
 }
 
 /** One button showing the chosen agent's mark and name; it drops down the others, each with its mark. Eight
@@ -179,7 +215,7 @@ function agentPicker(): HTMLElement {
   const type = document.createElement("div");
   type.className = "agent-type-row";
   type.append(agentDropdown(installed, kind, (picked) => {
-    kind = picked;
+    setDefaultKind(picked);
     paint();
   }));
   box.append(type, picks);
@@ -242,7 +278,7 @@ const PERMISSION_OPTIONS: { id: Permissions; label: string; hint: string }[] = [
 
 /** 权限: one choice for every agent started or resumed from now on (`launch::Permissions`). Filled in once the
  *  saved choice is read; a change is saved at once. */
-function permissionPicker(): HTMLElement {
+export function permissionPicker(): HTMLElement {
   const box = document.createElement("div");
   box.className = "perm-picker";
   const sel = document.createElement("select");

@@ -36,6 +36,7 @@ import {
   taskRename,
   taskReorder,
   agentReorder,
+  guideDoneGet,
   taskGoalsGet,
   taskSetCurrent,
   tasksLoad,
@@ -47,6 +48,7 @@ import { closeMenu } from "./menu";
 import { waitForVerdict } from "./jev";
 import { currentlyNeeding, nextNotices, type Notice, type Notified, staleNotices } from "./notify";
 import { closeNewPopover, showAddAgentPopover, showNewTaskPopover } from "./newpopover";
+import { shouldShowGuide, showGuide } from "./onboarding";
 import { startPtyBus } from "./ptybus";
 import { Sidebar, type Role } from "./sidebar";
 import { MemoryBar } from "./memory";
@@ -463,6 +465,8 @@ async function main() {
   fullscreenInset().then(applyFullscreen, reportError);
   // The statusbar is already visible while restoring a task; its sidebar action must be ready first.
   if (file.current) await showTask(file.current);
+  // First open: the one-screen guide (docs/ONBOARDING.md, 第 3 阶段). A failed read shows nothing.
+  if (shouldShowGuide(file.tasks.length, await guideDoneGet().catch(() => true))) showGuide(createTask);
 
   await listen<AgentView[]>("agents", async ({ payload }) => {
     // Sessions created by the remote helper join their project's existing task without changing focus.
