@@ -113,14 +113,41 @@ pub fn login_shell_path(shell: &str, timeout: Duration) -> Option<String> {
     parse_shell_output(&out)
 }
 
+/// `path` is a file this user may run (symlinks followed).
+pub fn is_executable(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(path).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+}
+
 /// The first `name` in `path` that is an executable file.
 pub fn find_program(path: &str, names: &[&str]) -> Option<PathBuf> {
-    use std::os::unix::fs::PermissionsExt;
-    names.iter().find_map(|name| {
-        path.split(':').filter(|d| !d.is_empty()).map(|d| Path::new(d).join(name)).find(|p| {
-            std::fs::metadata(p).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
-        })
-    })
+    names.iter().find_map(|name| path.split(':').filter(|d| !d.is_empty()).map(|d| Path::new(d).join(name)).find(|p| is_executable(p)))
+}
+
+/// The `shifu` CLI the app's agents, hooks and 项目经理 call, as a path that runs. Tried in order: `explicit`
+/// (`SHIFU_APP_SHIFU`; a bare name is looked up in `path`), `bundled` (the copy inside Shifu.app, or for the CLI
+/// itself its own executable), `~/.cargo/bin/shifu` (where a separately installed CLI goes), then `shifu` in `path`.
+/// A candidate that is not an executable file is skipped. `None` when none runs.
+pub fn resolve_shifu(explicit: Option<&str>, bundled: Option<&Path>, user_home: &str, path: &str) -> Option<String> {
+    let explicit = explicit.filter(|b| !b.is_empty()).and_then(|b| {
+        if b.contains('/') { Some(PathBuf::from(b)).filter(|p| is_executable(p)) } else { find_program(path, &[b]) }
+    });
+    let cargo = (!user_home.is_empty()).then(|| Path::new(user_home).join(".cargo/bin/shifu"));
+    explicit
+        .or_else(|| bundled.filter(|p| is_executable(p)).map(Path::to_path_buf))
+        .or_else(|| cargo.filter(|p| is_executable(p)))
+        .or_else(|| find_program(path, &["shifu"]))
+        .map(|p| p.to_string_lossy().into_owned())
+}
+
+/// `bin` (a `Config::shifu_bin`) can be run: a path that is an executable file, or a bare name found on the agents'
+/// PATH. What gates the 项目经理, whose instructions start with `shifu status`.
+pub fn shifu_usable(bin: &str) -> bool {
+    if bin.contains('/') {
+        return is_executable(Path::new(bin));
+    }
+    let path = agent_path().or_else(|| std::env::var("PATH").ok()).unwrap_or_default();
+    !bin.is_empty() && find_program(&path, &[bin]).is_some()
 }
 
 /// Every agent in `agents_spec::AGENTS` with where it was found in `path`. StepFun counts as installed when node is
@@ -221,6 +248,46 @@ mod tests {
         assert_eq!(path_of("kimi"), None);
         let order: Vec<&str> = found.iter().map(|f| f.kind.as_str()).collect();
         assert_eq!(order, ["claude", "codex", "codebuddy", "kimi", "antigravity", "stepfun", "qwen", "opencode", "pi", "gemini"]);
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn the_shifu_cli_is_the_override_then_the_bundled_one_then_cargo_then_path() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("shifu-resolve-{}", std::process::id()));
+        let home = root.join("home");
+        let (over, bundled, cargo, on_path) = (root.join("over/shifu"), root.join("app/bin/shifu"), home.join(".cargo/bin/shifu"), root.join("path/shifu"));
+        let exe = |p: &Path| {
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, "#!/bin/sh\n").unwrap();
+            std::fs::set_permissions(p, std::fs::Permissions::from_mode(0o755)).unwrap();
+        };
+        let (h, path) = (home.to_string_lossy().into_owned(), root.join("path").to_string_lossy().into_owned());
+        let s = |p: &Path| Some(p.to_string_lossy().into_owned());
+        let resolve = |explicit: Option<&str>| resolve_shifu(explicit, Some(&bundled), &h, &path);
+
+        // Nothing installed anywhere: no CLI, whatever the override names.
+        assert_eq!(resolve(None), None);
+        assert_eq!(resolve(Some("/no/such/shifu")), None);
+        exe(&on_path);
+        assert_eq!(resolve(None), s(&on_path));
+        exe(&cargo);
+        assert_eq!(resolve(None), s(&cargo));
+        exe(&bundled);
+        assert_eq!(resolve(None), s(&bundled));
+        assert_eq!(resolve(Some("")), s(&bundled));
+        // An override that does not run is skipped; one that does wins; a bare name is looked up on PATH.
+        assert_eq!(resolve(Some(&over.to_string_lossy())), s(&bundled));
+        exe(&over);
+        assert_eq!(resolve(Some(&over.to_string_lossy())), s(&over));
+        assert_eq!(resolve(Some("shifu")), s(&on_path));
+        // A file that is not executable does not count.
+        std::fs::set_permissions(&bundled, std::fs::Permissions::from_mode(0o644)).unwrap();
+        assert_eq!(resolve(None), s(&cargo));
+        assert!(shifu_usable(&cargo.to_string_lossy()));
+        assert!(!shifu_usable(&bundled.to_string_lossy()));
+        assert!(!shifu_usable("/no/such/shifu"));
+        assert!(!shifu_usable(""));
         std::fs::remove_dir_all(&root).unwrap();
     }
 

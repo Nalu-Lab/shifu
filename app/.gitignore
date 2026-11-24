@@ -4,3 +4,5 @@ src-tauri/target
 src-tauri/gen
 src-tauri/remote-bundle/*
 !src-tauri/remote-bundle/README.md
+src-tauri/cli-bundle/*
+!src-tauri/cli-bundle/README.md

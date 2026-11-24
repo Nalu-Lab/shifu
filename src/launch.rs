@@ -10,7 +10,7 @@ pub fn sh_quote(s: &str) -> String {
 }
 
 /// 路径里没有特殊字符就原样用，否则加引号。
-fn sh_word(s: &str) -> String {
+pub fn sh_word(s: &str) -> String {
     let plain = !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || "/._-+:@=,".contains(c));
     if plain { s.to_string() } else { sh_quote(s) }
 }

@@ -4,7 +4,7 @@
 
 1. 在下载目录运行 `shasum -a 256 -c SHA256SUMS`，解压后在本目录再次运行同一命令。
 2. 通过 Finder 将 `Shifu.app` 放到 `~/Applications`，首次安装需创建该目录。
-3. 在本目录安装匹配 CLI：
+3. 可选：要在终端里直接用 `shifu` 命令时，在本目录安装匹配 CLI。App 自带同版命令行（`Shifu.app/Contents/Resources/bin/shifu`），对话状态、提醒和项目经理不需要这一步：
 
    ```sh
    mkdir -p "$HOME/.cargo/bin"

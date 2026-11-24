@@ -25,14 +25,17 @@ pub fn init() -> Config {
     let user_home = var("HOME").unwrap_or_default();
     let home = resolve_home(var("SHIFU_APP_HOME").as_deref(), &user_home);
     let socket = resolve_socket(var("SHIFU_APP_SOCKET").as_deref());
-    let shifu_bin = var("SHIFU_APP_SHIFU")
-        .filter(|b| !b.is_empty())
-        .unwrap_or_else(|| format!("{user_home}/.cargo/bin/shifu"));
     let user_statusline = crate::statusline::user_command_from_file(&Path::new(&user_home).join(".claude/settings.json"));
     // A Finder-launched app gets PATH=/usr/bin:/bin:/usr/sbin:/sbin, so `claude`/`codex` would not be found: the
     // login shell's PATH from last run and the usual install folders are added (see `clis`).
     let cached_shell = crate::clis::cached_shell_path(&home);
     let path = crate::clis::startup_path(cached_shell.as_deref(), &var("PATH").unwrap_or_default(), &user_home);
+    // Tauri is not running yet, so the bundle's resources are found from this executable's own path.
+    let bundled = std::env::current_exe().ok().and_then(|exe| bundled_cli(&exe));
+    let shifu_bin = shifu::clis::resolve_shifu(var("SHIFU_APP_SHIFU").as_deref(), bundled.as_deref(), &user_home, &path)
+        .unwrap_or_else(|| "shifu".into());
+    // Last on the agents' PATH, so a bare `shifu` in their instructions runs even with no CLI installed elsewhere.
+    let path = with_bundled_bin(&path, bundled.as_deref());
     shifu::clis::set_agent_path(&path);
     // A Finder-launched app has no locale; without UTF-8 the agents mangle Chinese.
     let lang = var("LANG").filter(|l| l.contains("UTF-8")).unwrap_or_else(|| "en_US.UTF-8".to_string());
@@ -46,9 +49,47 @@ pub fn init() -> Config {
     Config { home, socket, shifu_bin, user_statusline }
 }
 
+/// The `shifu` CLI inside the bundle (`Contents/Resources/bin/shifu`) for an app executable at
+/// `Contents/MacOS/<name>`; `None` when not running from a bundle (e.g. `cargo run`). It may not exist.
+pub fn bundled_cli(exe: &Path) -> Option<PathBuf> {
+    let macos = exe.parent()?;
+    (macos.file_name()? == "MacOS").then(|| macos.parent()).flatten().map(|contents| contents.join("Resources/bin/shifu"))
+}
+
+/// `path` with the bundled CLI's folder appended when the CLI is there.
+fn with_bundled_bin(path: &str, bundled: Option<&Path>) -> String {
+    match bundled.filter(|b| shifu::clis::is_executable(b)).and_then(Path::parent) {
+        Some(dir) => shifu::clis::merge_paths(&[path, &dir.to_string_lossy()]),
+        None => path.to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_bundled_cli_sits_in_the_resources_of_the_running_bundle() {
+        assert_eq!(
+            bundled_cli(Path::new("/Applications/Shifu.app/Contents/MacOS/shifu-app")),
+            Some(PathBuf::from("/Applications/Shifu.app/Contents/Resources/bin/shifu"))
+        );
+        assert_eq!(bundled_cli(Path::new("/repo/target/debug/shifu-app")), None);
+    }
+
+    #[test]
+    fn the_bundled_bin_folder_goes_last_on_the_path_only_when_the_cli_is_there() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("shifu-app-bundled-{}", std::process::id()));
+        let cli = root.join("Contents/Resources/bin/shifu");
+        assert_eq!(with_bundled_bin("/a:/b", Some(&cli)), "/a:/b");
+        std::fs::create_dir_all(cli.parent().unwrap()).unwrap();
+        std::fs::write(&cli, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&cli, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(with_bundled_bin("/a:/b", Some(&cli)), format!("/a:/b:{}", cli.parent().unwrap().display()));
+        assert_eq!(with_bundled_bin("/a:/b", None), "/a:/b");
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 
     #[test]
     fn home_defaults_under_dot_shifu_app_and_can_be_overridden() {

@@ -10,6 +10,12 @@ bundle="$project_root/app/src-tauri/remote-bundle"
 npm --prefix "$project_root/app" run build:remote
 npm --prefix "$project_root/app" run build
 cargo build --locked --release --manifest-path "$project_root/remote/Cargo.toml" --target-dir "$build_dir"
+# The app ships its matching CLI (Contents/Resources/bin/shifu): hooks, the 项目经理 and `shifu` in agents' PATH use it
+# when no CLI was installed apart from the app.
+cargo build --locked --release --manifest-path "$project_root/Cargo.toml" --bin shifu
+mkdir -p "$project_root/app/src-tauri/cli-bundle"
+install -m 755 "$CARGO_TARGET_DIR/release/shifu" "$project_root/app/src-tauri/cli-bundle/shifu.tmp"
+mv -f "$project_root/app/src-tauri/cli-bundle/shifu.tmp" "$project_root/app/src-tauri/cli-bundle/shifu"
 stage_root=${SHIFU_BUILD_STAGE_ROOT:-"$project_root/target/remote-bundle-staging"}
 mkdir -p "$bundle" "$stage_root"
 stage=$(mktemp -d "$stage_root/release.XXXXXX")

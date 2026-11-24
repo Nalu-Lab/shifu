@@ -42,7 +42,14 @@ fn cmd_resume(args: &[String]) -> Result<(), String> {
     let cfg = shifu::app_session::Config {
         home: var("SHIFU_HOME").map(Into::into).unwrap_or_else(|| std::path::Path::new(&user_home).join(".shifu/app")),
         socket: var("SHIFU_SOCKET").unwrap_or_else(|| "shifu-app".into()),
-        shifu_bin: var("SHIFU_APP_SHIFU").unwrap_or_else(|| format!("{user_home}/.cargo/bin/shifu")),
+        // This CLI itself runs, so it stands in for the app's bundled copy when nothing is set.
+        shifu_bin: shifu::clis::resolve_shifu(
+            var("SHIFU_APP_SHIFU").as_deref(),
+            std::env::current_exe().ok().as_deref(),
+            &user_home,
+            &var("PATH").unwrap_or_default(),
+        )
+        .unwrap_or_else(|| "shifu".into()),
         user_statusline: shifu::app_statusline::user_command_from_file(&std::path::Path::new(&user_home).join(".claude/settings.json")),
     };
     shifu::app_session::resume_agent(&cfg, name)

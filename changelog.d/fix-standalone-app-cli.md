@@ -1,0 +1,2 @@
+- 只把 Shifu.app 拖进「应用程序」、没装 `shifu` 命令行的 Mac 上，对话状态、提醒和项目经理现在也能用：App 自带同版命令行，侧栏底部不再一直显示红字；真找不到命令行时不再启动注定出错的项目经理，提示会说明哪些功能受影响、怎么修。安装说明里装命令行那一步改为可选。
+- On a Mac where only Shifu.app was dragged into Applications, without the `shifu` CLI, conversation status, notifications and the project manager now work: the app carries its matching CLI, so the red text at the bottom of the sidebar is gone. If no CLI can be found at all, the project manager is not started and the notice says what stops working and how to fix it. Installing the CLI is now optional in the install instructions.
