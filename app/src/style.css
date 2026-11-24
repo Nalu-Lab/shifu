@@ -2614,3 +2614,113 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
 .project.no-tasks .project-add {
   opacity: 1;
 }
+
+/* ---------- first-run guide (onboarding.ts) ---------- */
+
+.guide {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.guide-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 420px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 20px 22px;
+  border: 0.5px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--bg-pop);
+  box-shadow: 0 6px 20px var(--shadow);
+}
+
+.guide-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.guide-lead {
+  margin: -8px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.guide-step-title {
+  margin-bottom: 6px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.guide-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.guide-body .empty-note {
+  max-width: none;
+  text-align: left;
+}
+
+.guide-body > .btn {
+  align-self: flex-start;
+}
+
+.guide-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.guide-row .btn {
+  flex: none;
+  white-space: nowrap;
+}
+
+.guide-folder {
+  flex: 1;
+}
+
+.guide-folder,
+.guide-note {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guide-note {
+  white-space: normal;
+}
+
+.guide-note:empty {
+  display: none;
+}
+
+.guide .perm-picker {
+  padding: 0;
+}
+
+.guide-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

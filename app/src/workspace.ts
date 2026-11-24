@@ -12,7 +12,7 @@ import type {
 import { AGENT_MIME, layoutLoad, layoutSave } from "./api";
 import { AgentTab, FileTab } from "./tab";
 import { getClis, onClisChange, splitAgents } from "./models";
-import { missingLine } from "./newpopover";
+import { missingLine, setupNotes } from "./newpopover";
 import { vendorIcon } from "./vendoricons";
 import { TerminalPanel } from "./terminal";
 import { FILE_PREFIX, FilePanel, isFilePanel, setFileOpener } from "./preview";
@@ -113,28 +113,10 @@ class EmptyState implements IWatermarkRenderer {
     this.unsubscribeClis = onClisChange(() => this.paint());
     this.paint();
   }
-  /** What was found on this Mac: tmux missing first (nothing runs without it), then the agents. */
-  private setupNotes(): HTMLElement[] {
-    const clis = getClis();
-    if (!clis) return [];
-    const notes: HTMLElement[] = [];
-    const note = (text: string) => {
-      const n = document.createElement("div");
-      n.className = "empty-note";
-      n.textContent = text;
-      notes.push(n);
-    };
-    if (!clis.tmux) note("没找到 tmux：Shifu 的每个对话都在 tmux 里运行。在终端运行 brew install tmux，装好后回到这里。");
-    const found = clis.agents.filter((a) => a.path !== null);
-    note(found.length ? `这台 Mac 上找到：${found.map((a) => a.name).join("、")}` : "这台 Mac 上还没找到 Agent 命令行工具，装好一个后回到这里。");
-    const line = missingLine(splitAgents(clis).missing);
-    if (line) notes.push(line);
-    return notes;
-  }
   private paint(): void {
     this.element.replaceChildren();
     if (!getCurrentTask()) {
-      this.element.append(this.button("新建任务", (b) => this.hooks.requestNewTask(b)), ...this.setupNotes());
+      this.element.append(this.button("新建任务", (b) => this.hooks.requestNewTask(b)), ...setupNotes(getClis()));
       return;
     }
     const label = document.createElement("div");

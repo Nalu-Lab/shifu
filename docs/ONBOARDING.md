@@ -45,14 +45,15 @@
 - 设置存在 `<SHIFU_HOME>/settings.json` 的 `agent_permissions`（`bypass` 或 `own`）。App（`~/.shifu/app`）和终端版（`~/.shifu`）各有一份；App 在新建任务窗口的「权限」里改。
 - 每次新开和恢复对话时读取，改了之后对已经在跑的对话不生效。Qwen 选 `own` 时传 `--approval-mode default`。
 
-## 第 3 阶段：首次引导
+## 第 3 阶段：首次引导（已完成，分支 `feat/onboarding-guide`）
 
-- 第一次打开时显示一屏引导：
-  1. 找到的 Agent，选一个默认（默认取第一个找到的）。
-  2. 权限开关（第 2 阶段）。
-  3. 通知：发一条测试通知，顺便触发 macOS 的授权。
-  4. 选第一个项目文件夹，建好任务后直接用默认 Agent 开第一条对话。
-- 可以跳过；跳过后，第一次建任务仍然自动开默认 Agent。
+- 第一次打开时（还没有任务，且 `<SHIFU_HOME>/settings.json` 里没有 `guide_done: true`）盖上一屏引导，见 `app/src/onboarding.ts`：
+  1. 默认 Agent：下拉列出找到的 Agent，默认取第一个；下面和空白页一样说明找到了什么、没装的给安装链接、没有 tmux 时提示安装。检测结果晚到或回到窗口时会重画。
+  2. 权限：就是第 2 阶段新建任务窗口里那个选择，改了立刻保存。
+  3. 通知：「发一条测试通知」走 App 平常发通知的路径，第一次会让 macOS 询问授权；没看到时提示去系统设置里打开。
+  4. 第一个项目：选文件夹后「建立任务并开始」，用默认 Agent 建任务，第一条对话直接打开。
+- 「跳过」或建好任务后写入 `guide_done`，以后不再出现。
+- 默认 Agent 存在 localStorage（`shifu.defaultKind`），新建任务窗口也从它开始、改了也存回去，所以跳过后第一次建任务仍然直接开默认 Agent，重启后也记得。
 
 ## 第 4 阶段：启动失败时说清楚（已完成，分支 `feat/explain-launch-failure`）
 

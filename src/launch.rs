@@ -227,6 +227,29 @@ pub fn save_permissions(perms: Permissions) -> Result<(), String> {
 }
 
 fn save_permissions_in(path: &std::path::Path, perms: Permissions) -> Result<(), String> {
+    save_setting_in(path, "agent_permissions", serde_json::to_value(perms).map_err(|e| e.to_string())?)
+}
+
+/// Whether the app's first-run guide was finished or skipped (`guide_done` in the same file). Not set: show it
+/// while there are no tasks yet.
+pub fn guide_done() -> bool {
+    guide_done_in(&settings_path())
+}
+
+fn guide_done_in(path: &std::path::Path) -> bool {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+        .and_then(|v| v["guide_done"].as_bool())
+        .unwrap_or(false)
+}
+
+pub fn save_guide_done() -> Result<(), String> {
+    save_setting_in(&settings_path(), "guide_done", json!(true))
+}
+
+/// Sets one key of settings.json, keeping the others.
+fn save_setting_in(path: &std::path::Path, key: &str, value: Value) -> Result<(), String> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| format!("create {} failed: {e}", dir.display()))?;
     }
@@ -235,7 +258,7 @@ fn save_permissions_in(path: &std::path::Path, perms: Permissions) -> Result<(),
         .and_then(|text| serde_json::from_str::<Value>(&text).ok())
         .filter(Value::is_object)
         .unwrap_or_else(|| json!({}));
-    settings["agent_permissions"] = serde_json::to_value(perms).map_err(|e| e.to_string())?;
+    settings[key] = value;
     let text = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     crate::app_session::write_atomic(path, &text)
 }
@@ -452,6 +475,21 @@ mod tests {
         assert_eq!(saved, json!({"other": 1, "agent_permissions": "own"}));
         std::fs::write(&path, "not json").unwrap();
         assert_eq!(permissions_in(&path), Permissions::Bypass);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn guide_done_is_kept_beside_the_permission_choice() {
+        let dir = std::env::temp_dir().join(format!("shifu-guide-{}", std::process::id()));
+        let path = dir.join("settings.json");
+        assert!(!guide_done_in(&path));
+        save_permissions_in(&path, Permissions::Own).unwrap();
+        assert!(!guide_done_in(&path));
+        save_setting_in(&path, "guide_done", json!(true)).unwrap();
+        assert!(guide_done_in(&path));
+        assert_eq!(permissions_in(&path), Permissions::Own);
+        std::fs::write(&path, r#"{"guide_done": "yes"}"#).unwrap();
+        assert!(!guide_done_in(&path));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
