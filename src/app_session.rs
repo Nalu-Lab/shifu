@@ -323,6 +323,16 @@ pub fn create_agent(cfg: &Config, command: &str, cwd: &str, model: Option<&str>,
 
 /// Restarts an exited agent: in place when its dead pane is still there, otherwise in a new session.
 pub fn resume_agent(cfg: &Config, name: &str) -> Res<()> {
+    restart_agent(cfg, name, false)
+}
+
+/// Starts an agent that ended right at its launch again the way it was first started: it never began a
+/// conversation, so resuming (`--continue`) could pick up another one in the same folder.
+pub fn retry_agent(cfg: &Config, name: &str) -> Res<()> {
+    restart_agent(cfg, name, true)
+}
+
+fn restart_agent(cfg: &Config, name: &str, fresh: bool) -> Res<()> {
     let record = agent::load(name)?.ok_or_else(|| format!("no agent named {name}"))?;
     let tmux = Tmux::from_env();
     let panes = tmux.panes();
@@ -331,15 +341,24 @@ pub fn resume_agent(cfg: &Config, name: &str) -> Res<()> {
     }
     let settings = write_settings(cfg, record.kind)?;
     let pick = model_flags(record.kind, record.model.as_deref(), record.effort.as_deref());
-    let launch = resume_command(record.kind, &record.command, &cfg.shifu_bin, &settings, record.session_id.as_deref(), &pick, crate::launch::permissions());
+    let launch = if fresh {
+        agent_command(record.kind, &record.command, &cfg.shifu_bin, &settings, &pick, crate::launch::permissions())
+    } else {
+        resume_command(record.kind, &record.command, &cfg.shifu_bin, &settings, record.session_id.as_deref(), &pick, crate::launch::permissions())
+    };
     // Reattaching a saved Codex conversation need not emit SessionStart, and does not submit a turn.
     // Write before launch so a prompt/tool hook during startup can still replace this idle state.
-    let status = if record.kind == Kind::Codex && record.session_id.is_some() { Status::Idle } else { Status::Starting };
+    let status = if !fresh && record.kind == Kind::Codex && record.session_id.is_some() { Status::Idle } else { Status::Starting };
     let restarted = Agent { status, status_since: now_secs(), ..record.clone() };
     agent::save(&restarted)?;
     let live_pane = record.pane_id.as_ref().filter(|p| panes.contains_key(*p));
     let launched = match live_pane {
         Some(pane) => {
+            // A retry starts from a blank pane, so the next failure is read from its own output only.
+            if fresh {
+                let _ = tmux.run(["send-keys", "-R", "-t", pane.as_str()]);
+                let _ = tmux.run(["clear-history", "-t", pane.as_str()]);
+            }
             let id = format!("SHIFU_ID={name}");
             let mut args: Vec<String> =
                 ["respawn-pane", "-k", "-t", pane.as_str(), "-c", record.cwd.as_str(), "-e", id.as_str()].map(String::from).to_vec();

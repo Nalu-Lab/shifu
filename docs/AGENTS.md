@@ -15,6 +15,7 @@
 | `commands` | 选中这个 Agent 的命令名，第一个是实际启动的程序 | `["kimi", "kimi-cli"]` |
 | `detect` | 在 PATH 里找哪些程序来判断装没装（只看文件，不运行） | `["agy", "antigravity"]` |
 | `label`、`install_url` | 显示名，「未安装」里的安装说明链接 | |
+| `install_command`、`login_command` | 启动后马上退出时面板里给的安装、登录命令（没有就只给链接，见 `launch_failure.rs`） | `Some("codex login")` |
 | `bypass_args` / `own_args` | 权限开关是「免确认」/「用 Agent 自己的设置」时加的参数 | `["--yolo"]` |
 | `bypass_env` | 免确认要靠环境变量而不是参数时用 | 目前没有 Agent 用到；留给只认环境变量的 Agent |
 | `model_args` / `effort_args` | 模型、思考档位的参数模板，`{model}`、`{effort}` 会被替换 | `["-m", "{model}"]` |

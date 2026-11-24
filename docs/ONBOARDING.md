@@ -54,6 +54,15 @@
   4. 选第一个项目文件夹，建好任务后直接用默认 Agent 开第一条对话。
 - 可以跳过；跳过后，第一次建任务仍然自动开默认 Agent。
 
-## 第 4 阶段：启动失败时说清楚
+## 第 4 阶段：启动失败时说清楚（已完成，分支 `feat/explain-launch-failure`）
 
 - Agent 启动后立刻退出时（没找到命令、版本太旧、没登录），在面板里说明原因和对应的安装或登录命令，而不是只留下一个已退出的面板。
+- **怎么算「启动后马上退出」**（`src/launch_failure.rs`）：记录还是启动时写的状态（没有任何 hook 改过它），而且 tmux 报的窗格退出时间（`pane_dead_time`）离启动不到 10 秒。退出的窗格因 `remain-on-exit` 还在，从里面读最后的输出。
+- **分哪几种：**
+  - 退出码 127 或输出里有 `command not found`（zsh、sh、bash 的原话）：没装，给安装命令。
+  - 输出里有 not logged in、unauthorized 这类字样：没登录，给登录命令。
+  - 输出最后有 Node 自己打的 `Node.js vX`：多半是 Node.js 太旧（在 Node 18 上跑 gemini-cli 实测就是这样结束）。
+  - 其他：「启动后马上退出了」，附退出码和最后 8 行输出。
+- **命令写在 `src/agents_spec.rs`：** `install_command`（Claude 用官方安装脚本，其余用 npm 包名，2026-11-23 核对过包里的命令名；Kimi、Antigravity、StepFun 没有一条命令，只给安装说明链接）和 `login_command`（只有 `claude auth login`、`codex login` 两条是真有的命令）。
+- **实测：** 这台 Mac 上的 Claude、Codex、Antigravity、Qwen Code 在没登录时都不退出，而是自己显示登录界面，所以「没登录」这一类主要留给以后真会退出的 Agent。
+- **面板：** 原因、可复制的命令、安装说明链接、最后的输出，按钮从「恢复会话」换成「重试」。重试按第一次的方式重新启动（`retry_agent`，不加 `--continue`，以免接上同一文件夹里别的对话），并先清空窗格，下次失败只读这次的输出。

@@ -3,7 +3,7 @@ import { PtySize } from "./ptysize";
 import { Terminal } from "@xterm/xterm";
 import type { IBufferCellPosition, ILink } from "@xterm/xterm";
 import type { GroupPanelPartInitParameters, IContentRenderer } from "dockview";
-import { agentResume, clipboardWrite, codexFileLinkLabels, dropSave, pathOpen, pathReveal, pathsResolve, ptyKill, ptyResize, ptyWrite, termAttach, termLeaveScroll, termShiftEnter } from "./api";
+import { agentLaunchFailure, clipboardWrite, codexFileLinkLabels, dropSave, pathOpen, pathReveal, pathsResolve, ptyKill, ptyResize, ptyWrite, termAttach, termLeaveScroll, termShiftEnter } from "./api";
 import { TerminalInput } from "./terminalinput";
 import { decodeOsc52 } from "./clipboard";
 import { catchDroppedInput } from "./imeinput";
@@ -16,6 +16,7 @@ import { getTheme, isDark, onThemeChange, terminalTheme, type Theme } from "./th
 import { getFontSizes, onFontSizesChange } from "./fontsize";
 import { beginPtyAttach, register, unregister } from "./ptybus";
 import { findAgent, reportError, subscribe } from "./store";
+import { paintBanner } from "./launchfailure";
 
 /** Keys the app owns through the native menu; the terminal must not turn them into input. */
 const APP_KEYS = new Set(["t", "w", "j"]);
@@ -65,6 +66,10 @@ export class TerminalPanel implements IContentRenderer {
   /** Keys go out in order, also when one first waits for tmux to leave scroll mode. */
   private readonly outbox = new TerminalInput();
   private destroyed = false;
+  /** The start time of the exited agent the banner was last painted for (null: running); a change repaints it. */
+  private shownExited: number | null = null;
+  /** Bumped per question to the backend, so an older answer never paints over a newer one. */
+  private failureAsk = 0;
   private resizeObserver: ResizeObserver | null = null;
   private unsubscribe: (() => void) | null = null;
   private readonly strip = new ScrollStrip({
@@ -90,13 +95,6 @@ export class TerminalPanel implements IContentRenderer {
     this.element.className = "term-panel";
     this.banner.className = "term-banner";
     this.banner.hidden = true;
-    const label = document.createElement("span");
-    label.textContent = "已退出";
-    const resume = document.createElement("button");
-    resume.className = "btn";
-    resume.textContent = "恢复会话";
-    resume.addEventListener("click", () => agentResume(this.name).catch(reportError));
-    this.banner.append(label, resume);
     this.host.className = "term-host";
     this.host.append(this.strip.element);
     this.element.append(this.banner, this.host);
@@ -420,12 +418,30 @@ export class TerminalPanel implements IContentRenderer {
     this.element.classList.toggle("codex-terminal", agent?.kind === "codex");
     this.syncScrollStrip(agent);
     this.banner.hidden = !agent?.exited;
+    // A retry that dies again before the next poll never shows as running; its new start time still asks again.
+    const exitedSince = agent?.exited ? agent.status_since : null;
+    if (exitedSince !== this.shownExited) {
+      this.shownExited = exitedSince;
+      if (exitedSince !== null) this.explainExit();
+    }
     // The session was gone when the client died; once the agent is running again, connect to the new one.
     if (agent && !agent.exited && this.needsReattach && this.ptyId === null) {
       this.needsReattach = false;
       this.term.reset();
       this.fitAndAttach();
     }
+  }
+
+  /** Plain "已退出" first; if it ended right at launch, why and what to run (see launchfailure.ts). */
+  private explainExit(): void {
+    const ask = ++this.failureAsk;
+    const name = this.name;
+    paintBanner(this.banner, name, null);
+    agentLaunchFailure(name)
+      .then((failure) => {
+        if (failure && ask === this.failureAsk && this.shownExited !== null && !this.destroyed) paintBanner(this.banner, name, failure);
+      })
+      .catch(reportError);
   }
 
   private syncScrollStrip(agent = findAgent(this.name)): void {

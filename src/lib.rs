@@ -19,6 +19,7 @@ pub mod find;
 pub mod hook;
 pub mod inbox;
 pub mod launch;
+pub mod launch_failure;
 pub mod menu;
 pub mod remote;
 pub mod sidebar;

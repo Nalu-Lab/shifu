@@ -497,6 +497,22 @@ fn agent_resume(cfg: State<Config>, name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn agent_retry(cfg: State<Config>, name: String) -> Result<(), String> {
+    session::retry_agent(&cfg, &name)
+}
+
+/// Why `name` ended right after it started; `None` when it did not (or its dead pane is gone).
+#[tauri::command]
+async fn agent_launch_failure(name: String) -> Result<Option<shifu::launch_failure::LaunchFailure>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(record) = shifu::agent::load(&name)? else { return Ok(None) };
+        Ok(shifu::launch_failure::check(&shifu::tmux::Tmux::from_env(), &record))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 fn agent_reveal(name: String) -> Result<(), String> {
     let record = shifu::agent::load(&name)?.ok_or_else(|| format!("no agent named {name}"))?;
     session::reveal(&record.cwd)
@@ -773,6 +789,8 @@ fn main() {
             drop_save,
             app_name,
             agent_resume,
+            agent_retry,
+            agent_launch_failure,
             agent_reveal,
             recent_dirs,
             term_attach,
