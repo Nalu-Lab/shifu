@@ -102,6 +102,18 @@ export const fileSave = (path: string, expected: string, text: string) => invoke
 export const dropSave = (name: string, bytes: ArrayBuffer) =>
   invoke<string>("drop_save", bytes, { headers: { "x-name": encodeURIComponent(name) } });
 export const agentResume = (name: string) => invoke<void>("agent_resume", { name });
+/** Starts an agent that ended at its launch again, fresh (see `retry_agent`). */
+export const agentRetry = (name: string) => invoke<void>("agent_retry", { name });
+
+/** Why an agent ended right after it started (src/launch_failure.rs). */
+export interface LaunchFailure {
+  reason: "not_found" | "login" | "node" | "other";
+  message: string;
+  command: string | null;
+  install_url: string | null;
+  output: string[];
+}
+export const agentLaunchFailure = (name: string) => invoke<LaunchFailure | null>("agent_launch_failure", { name });
 export const agentReveal = (name: string) => invoke<void>("agent_reveal", { name });
 export const recentDirs = () => invoke<string[]>("recent_dirs");
 export const termAttach = (name: string, cols: number, rows: number) =>

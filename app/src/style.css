@@ -1545,13 +1545,48 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
 .term-banner {
   flex: none;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 32px;
+  flex-direction: column;
+  gap: 6px;
   padding: 0 12px;
   background: var(--bg-active);
   color: var(--text-2);
   font-size: 12px;
+}
+
+.term-banner-head,
+.term-banner-command {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.term-banner.launch-failed {
+  padding-bottom: 8px;
+  color: var(--text);
+}
+
+.term-banner-command {
+  min-height: 0;
+}
+
+.term-banner-command code {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--bg);
+  font-family: "Maple Mono NF CN", Menlo, monospace;
+  user-select: text;
+}
+
+.term-banner-output {
+  margin: 0;
+  max-height: 9em;
+  overflow: auto;
+  color: var(--text-2);
+  font-family: "Maple Mono NF CN", Menlo, monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  user-select: text;
 }
 
 .term-banner[hidden],
