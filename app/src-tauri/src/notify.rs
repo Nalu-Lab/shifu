@@ -130,7 +130,18 @@ mod mac {
         REGISTRY.lock().unwrap_or_else(|e| e.into_inner())
     }
 
+    /// Outside an app bundle (`tauri dev`, the bare release binary) macOS may give no notification centre, or one
+    /// that answers nil. The generated bindings assume non-nil and panic, which took the whole app down (11-23).
+    #[allow(deprecated)]
+    fn center() -> Option<objc2::rc::Retained<objc2_foundation::NSUserNotificationCenter>> {
+        use objc2::{msg_send, ClassType};
+        unsafe { msg_send![objc2_foundation::NSUserNotificationCenter::class(), defaultUserNotificationCenter] }
+    }
+
     pub fn send(app: AppHandle, agent: String, title: String, body: String) -> Result<(), String> {
+        if center().is_none() {
+            return Err("通知只在装好的 Shifu.app 里能用（现在这份不在 App 包里运行）".to_string());
+        }
         ensure_application(&app)?;
         // One notification per agent: a newer state replaces the older one.
         let id = registry().add(&agent, &title, &body, Instant::now());
@@ -178,8 +189,12 @@ mod mac {
     /// One pass over Notification Center; true while a withdrawn notification may still show up there.
     #[allow(deprecated)] // NSUserNotification is what mac-notification-sys delivers through.
     fn sweep(registry: &mut Registry) -> bool {
-        let center = objc2_foundation::NSUserNotificationCenter::defaultUserNotificationCenter();
-        let delivered: Vec<_> = center.deliveredNotifications().iter().collect();
+        let Some(center) = center() else { return false };
+        // Outside an app bundle the centre exists but answers nil here; the binding would panic on that.
+        let list: Option<objc2::rc::Retained<objc2_foundation::NSArray<objc2_foundation::NSUserNotification>>> =
+            unsafe { objc2::msg_send![&*center, deliveredNotifications] };
+        let Some(list) = list else { return false };
+        let delivered: Vec<_> = list.iter().collect();
         let words: Vec<(String, String)> = delivered
             .iter()
             .map(|n| {

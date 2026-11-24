@@ -1,0 +1,2 @@
+- 开发时直接跑的 Shifu（不在 App 包里）点「发一条测试通知」或收到通知不再整个崩掉，改为提示「通知只在装好的 Shifu.app 里能用」。装好的 Shifu.app 不受影响。
+- A Shifu run outside its app bundle (during development) no longer crashes when it sends or clears a notification; it says notifications only work in the installed Shifu.app. The installed app is unaffected.
