@@ -1,6 +1,8 @@
+import { botPortraits, residentPortrait } from "./botportraits";
+import { type PickerRole, showBotPicker } from "./botpicker";
 import { progressSummary } from "./supervision";
 import { getPanelData } from "dockview";
-import { AGENT_MIME, appName, searchConversations } from "./api";
+import { AGENT_MIME, appName, searchConversations, type BotId, type BotProfile, type ResidentBot } from "./api";
 import { findAgents, type Found, highlight, type Hit } from "./search";
 import { type AgentView, agentLabel, ageText, displayKey, statusHint, statusLabel, statusLine } from "./format";
 import { type Mark, vendorIcon } from "./vendoricons";
@@ -47,9 +49,19 @@ export interface SidebarActions {
   openRole(role: Role, anchor: HTMLElement): void;
   /** Forget the role's agent and model; the next start asks again. */
   repickRole(role: Role): void;
+  listBots(): Promise<readonly ResidentBot[]>;
+  joinBot(id: BotId): Promise<readonly ResidentBot[]>;
+  /** Off 我的 Bot; its folder and conversation stay for when it is added back. */
+  leaveBot(id: BotId): Promise<readonly ResidentBot[]>;
+  saveBot(id: BotId, profile: BotProfile): Promise<readonly ResidentBot[]>;
+  openBot(bot: ResidentBot, anchor: HTMLElement): void;
 }
 
 export type Role = "pm" | "daily";
+
+const HEADER_CAT_KEY = "shifu.headerCat";
+/** Roles the user took off 我的 Bot. */
+const HIDDEN_ROLES_KEY = "shifu.hiddenRoles";
 
 const ROLE_ICONS: Record<Role, string> = {
   pm: '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5.5" width="13" height="10" rx="2"/><path d="M6.5 5.5v-2h5v2M2.5 9.5a16 16 0 0 0 13 0M9 9v3"/></svg>',
@@ -64,7 +76,8 @@ class PinnedRow {
   private readonly note = el("span", "pm-note");
   dir: string | null = null;
 
-  constructor(actions: SidebarActions, role: Role, private readonly name: string, private readonly description: string) {
+  constructor(actions: SidebarActions, readonly role: Role, readonly name: string, readonly description: string,
+    remove: () => void) {
     const icon = el("span", "pm-icon");
     icon.innerHTML = ROLE_ICONS[role];
     icon.append(this.dot);
@@ -77,6 +90,7 @@ class PinnedRow {
       e.preventDefault();
       showMenu(e.clientX, e.clientY, [
         { label: "换 agent 或模型", hint: `下次开${name}时重新选`, run: () => actions.repickRole(role) },
+        { label: "从我的 Bot 移除", hint: "对话保留，可从＋加回", run: remove },
       ]);
     });
   }
@@ -642,6 +656,13 @@ class ProjectView {
 
 export class Sidebar {
   readonly element = el("aside", "sidebar");
+  private readonly headerCat = el("button", "header-cat");
+  private readonly catImage = el("img", "header-cat-portrait");
+  private readonly botSection = el("div", "resident-section");
+  private readonly addBot = el("button", "icon-btn side-label-add");
+  private hiddenRoles = new Set<Role>(JSON.parse(localStorage.getItem(HIDDEN_ROLES_KEY) ?? "[]"));
+  private readonly botRows = el("div", "resident-bots");
+  private bots: readonly ResidentBot[] = [];
   private readonly waitingLabel = el("div", "side-label", "在等你");
   private readonly waitingBox = el("div", "waiting");
   private readonly projectBox = el("div", "projects");
@@ -669,7 +690,17 @@ export class Sidebar {
     brand.dataset.tauriDragRegion = "";
     // The acceptance copy calls itself "Shifu 测试", so it is never taken for the real one.
     appName().then((n) => (brand.textContent = n)).catch(reportError);
-    header.append(brand, this.newButton);
+    this.catImage.alt = "";
+    this.catImage.draggable = false;
+    const savedCat = localStorage.getItem(HEADER_CAT_KEY);
+    this.catImage.src = botPortraits[savedCat === "calico" || savedCat === "tuxedo" ? savedCat : "tabby"];
+    this.headerCat.type = "button";
+    this.headerCat.title = "我的 Bot";
+    this.headerCat.setAttribute("aria-label", "我的 Bot");
+    this.headerCat.setAttribute("aria-haspopup", "dialog");
+    this.headerCat.append(this.catImage);
+    this.headerCat.addEventListener("click", () => void this.showBots().catch(reportError));
+    header.append(this.headerCat, brand, this.newButton);
     this.newButton.title = "新建任务  ⌘N";
     this.newButton.setAttribute("aria-label", "新建任务");
     this.newButton.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>';
@@ -678,12 +709,23 @@ export class Sidebar {
     this.waitingBox.append(this.waitingLabel);
     this.progressRow.addEventListener("click", () => actions.showProgress());
     this.pinned = {
-      pm: new PinnedRow(actions, "pm", "项目经理", "常驻的助理：问它哪些在等你、某件事做到哪了，也能替你给某个对话传话"),
-      daily: new PinnedRow(actions, "daily", "每日分析", "汇总各项目推进与阻碍；安全、云机和用量报告需自行配置来源"),
+      pm: new PinnedRow(actions, "pm", "项目经理", "常驻的助理：问它哪些在等你、某件事做到哪了，也能替你给某个对话传话",
+        () => this.setRoleShown("pm", false)),
+      daily: new PinnedRow(actions, "daily", "每日分析", "汇总各项目推进与阻碍；安全、云机和用量报告需自行配置来源",
+        () => this.setRoleShown("daily", false)),
     };
     // Hidden until its folder is known (an older backend without the role leaves it hidden).
     this.pinned.daily.element.hidden = true;
-    scroll.append(this.results, this.pinned.pm.element, this.pinned.daily.element, this.progressRow, this.waitingBox, this.projectBox);
+    const botLabel = el("div", "side-label side-label-row");
+    this.addBot.type = "button";
+    this.addBot.title = "添加或移除 Bot";
+    this.addBot.setAttribute("aria-label", "添加或移除 Bot");
+    this.addBot.setAttribute("aria-haspopup", "dialog");
+    this.addBot.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg>';
+    this.addBot.addEventListener("click", () => void this.showBots(this.addBot, true).catch(reportError));
+    botLabel.append(el("span", "", "我的 Bot"), this.addBot);
+    this.botSection.append(botLabel, this.pinned.pm.element, this.pinned.daily.element, this.botRows);
+    scroll.append(this.results, this.botSection, this.progressRow, this.waitingBox, this.projectBox);
     this.errorBox.hidden = true;
     this.noticeBox.hidden = true;
     this.noticeBox.setAttribute("role", "alert");
@@ -776,6 +818,86 @@ export class Sidebar {
     this.results.replaceChildren(...rows);
   }
 
+  setBots(bots: readonly ResidentBot[]): void {
+    const joined = bots.filter((bot) => bot.joined);
+    this.bots = bots;
+    const current = joined.find((bot) => bot.id === localStorage.getItem(HEADER_CAT_KEY));
+    if (current) this.catImage.src = residentPortrait(current);
+    this.botRows.replaceChildren();
+    for (const bot of joined) {
+      const row = el("button", "row nav-row pm-row resident-row");
+      row.type = "button";
+      row.dataset.project = bot.dir;
+      row.title = bot.purpose;
+      const image = el("img", "resident-portrait");
+      image.src = residentPortrait(bot);
+      image.alt = "";
+      row.append(image, el("span", "pm-name", bot.name));
+      row.addEventListener("click", () => this.chatWithBot(bot, row));
+      row.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        showMenu(e.clientX, e.clientY, [{ label: "从我的 Bot 移除", hint: "对话保留，可从＋加回",
+          run: () => void this.actions.leaveBot(bot.id).then((bots) => this.setBots(bots)).catch(reportError) }]);
+      });
+      this.botRows.append(row);
+    }
+    this.render();
+  }
+
+  private setRoleShown(role: Role, shown: boolean): void {
+    const hidden = new Set(this.hiddenRoles);
+    if (shown) hidden.delete(role);
+    else hidden.add(role);
+    this.hiddenRoles = hidden;
+    localStorage.setItem(HIDDEN_ROLES_KEY, JSON.stringify([...hidden]));
+    this.render();
+  }
+
+  /** 项目经理 always; 每日分析 once its folder is known. */
+  private pickerRoles(): PickerRole[] {
+    return Object.values(this.pinned).filter((row) => row.role === "pm" || row.dir !== null).map((row) => ({
+      id: row.role, name: row.name, purpose: row.description, icon: ROLE_ICONS[row.role], joined: !this.hiddenRoles.has(row.role),
+    }));
+  }
+
+  private async showBots(anchor: HTMLElement = this.headerCat, adding = false): Promise<void> {
+    if (!this.bots.length) this.setBots(await this.actions.listBots());
+    showBotPicker(anchor, this.bots, this.pickerRoles(), {
+      leave: async (id) => {
+        const bots = await this.actions.leaveBot(id);
+        this.setBots(bots);
+        return bots;
+      },
+      setRole: (id, joined) => {
+        this.setRoleShown(id as Role, joined);
+        return this.pickerRoles();
+      },
+      openRole: (id, opener) => this.actions.openRole(id as Role, opener),
+      join: async (id) => {
+        const bots = await this.actions.joinBot(id);
+        localStorage.setItem(HEADER_CAT_KEY, id);
+        this.setBots(bots);
+        return bots;
+      },
+      save: async (id, profile) => {
+        const bots = await this.actions.saveBot(id, profile);
+        localStorage.setItem(HEADER_CAT_KEY, id);
+        this.setBots(bots);
+        return bots;
+      },
+      chat: (id, anchor) => {
+        const bot = this.bots.find((candidate) => candidate.id === id && candidate.joined);
+        if (bot) this.chatWithBot(bot, anchor);
+      },
+    }, adding);
+  }
+
+  private chatWithBot(bot: ResidentBot, anchor: HTMLElement): void {
+    this.catImage.src = residentPortrait(bot);
+    localStorage.setItem(HEADER_CAT_KEY, bot.id);
+    this.actions.openBot(bot, anchor);
+  }
+
   setRoleDir(role: Role, dir: string): void {
     this.pinned[role].dir = dir;
     this.render();
@@ -799,11 +921,19 @@ export class Sidebar {
   }
 
   private render(): void {
+    const waiting = getWaitingList();
+    this.headerCat.dataset.state = waiting.length ? "waiting"
+      : getAgents().some((agent) => agent.status === "running") ? "working" : "idle";
     const searching = this.query.trim() !== "";
     this.results.hidden = !searching;
-    this.pinned.pm.element.hidden = searching;
-    this.pinned.daily.element.hidden = searching || this.pinned.daily.dir === null;
+    this.pinned.pm.element.hidden = searching || this.hiddenRoles.has("pm");
+    this.pinned.daily.element.hidden = searching || this.pinned.daily.dir === null || this.hiddenRoles.has("daily");
     this.progressRow.hidden = searching;
+    this.botSection.hidden = searching;
+    const currentProject = getTasks().find((task) => task.id === getCurrentId())?.project;
+    this.botSection.querySelectorAll<HTMLElement>(".resident-row").forEach((row) => {
+      row.classList.toggle("active", row.dataset.project === currentProject);
+    });
     this.projectBox.hidden = searching;
     if (searching) {
       this.waitingBox.hidden = true;
@@ -812,7 +942,6 @@ export class Sidebar {
     }
     const ctx: Ctx = { now: nowSecs(), currentId: getCurrentId(), activeAgent: this.activeName };
     this.renderPinned(ctx.currentId);
-    const waiting = getWaitingList();
     const rows = cached(this.waitingRows, waiting.map((w) => w.agent.name), (name) => new WaitingRow(this.actions, waiting.find((w) => w.agent.name === name)!));
     waiting.forEach((w, i) => rows[i].update(w, ctx.now));
     this.waitingBox.hidden = waiting.length === 0;
@@ -827,9 +956,11 @@ export class Sidebar {
     syncChildren(this.projectBox, views.map((v) => v.element));
   }
 
-  /** Project folders with their tasks in the order the sidebar shows them; the pinned role folders left out. */
+  /** Project folders in sidebar order, excluding resident bot folders. */
   shownProjects(): Project[] {
     const pinnedDirs = new Set([this.pinned.pm.dir, this.pinned.daily.dir]);
+    // Removed bots still own their existing conversations.
+    for (const bot of this.bots) pinnedDirs.add(bot.dir);
     const projects = projectsOf(getTasks().filter((t) => !pinnedDirs.has(t.project)), getProjectOrder(), getTaskOrder(), getPinnedTasks());
     return withPickedFolders(projects, getPickedFolders(), pinnedDirs);
   }

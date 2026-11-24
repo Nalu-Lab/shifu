@@ -169,8 +169,8 @@ fn kimi_gets_its_task_with_the_first_prompt() {
 
 #[test]
 fn the_pinned_roles_are_not_asked_to_draft_a_goal() {
-    for role in ["pm", "daily"] {
-        let path = home(&format!("role-{role}"), "codex", None);
+    for role in ["pm", "daily", "bots/tabby"] {
+        let path = home(&format!("role-{}", role.replace('/', "-")), "codex", None);
         let dir = path.join(role);
         fs::write(path.join("tasks.json"), json!({"current":"t-1","tasks":[
             {"id":"t-1","project":dir,"name":"每日分析","auto_name":false,"created_at":1,"agents":["agent"]}

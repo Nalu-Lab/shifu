@@ -434,7 +434,55 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
 }
 
 
+.header-cat {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin-right: 4px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.resident-portrait {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex: none;
+}
+
+.header-cat:hover { background: var(--bg-hover); }
+.header-cat:focus-visible { outline: 2px solid var(--line-focus); }
+.header-cat-portrait {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  pointer-events: none;
+  transform-origin: 50% 85%;
+}
+
+.header-cat[data-state="waiting"] img { transform: rotate(-6deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .header-cat[data-state="working"] img { animation: cat-nod 5s ease-in-out infinite; }
+  .header-cat[data-state="waiting"] img { animation: cat-tilt 8s ease-in-out infinite; }
+}
+
+@keyframes cat-nod {
+  0%, 13%, 100% { transform: translateY(0); }
+  6% { transform: translateY(1.5px) rotate(3deg); }
+}
+@keyframes cat-tilt {
+  0%, 20%, 100% { transform: rotate(-6deg); }
+  9% { transform: rotate(3deg); }
+}
+
 .brand {
+  margin-right: auto;
+  white-space: nowrap;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-2);
@@ -1863,6 +1911,63 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   border: 1px solid var(--text-3);
 }
 
+/* 我的 Bot displays its avatars separately from conversation rows. */
+.resident-section {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  padding: 0 6px 8px;
+}
+
+.resident-section > .side-label-row {
+  grid-column: 1 / -1;
+  margin: 0 -6px;
+}
+
+.resident-section > .resident-bots {
+  display: contents;
+}
+
+.resident-section .pm-row {
+  position: relative;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 2px 6px;
+  text-align: center;
+}
+
+.resident-section .pm-icon,
+.resident-section .resident-portrait {
+  width: 32px;
+  height: 32px;
+}
+
+.resident-section .pm-icon {
+  align-items: center;
+  justify-content: center;
+}
+
+.resident-section .pm-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.resident-section .pm-name {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resident-section .pm-note {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  min-width: 0;
+}
+
 .nav-row:hover {
   background: var(--bg-hover);
 }
@@ -2568,6 +2673,19 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
 .task-receipts { display: grid; justify-items: start; }
 .task-receipt { margin-top: 4px; padding: 2px 0; border: 0; background: transparent; color: var(--text); font: inherit; text-align: start; text-decoration: underline; cursor: pointer; }
 .task-receipt:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+.side-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 4px;
+}
+
+.side-label-add {
+  width: 20px;
+  height: 20px;
+  color: var(--text-3);
+}
 
 /* 外观… text size rows: name on the left, − value + on the right, like the color rows. */
 .font-size-controls {

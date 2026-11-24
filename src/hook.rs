@@ -327,9 +327,9 @@ fn task_note(home: &std::path::Path, name: &str) -> Res<Option<String>> {
     let Some(task) = list.tasks.into_iter().find(|t| t.agents.iter().any(|a| a == name)) else {
         return Ok(None);
     };
-    // 项目经理 and 每日分析 have their own instructions in their folders and no goal file; the progress page leaves
-    // their tasks out too.
-    if ["pm", "daily"].iter().any(|role| std::path::Path::new(&task.project) == home.join(role)) {
+    // Resident roles take their purpose from the instructions in their own folder.
+    let project = std::path::Path::new(&task.project);
+    if project == home.join("pm") || project == home.join("daily") || project.parent() == Some(home.join("bots").as_path()) {
         return Ok(None);
     }
     let file = home.join("goals").join(format!("{}.md", task.id));
