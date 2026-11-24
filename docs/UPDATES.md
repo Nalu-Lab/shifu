@@ -2,6 +2,22 @@
 
 [回到 Shifu](../README.md)　[English](#english)
 
+## 0.4.3 预发布 · 2026-11-23
+
+下载包现已包含 0.4.2 之后的改动，App、CLI 和可选电脑操作组件配套提供：
+
+- 对话之间能问能答：`shifu ask <对话> <问题>` 等对方用 `shifu reply` 回答（默认等 100 秒，晚到的回答会连同问题排进提问的对话）。`shifu tell` 发给 Claude、Codex 对话时也走同一个排队：等输入框空了再发，不覆盖草稿。很长或多行的消息存成文件，输入框里只放一行路径，不再卡在输入框里。
+- 新 Agent：opencode 和 Pi 成为正式支持的 Agent，侧栏能显示运行、等你确认、提问和结束；装了 Gemini CLI 也会出现在新建列表里（暂不显示状态）。
+- 侧栏对话的右键菜单和标签页的一样，侧栏里也能直接改名；去掉「用回话题名」和「消息送达状态」（`shifu inbox` 仍可查看送达）。
+- 新建任务：项目改成下拉框，同名文件夹带上路径；窗口矮时「建立」按钮固定在底部，不会被挤出窗口。
+- 终端：Codex 回复里一个标题对应多个文件时，点开弹出 Shifu 的文件菜单，不再由 Codex 打开失败；修复快速改窗口大小后同一行画两遍。
+- 关了颜色（NO_COLOR）的 Claude 也能正确送达排队消息，不再把它的建议当成草稿。
+- 电池供电合盖继续运行时，接着的外接屏幕会被重新唤醒。
+- `shifu new --help` 等命令打印用法，不再开出一个叫 help 的空任务；Antigravity 对话在发出第一条消息前，「复制会话 ID」也会显示并说明原因。
+- 0.4.2 及更早的包继续保留。
+
+本包由 GitHub 云端从公开源码构建，用 Shifu 自己的固定证书签名、未公证；构建来源见包内 BUILD-INFO.json。从 0.4.1 或 0.4.2 升级不用重新授权电脑操作。
+
 ## 0.4.2 预发布 · 2026-11-22
 
 下载包现已包含 0.4.1 之后的改动，App、CLI 和可选电脑操作组件配套提供：
@@ -149,6 +165,22 @@
 Finder 的独立改名输入框现已可读取、输入并提交；操作结果仍应核对文件路径。浏览器后台可能只有工具栏，等待文字时应选正文中的明确片段；目前没有 DOM 操作通道。
 
 ## English
+
+### 0.4.3 preview · November 23, 2026
+
+The download now includes the changes since 0.4.2, with a matching app, CLI and optional Computer Use helper:
+
+- Conversations can ask each other: `shifu ask <conversation> <question>` waits for `shifu reply` (100 s by default; a late answer is queued into the asking conversation with its question). `shifu tell` to a Claude or Codex conversation uses the same checked queue: it waits for an empty input box and never overwrites a draft. Long or multi-line messages are saved to a file and the input box gets one line with its path, so they no longer stick there.
+- New agents: opencode and Pi are first-class, with running, waiting-for-approval, asking and finished shown in the sidebar. Gemini CLI appears in the new-conversation list when installed (no status yet).
+- The sidebar conversation menu now matches the tab's, with rename in the sidebar. 用回话题名 and 消息送达状态 are gone from the menus; `shifu inbox` still shows receipts.
+- New task: the project picker is a dropdown, with paths for same-named folders, and the create button stays visible in short windows.
+- Terminal: a Codex reply title that names several files opens a Shifu file menu instead of failing in Codex's viewer; fixed rows drawn twice after quick window resizes.
+- Queued messages reach Claude conversations running with colour turned off (NO_COLOR) instead of mistaking Claude's suggestion for a draft.
+- With lid-closed running on battery, an attached external screen is woken again.
+- `shifu new --help` and similar commands print usage instead of opening an empty task named help; an Antigravity conversation shows 复制会话 ID before its first message, with the reason it is not available yet.
+- 0.4.2 and earlier packages remain available.
+
+Built by GitHub Actions from the public source; signed with Shifu's own fixed certificate and not notarized. The build source is recorded in BUILD-INFO.json inside the package. Upgrading from 0.4.1 or 0.4.2 keeps the Computer Use permissions.
 
 ### 0.4.2 preview · November 22, 2026
 
