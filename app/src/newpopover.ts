@@ -1,8 +1,8 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { type Permissions, pathOpen, permissionsGet, permissionsSet, recentDirs } from "./api";
-import { projectName } from "./tasks";
+import { pickFolder, projectName } from "./tasks";
 import { shortPath } from "./format";
-import { reportError } from "./store";
+import { addPickedFolder, reportError } from "./store";
 import {
   AGENTS,
   type AgentSpec,
@@ -301,7 +301,7 @@ export function showAddAgentPopover(anchor: HTMLElement, add: AddAgent, options:
 type CreateTask = (project: string, name: string, kind: string) => Promise<void>;
 
 export interface NewTaskOptions {
-  /** Folders that already have tasks. */
+  /** Folders that already have tasks, then those picked earlier that have none yet. */
   projects: readonly string[];
   /** Folder to start with: the "+" of a project row, else the current task's. */
   preselect?: string;
@@ -314,8 +314,10 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
   const pop = document.createElement("div");
   pop.className = "popup new-pop";
 
-  const folders = [...opts.projects];
+  let folders = [...opts.projects];
   let selected = opts.preselect ?? folders[0] ?? null;
+  // The "+" of a folder that is not in the list (one picked earlier, with no task yet) still starts selected.
+  if (selected !== null && !folders.includes(selected)) folders.unshift(selected);
   // A dropdown, not a list: the list of recent folders pushed the rest of the form down (Eddie 11-23).
   const CHOOSE = "\u0000choose";
   const list = document.createElement("select");
@@ -346,8 +348,9 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
     try {
       const dir = await open({ directory: true, multiple: false, title: "选择文件夹" });
       if (typeof dir === "string") {
-        if (!folders.includes(dir)) folders.push(dir);
-        selected = dir;
+        // The picked folder becomes the task's folder, first in the list, and shows in the sidebar from now on.
+        ({ folders, selected } = pickFolder(folders, dir));
+        addPickedFolder(dir);
       }
     } catch (e) {
       reportError(e);

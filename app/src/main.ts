@@ -58,6 +58,8 @@ import {
   getActiveAgent,
   getWaitingList,
   dismissWaitingFor,
+  dropPickedFolder,
+  getPickedFolders,
   initWaitingOpened,
   initPinnedTasks,
   onWaitingOpenedChange,
@@ -78,7 +80,7 @@ import {
   setWindowFocused,
   subscribe,
 } from "./store";
-import { projectsOf, taskOfAgent } from "./tasks";
+import { projectsOf, taskOfAgent, withPickedFolders } from "./tasks";
 import { loadWaitingSeen, WAITING_SEEN_KEY } from "./waitingseen";
 
 const PINNED_TASKS_KEY = "shifu.pinnedTasks";
@@ -192,6 +194,7 @@ async function main() {
 
   const createTask = async (project: string, name: string, kind: string) => {
     const { file } = await taskNew(project, name, kind, pickArgs(pickFor(kind)));
+    dropPickedFolder(project);
     // The new agent has to be in the list before its task is shown, or the panel would be dropped as stale.
     setAgents(await agentsList());
     setTaskFile(file);
@@ -260,7 +263,7 @@ async function main() {
 
   const requestNewTask = (anchor: HTMLElement, project?: string) =>
     void showNewTaskPopover(anchor, {
-      projects: projectsOf(getTasks(), getProjectOrder()).map((p) => p.path),
+      projects: withPickedFolders(projectsOf(getTasks(), getProjectOrder()), getPickedFolders()).map((p) => p.path),
       preselect: project ?? getCurrentTask()?.project,
       create: createTask,
     });

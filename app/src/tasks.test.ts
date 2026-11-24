@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentView, Mark, Status } from "./format";
-import { inDraggedOrder, projectsOf, type Task, taskLabel, taskNeedsYou, taskStatus, waitingList, waitingPresentation } from "./tasks";
+import { inDraggedOrder, pickFolder, projectsOf, type Task, taskLabel, taskNeedsYou, taskStatus, waitingList, waitingPresentation, withPickedFolders } from "./tasks";
 
 function agent(name: string, status: Status, since = 1, mark?: Mark, title: string | null = null): AgentView {
   return { name, kind: "claude", cwd: "/w", dir_name: "w", branch: null, title, status, status_since: since, last_message: null, exited: status === "exited", mark };
@@ -233,5 +233,27 @@ describe("inDraggedOrder", () => {
     const list = [agent("a", "running"), agent("b", "idle"), agent("c", "idle"), agent("d", "idle")];
     expect(inDraggedOrder(list, ["c", "gone", "a"]).map((x) => x.name)).toEqual(["c", "a", "b", "d"]);
     expect(inDraggedOrder(list, undefined).map((x) => x.name)).toEqual(["a", "b", "c", "d"]);
+  });
+});
+
+describe("a folder picked for a new task", () => {
+  it("becomes the selected folder, first in the list, without a second copy", () => {
+    expect(pickFolder(["/w/old", "/w/new", "/w/other"], "/w/new")).toEqual({ folders: ["/w/new", "/w/old", "/w/other"], selected: "/w/new" });
+    expect(pickFolder(["/w/old"], "/w/fresh")).toEqual({ folders: ["/w/fresh", "/w/old"], selected: "/w/fresh" });
+  });
+
+  it("shows in the sidebar as an empty project after the ones with tasks", () => {
+    const projects = projectsOf([task("t1", "/w/a", 10)]);
+    const got = withPickedFolders(projects, ["/w/fresh", "/w/a", "/w/fresh"]);
+    expect(got.map((p) => [p.path, p.name, p.tasks.length])).toEqual([
+      ["/w/a", "a", 1],
+      ["/w/fresh", "fresh", 0],
+    ]);
+  });
+
+  it("leaves out the pinned role folders and changes nothing when none was picked", () => {
+    const projects = projectsOf([task("t1", "/w/a", 10)]);
+    expect(withPickedFolders(projects, ["/w/pm"], new Set(["/w/pm", null]))).toEqual(projects);
+    expect(withPickedFolders(projects, [])).toEqual(projects);
   });
 });

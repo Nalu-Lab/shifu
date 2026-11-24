@@ -5,13 +5,14 @@ import { findAgents, type Found, highlight, type Hit } from "./search";
 import { type AgentView, agentLabel, ageText, displayKey, statusHint, statusLabel, statusLine } from "./format";
 import { type Mark, vendorIcon } from "./vendoricons";
 import { type MenuItem, showMenu } from "./menu";
-import { getAgentOrder, getAgents, getCurrentId, getPinnedTasks, getProjectOrder, getTaskOrder, getTasks, getWaitingList, onError, reportError, subscribe } from "./store";
+import { getAgentOrder, getAgents, getCurrentId, getPickedFolders, getPinnedTasks, getProjectOrder, getTaskOrder, getTasks, getWaitingList, onError, reportError, subscribe } from "./store";
 import { agentMenuItems, renameAgent } from "./tab";
 import { pinItem, unreadItem } from "./marks";
 import { bindSidebarReorder } from "./sidebarreorder";
 import {
   type Project,
   projectsOf,
+  withPickedFolders,
   type Task,
   inDraggedOrder,
   taskAgents,
@@ -589,13 +590,14 @@ class TaskView {
   }
 }
 
-/** A folder with tasks. Collapsing is kept only in memory. */
+/** A folder with tasks, or one just picked that has none yet. Collapsing is kept only in memory. */
 class ProjectView {
   readonly element = el("div", "project");
   private readonly head = el("div", "project-row");
   private readonly arrow = el("span", "project-arrow");
   private readonly name = el("span", "project-name");
   private readonly list = el("div", "project-tasks");
+  private readonly emptyNote = el("div", "project-empty-note", "还没有任务，点 + 新建");
   private readonly tasks = new Map<string, TaskView>();
 
   constructor(
@@ -617,11 +619,15 @@ class ProjectView {
     });
     this.head.append(this.arrow, this.name, add);
     this.head.addEventListener("click", toggle);
-    this.element.append(this.head, this.list);
+    this.element.append(this.head, this.emptyNote, this.list);
   }
 
   update(project: Project, collapsed: boolean, ctx: Ctx): void {
     this.name.textContent = project.name;
+    // A folder just picked for a new task, with no task in it yet (see `withPickedFolders`).
+    const empty = project.tasks.length === 0;
+    this.element.classList.toggle("empty", empty);
+    this.emptyNote.hidden = !empty;
     this.head.title = this.path;
     this.element.classList.toggle("collapsed", collapsed);
     const views = cached(this.tasks, project.tasks.map((t) => t.id), (id) =>
@@ -824,7 +830,8 @@ export class Sidebar {
   /** Project folders with their tasks in the order the sidebar shows them; the pinned role folders left out. */
   shownProjects(): Project[] {
     const pinnedDirs = new Set([this.pinned.pm.dir, this.pinned.daily.dir]);
-    return projectsOf(getTasks().filter((t) => !pinnedDirs.has(t.project)), getProjectOrder(), getTaskOrder(), getPinnedTasks());
+    const projects = projectsOf(getTasks().filter((t) => !pinnedDirs.has(t.project)), getProjectOrder(), getTaskOrder(), getPinnedTasks());
+    return withPickedFolders(projects, getPickedFolders(), pinnedDirs);
   }
 
   private toggle(path: string): void {

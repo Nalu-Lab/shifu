@@ -67,6 +67,21 @@ export function projectsOf(
   return projects;
 }
 
+/** Folders picked with 选择文件夹… that have no task yet, after the projects: they would not show up otherwise,
+ *  since a project is a folder with tasks. `leaveOut` holds folders shown elsewhere (the pinned roles). */
+export function withPickedFolders(projects: readonly Project[], picked: readonly string[], leaveOut: ReadonlySet<string | null> = new Set()): Project[] {
+  const shown = new Set(projects.map((p) => p.path));
+  const empty = picked
+    .filter((path, i) => !shown.has(path) && !leaveOut.has(path) && picked.indexOf(path) === i)
+    .map((path) => ({ path, name: projectName(path), tasks: [] }));
+  return [...projects, ...empty];
+}
+
+/** The new-task popover's folders once `dir` was picked: it goes first, and is the one selected. */
+export function pickFolder(folders: readonly string[], dir: string): { folders: string[]; selected: string } {
+  return { folders: [dir, ...folders.filter((f) => f !== dir)], selected: dir };
+}
+
 export const taskOfAgent = (tasks: readonly Task[], name: string): Task | undefined =>
   tasks.find((t) => t.agents.includes(name));
 
