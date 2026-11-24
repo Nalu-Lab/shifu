@@ -117,6 +117,23 @@ export function setTaskPinned(id: string, pinned: boolean): void {
   emit();
 }
 
+let pickedFolders: readonly string[] = [];
+
+/** Folders picked in the new-task popover this session, newest first; the sidebar shows the ones without a task. */
+export const getPickedFolders = () => pickedFolders;
+
+export function addPickedFolder(dir: string): void {
+  pickedFolders = [dir, ...pickedFolders.filter((d) => d !== dir)];
+  emit();
+}
+
+/** A task was made in `dir`, so it is a project now and no longer needs the picked-folder row. */
+export function dropPickedFolder(dir: string): void {
+  if (!pickedFolders.includes(dir)) return;
+  pickedFolders = pickedFolders.filter((d) => d !== dir);
+  emit();
+}
+
 export const onWaitingOpenedChange = (listener: (seen: WaitingSeen) => void) => waitingOpenedListeners.add(listener);
 
 /** The panel in front (null when there is none). */

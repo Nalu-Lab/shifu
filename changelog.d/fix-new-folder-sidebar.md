@@ -1,0 +1,2 @@
+- 新建任务时用「选择文件夹…」选的新文件夹会直接成为任务的项目并排在下拉第一项；还没有任务的这个文件夹也会立刻出现在侧栏，标着「还没有任务，点 + 新建」，不会找不到。
+- A new folder picked with 选择文件夹… (Choose folder…) in the new-task popover becomes the task's project and moves to the top of the list; it also shows up in the sidebar right away, marked as having no task yet, instead of being nowhere to be seen.

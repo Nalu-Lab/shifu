@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentView } from "./format";
-import { findAgent, getPinnedTasks, getWaitingList, initPinnedTasks, initSeen, initWaitingOpened, markUnread, setActiveAgent, setAgents, setTaskFile, setTaskPinned, setWindowFocused } from "./store";
+import { addPickedFolder, dropPickedFolder, findAgent, getPickedFolders, getPinnedTasks, getWaitingList, initPinnedTasks, initSeen, initWaitingOpened, markUnread, setActiveAgent, setAgents, setTaskFile, setTaskPinned, setWindowFocused, subscribe } from "./store";
 
 const agent = (name: string): AgentView => ({
   name, kind: "codex", cwd: "/w", dir_name: "w", branch: null, title: name, status: "needs_reply",
@@ -58,5 +58,22 @@ describe("pinned tasks", () => {
     setTaskPinned("old", false);
     expect([...getPinnedTasks()]).toEqual(["career"]);
     expect(saved).toEqual([["old", "career"], ["career"]]);
+  });
+});
+
+describe("folders picked for a new task", () => {
+  it("are kept newest first until a task is made in them, and each change redraws", () => {
+    const redraw = vi.fn();
+    const stop = subscribe(redraw);
+    addPickedFolder("/w/one");
+    addPickedFolder("/w/two");
+    addPickedFolder("/w/one");
+    expect(getPickedFolders()).toEqual(["/w/one", "/w/two"]);
+    dropPickedFolder("/w/one");
+    dropPickedFolder("/w/never-picked");
+    expect(getPickedFolders()).toEqual(["/w/two"]);
+    expect(redraw).toHaveBeenCalledTimes(4);
+    stop();
+    dropPickedFolder("/w/two");
   });
 });
