@@ -366,6 +366,12 @@ fn task_move_agent(
     tasks.move_agent(&cfg, &name, &to_id)
 }
 
+/// A conversation dropped on a folder without tasks: a new task there takes it over.
+#[tauri::command]
+fn task_new_with_agent(cfg: State<Config>, tasks: State<Tasks>, project: String, name: String) -> Result<TaskFile, String> {
+    tasks.create_with_agent(&cfg, &project, &name)
+}
+
 #[tauri::command]
 fn task_delete(cfg: State<Config>, tasks: State<Tasks>, id: String) -> Result<TaskFile, String> {
     tasks.delete(&cfg, &id)
@@ -785,6 +791,7 @@ fn main() {
             agent_rename,
             task_set_current,
             task_move_agent,
+            task_new_with_agent,
             task_delete,
             project_reorder,
             task_reorder,

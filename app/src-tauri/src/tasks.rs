@@ -197,6 +197,21 @@ pub fn move_agent_file(mut file: TaskFile, name: &str, to_id: &str) -> TaskFile 
     file
 }
 
+/// A task in `project` named after its folder, holding `agent`, which leaves every other task.
+pub fn new_task_with_agent(mut file: TaskFile, project: &str, agent: &str, now_ms: u64, now_secs: u64) -> TaskFile {
+    for t in &mut file.tasks {
+        t.agents.retain(|a| a != agent);
+    }
+    let name = Path::new(project).file_name().map(|n| n.to_string_lossy().to_string()).filter(|n| !n.is_empty());
+    let (name, auto_name) = match name {
+        Some(n) => (n, false),
+        None => (default_name(&file, project), true),
+    };
+    let id = unique_id(&file.tasks, now_ms);
+    file.tasks.push(Task { id, project: project.to_string(), name, auto_name, created_at: now_secs, agents: vec![agent.to_string()] });
+    file
+}
+
 /// Stores the order the sidebar was dragged into. The frontend sends the whole displayed order, so nothing here has
 /// to reconstruct it: paths that are no project of any task are dropped, repeats collapse to their first place, and
 /// folders left out keep the newest-first default. No task, agent or layout is touched.
@@ -317,6 +332,20 @@ impl Tasks {
         file.current = Some(id);
         write(cfg, &file)?;
         Ok(Changed { file, agent: Some(agent) })
+    }
+
+    /// A conversation dropped on a folder that has no task yet: a new task there, named after the folder, takes it
+    /// over from its old task. No new session starts.
+    pub fn create_with_agent(&self, cfg: &Config, project: &str, agent: &str) -> Res<TaskFile> {
+        let _held = self.guard();
+        let project = canonical_dir(project)?;
+        let file = Self::current_file(cfg)?;
+        if !file.tasks.iter().any(|t| t.agents.iter().any(|a| a == agent)) {
+            return Err(format!("no agent {agent}"));
+        }
+        let file = new_task_with_agent(file, &project, agent, now_ms(), agent::now_secs());
+        write(cfg, &file)?;
+        Ok(file)
     }
 
     pub fn add_agent(&self, cfg: &Config, task_id: &str, kind: &str, pick: Pick) -> Res<Changed> {
@@ -490,6 +519,17 @@ mod tests {
     fn a_current_that_points_nowhere_is_moved_to_the_newest_task() {
         let file = TaskFile { current: Some("t-gone".into()), tasks: vec![task("t-1", "/w/a", 10, &[]), task("t-2", "/w/b", 20, &[])], ..Default::default() };
         assert_eq!(adopt_orphans(file, &[], 9).current.as_deref(), Some("t-2"));
+    }
+
+    #[test]
+    fn a_dropped_agent_makes_a_task_named_after_the_folder() {
+        let file = TaskFile { current: Some("t-1".into()), tasks: vec![task("t-1", "/w/a", 1, &["p", "q"])], ..Default::default() };
+        let file = new_task_with_agent(file, "/w/LLM", "q", 5, 6);
+        assert_eq!(file.tasks[0].agents, vec!["p".to_string()]);
+        let made = &file.tasks[1];
+        assert_eq!((made.project.as_str(), made.name.as_str(), made.auto_name), ("/w/LLM", "LLM", false));
+        assert_eq!(made.agents, vec!["q".to_string()]);
+        assert_eq!(file.current.as_deref(), Some("t-1"));
     }
 
     #[test]
