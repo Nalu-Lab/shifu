@@ -1,0 +1,2 @@
+- 内测版可在 Shifu 菜单打开「我的 Mac」并用 Google 登录。首次加入需要一次性邀请码，已加入的账号可在其他 Mac 登录并管理自己的设备。
+- Pilot builds add My Macs in the Shifu menu. First-time Google sign-ins require a single-use invite. Returning users can sign in on another Mac and manage their own device list.

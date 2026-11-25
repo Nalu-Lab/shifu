@@ -1,0 +1,21 @@
+{
+  "name": "shifu-accounts",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "invite": "node invite.mjs",
+    "review": "node review.mjs",
+    "test": "node --test test/*.test.mjs",
+    "preview": "node preview/server.mjs",
+    "test:preview": "node --test test/preview.mjs"
+  },
+  "dependencies": {
+    "@fastify/rate-limit": "10.3.0",
+    "fastify": "5.12.8",
+    "google-auth-library": "10.9.1"
+  }
+}

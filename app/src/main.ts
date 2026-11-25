@@ -3,6 +3,7 @@ import { applyStoredFontSizes, stepTerminal } from "./fontsize";
 import "@xterm/xterm/css/xterm.css";
 import "dockview/dist/styles/dockview.css";
 import "./style.css";
+import { showAccounts } from "./accounts";
 import { showAppearancePopover } from "./appearance";
 import { applyStoredTheme } from "./theme";
 import { ProgressPage } from "./progress";
@@ -539,6 +540,12 @@ async function main() {
 
   // Cmd+N / Cmd+T / Cmd+W / Cmd+J come from the native menu (the default Cmd+W would close the window).
   await listen<string>("menu", ({ payload }) => {
+    if (payload === "my-macs") {
+      leaveRemoteController();
+      closeMenu();
+      showAccounts(sidebar.newButton);
+      return;
+    }
     if (handleRemoteControlMenu(payload)) return;
     closeMenu();
     if (payload === "new-task") requestNewTask(sidebar.newButton);
