@@ -1,0 +1,2 @@
+- Claude 套餐额度优先显示定时查询的结果，查询不可用时继续显示本地记录。（还没装）
+- Claude quota displays successful scheduled checks and falls back to local readings when a check fails.

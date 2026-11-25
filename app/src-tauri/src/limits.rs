@@ -311,9 +311,17 @@ fn newest(local: Option<VendorLimits>, live: Option<VendorLimits>) -> Option<Ven
     }
 }
 
+fn claude_limits(home: &Path, live: Option<VendorLimits>) -> Option<VendorLimits> {
+    // A statusLine redraw can rewrite cached quota without fetching it again.
+    if live.as_ref().is_some_and(|reading| reading.error.is_none()) {
+        return live;
+    }
+    newest(read_claude(home), live)
+}
+
 pub fn collect(cfg: &Config, cache: &mut CodexCache, slow: &SlowLimits) -> Limits {
     Limits {
-        claude: newest(read_claude(&cfg.home), slow.claude.lock().ok().and_then(|v| v.clone())),
+        claude: claude_limits(&cfg.home, slow.claude.lock().ok().and_then(|v| v.clone())),
         codex: newest(read_codex(&codex_sessions_dir(), cache), slow.codex.lock().ok().and_then(|v| v.clone())),
         kimi: slow.kimi.lock().map(|k| k.clone()).unwrap_or(None),
         codebuddy: slow.codebuddy.lock().map(|c| c.clone()).unwrap_or(None),
@@ -765,6 +773,25 @@ mod tests {
         let got = read_claude(&home).unwrap();
         assert_eq!(got.windows, vec![w(71.0, 10080, 5)]);
         assert!(got.updated_at > 1_700_000_000 && got.credits.is_none());
+        std::fs::remove_dir_all(&home).unwrap();
+    }
+
+    #[test]
+    fn claude_statusline_redraw_cannot_replace_a_successful_quota_query() {
+        let home = temp_dir("claude-query");
+        std::fs::write(capture_path(&home), r#"{"rate_limits":{"seven_day":{"used_percentage":25,"resets_at":2000000000}}}"#).unwrap();
+        let local = read_claude(&home).unwrap();
+        let live = VendorLimits {
+            windows: vec![w(36.0, 10080, 2_000_000_000)],
+            updated_at: local.updated_at - 1,
+            ..Default::default()
+        };
+        assert_eq!(claude_limits(&home, Some(live.clone())), Some(live.clone()));
+        assert_eq!(claude_limits(&home, None), Some(local.clone()));
+
+        let error = Some("Claude 查询超时".to_string());
+        let failed_query = VendorLimits { error: error.clone(), ..live };
+        assert_eq!(claude_limits(&home, Some(failed_query)), Some(VendorLimits { error, ..local }));
         std::fs::remove_dir_all(&home).unwrap();
     }
 
