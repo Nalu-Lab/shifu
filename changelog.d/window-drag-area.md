@@ -1,0 +1,2 @@
+- 拖动窗口更容易了：侧栏顶部整行都能拖动 Shifu 窗口，按钮之间的空隙也算，按钮照常能点；窗口顶部标签栏右边的空白处也能拖动窗口，双击它会像普通 Mac 标题栏一样缩放窗口。拖动标签本身仍然是移动标签。只需更新 App。
+- Moving the window is easier. The whole top row of the sidebar now drags the Shifu window, gaps between its buttons included, and the buttons still click. The empty part of the tab bar along the window's top edge also drags the window, and a double click there zooms it like a normal Mac title bar. Dragging a tab still moves the tab. Needs only the app updated.
