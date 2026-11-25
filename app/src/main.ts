@@ -501,6 +501,19 @@ async function main() {
   const markCorner = () => {
     dock.querySelectorAll(".under-lights").forEach((g) => g.classList.remove("under-lights"));
     dock.querySelector(".dv-groupview")?.classList.add("under-lights");
+    markTitleBar();
+  };
+  // The window has no title bar, so the empty part of the tab bars along its top edge moves the window (and a
+  // double click zooms it), like a title bar. Lower groups keep that space for dragging the whole group elsewhere.
+  const markTitleBar = () => {
+    const top = dock.getBoundingClientRect().top;
+    dock.querySelectorAll<HTMLElement>(".dv-groupview").forEach((g) => {
+      const strip = g.querySelector<HTMLElement>(".dv-void-container");
+      if (!strip) return;
+      const onTop = Math.abs(g.getBoundingClientRect().top - top) < 2 && !g.closest(".dv-resize-container");
+      if (onTop) strip.dataset.tauriDragRegion = "";
+      else delete strip.dataset.tauriDragRegion;
+    });
   };
   workspace.api.onDidLayoutChange(markCorner);
   markCorner();
