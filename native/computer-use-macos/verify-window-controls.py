@@ -71,7 +71,60 @@ def verify_dimensions(shot):
     assert f"pixelWidth: {shot['width']}\n" in probe and f"pixelHeight: {shot['height']}\n" in probe, probe
 
 
+def text_field(snapshot, label):
+    match = re.search(r'^\s*(\d+) text field[^\n]*? ' + re.escape(label) + r', Value: ([^\n]+)$',
+                      snapshot['treeText'], re.M)
+    assert match, snapshot['treeText']
+    return int(match[1]), match[2]
+
+
+def verify_indexed_text():
+    with launch(SHIFU_FIXTURE_INDEXED_TEXT='1') as call:
+        window, = wait_windows(call, lambda windows: len(windows) == 1)
+        args = ('--window-id', window['id'], '--no-screenshot')
+        before = call('get-app-state', *args, '--background-only')['result']['snapshot']
+        focused, initial = text_field(before, '测试输入框')
+        target, target_initial = text_field(before, '指定输入框')
+        assert before['focusedElementId'] == focused and initial == '初始文字' and target_initial == '目标初值', before
+
+        phrase = '定点写入'
+        action = call('type-text', *args, '--element-index', target, '--text', phrase)['result']['action']
+        after = call('get-app-state', *args, '--background-only')['result']['snapshot']
+        observed = {
+            'target_index': target,
+            'focused_before': before['focusedElementId'],
+            'focused_after': after['focusedElementId'],
+            'other_before': initial,
+            'other_after': text_field(after, '测试输入框')[1],
+            'target_before': target_initial,
+            'target_after': text_field(after, '指定输入框')[1],
+        }
+        checks['indexed_text'] = observed
+        assert observed['focused_after'] == focused and observed['other_after'] == initial, observed
+        # AppKit may report a zero-length caret at the start of an unfocused field.
+        assert observed['target_after'] in (phrase + target_initial, target_initial + phrase), observed
+        assert before['foreground']['state'] == after['foreground']['state'] == 'other_app', after
+        assert action['targetWindowId'] == window['id'] and action['targetElementIndex'] == target, action
+        assert action['delivery'] == 'background' and action['path'] == 'accessibility', action
+        assert action['verification']['state'] == 'verified' and action['verification']['property'] == 'elementText', action
+
+        rejected = call('type-text', *args, '--element-index', button(after, '增加计数'), '--text', '不应写入', ok=False)
+        assert rejected['error']['code'] == 'value_not_settable', rejected
+        unchanged = call('get-app-state', *args, '--background-only')['result']['snapshot']
+        assert text_field(unchanged, '测试输入框') == (focused, initial), unchanged
+        assert text_field(unchanged, '指定输入框') == (target, observed['target_after']), unchanged
+
+        call('type-text', *args, '--text', '焦点输入')
+        legacy = call('get-app-state', *args, '--background-only')['result']['snapshot']
+        assert '焦点输入' in text_field(legacy, '测试输入框')[1], legacy
+        assert text_field(legacy, '指定输入框') == (target, observed['target_after']), legacy
+        observed.update({'non_text_rejected': True, 'unindexed_type_text_uses_focus': True})
+
+
 try:
+    verify_indexed_text()
+    if sys.argv[3:] == ['--indexed-text-only']:
+        sys.exit(0)
     with launch(SHIFU_FIXTURE_OBSERVATION='1', SHIFU_FIXTURE_WINDOW_CONTROLS='1') as call:
         main, existing = wait_windows(call, lambda windows: len(windows) == 2)
         assert main['title'] == 'Shifu Computer Use 测试窗口', (main, existing)

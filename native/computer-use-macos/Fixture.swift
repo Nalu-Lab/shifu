@@ -27,6 +27,13 @@ final class Fixture: NSObject, NSApplicationDelegate {
         let note = NSTextField(labelWithString: "仅测试窗口，不读取或修改其他文件。")
         note.frame = NSRect(x: 24, y: 32, width: 410, height: 24)
         for view in [button, countLabel, field, note] { window.contentView!.addSubview(view) }
+        if ProcessInfo.processInfo.environment["SHIFU_FIXTURE_INDEXED_TEXT"] == "1" {
+            let target = NSTextField(string: "目标初值")
+            target.setAccessibilityLabel("指定输入框")
+            target.frame = NSRect(x: 24, y: 120, width: 380, height: 28)
+            window.contentView!.addSubview(target)
+            window.makeFirstResponder(field)
+        }
         if observationMode {
             let close = NSButton(title: "关闭测试窗口", target: self, action: #selector(closeTestWindows))
             close.frame = NSRect(x: 24, y: 58, width: 140, height: 28)

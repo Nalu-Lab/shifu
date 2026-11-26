@@ -152,6 +152,7 @@ pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, 
         (has_any(params, SCREENSHOT_OPTIONS), "observation", "screenshotOptions", "feature_unsupported", "截图设置"),
         (!params["waitForEnabled"].is_null(), "observation", "enabledElements", "feature_unsupported", "控件可用状态核对"),
         (!params["waitForWindow"].is_null(), "windows", "offscreenDiscovery", "feature_unsupported", "窗口核对"),
+        (request["method"] == "typeText" && !params["elementIndex"].is_null(), "actions", "typeTextElement", "feature_unsupported", "按控件索引输入文字"),
     ];
     if verification_capabilities.iter().any(|&(required, ..)| required) {
         // Older helpers ignore unknown parameters. Verify support before sending the target request.
@@ -404,18 +405,20 @@ mod tests {
 
     #[test]
     fn new_controls_require_a_matching_helper_before_input() {
-        for params in [
-            json!({"screenshotFormat":"jpeg"}),
-            json!({"waitForEnabled":"Save"}),
-            json!({"waitForWindow":"Result"}),
+        for (method, params) in [
+            ("click", json!({"screenshotFormat":"jpeg"})),
+            ("click", json!({"waitForEnabled":"Save"})),
+            ("click", json!({"waitForWindow":"Result"})),
+            ("typeText", json!({"elementIndex":0, "text":"Input"})),
         ] {
             let mut calls = 0;
-            let response = execute(request("click", params), |r| {
+            let response = execute(request(method, params), |r| {
                 calls += 1;
                 assert_eq!(r["method"], "handshake");
                 Ok(json!({"ok":true,"result":{"supports":{}}}))
             }).unwrap();
             assert_eq!(response["error"]["code"], "feature_unsupported");
+            assert_eq!(response["result"]["recovery"]["actionReported"], false);
             assert_eq!(calls, 1);
         }
     }
