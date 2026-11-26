@@ -15,12 +15,12 @@ from html.parser import HTMLParser
 
 # ---- The one place to edit for a new release ---------------------------------------------------------------
 RELEASE = {
-    "version": "0.4.2",                      # shown as "0.4.2 预览版" / "0.4.2 preview"
-    "tag": "remote-v0.4.2-preview.1",        # GitHub release tag the download buttons point to
-    "gemini_in_release": False,              # False: Gemini CLI is badged "下个版本 / next release"
+    "version": "0.4.3",                      # shown as "0.4.3 预览版" / "0.4.3 preview"
+    "tag": "remote-v0.4.3-preview.1",        # GitHub release tag the download buttons point to
+    "gemini_in_release": True,               # False: Gemini CLI is badged "下个版本 / next release"
 }
-# TODO: set to "https://<domain>" once known; canonical, hreflang and og:image then become absolute.
-SITE_URL = ""
+# Canonical, hreflang and og:image are absolute under this address.
+SITE_URL = "https://shifu.yutailin.com"
 # -------------------------------------------------------------------------------------------------------------
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -126,6 +126,7 @@ def render(lang):
         "ZH_URL": zh_url if lang == "en" else (url("") if SITE_URL else "./"),
         "EN_URL": en_url,
         "VERSION": RELEASE["version"],
+        "OG_IMAGE": url("assets/og.png") if SITE_URL else c["root"] + "assets/og.png",
         "RELEASE_URL": f"https://github.com/Nalu-Lab/shifu/releases/tag/{RELEASE['tag']}",
         "README": c["readme"], "PRIVACY_ANCHOR": c["privacy_anchor"], "RELAY_DOC": c["relay_doc"],
     }
