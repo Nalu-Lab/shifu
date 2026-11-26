@@ -34,6 +34,8 @@ shifu web serve --endpoint ws://127.0.0.1:9339/pw
 
 ## 填写、点击与本人控制
 
-`fill_form`（textbox）和 `click` 需要当前观察里唯一出现的 role/name。它们结果不明时任务暂停，旧动作不自动重发，只能由本人用 `shifu web request --control` 核对后 `resume` 或 `close`。同一任务可由多个执行者排队交接（`wait`、`yield`），旧执行者交出后不能再写。
+`fill_form`（textbox）和 `click` 需要当前观察里唯一出现的 role/name，并绑定到观察当时的控件。观察和动作回执带有 `pageId` 与 `documentId`。页面重载或旧控件被替换时，派发前拦下的动作返回 `phase:"not_dispatched"`，可重新观察，再用新的 `requestId` 和下一个 `sequence` 操作。
+
+动作开始后结果不明会返回 `phase:"outcome_unknown"`，任务暂停，旧动作不自动重发。由本人用 `shifu web request --control` 核对后 `resume` 或 `close`。同一任务可由多个执行者排队交接（`wait`、`yield`），旧执行者交出后不能再写。
 
 本工具只记录任务和页面编号及执行阶段，不保存页面正文、填写内容、Cookie 或截图。它不是多用户安全沙箱：同一系统用户的程序都能访问本机控制入口。

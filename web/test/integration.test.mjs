@@ -109,6 +109,83 @@ test('原执行者退出后，本人能交给等待者；重复名称用区域�
   } finally { await s.cleanup(); }
 });
 
+test('原观察绑定文档与控件，重载或更换同名控件会在派发前拒绝', required, async t => {
+  for (const change of ['reload', 'replace']) {
+    await t.test(change, async () => {
+      const s = await setup();
+      try {
+        const task = 'bound-target';
+        const { pageId } = await s.open(task);
+        const actorId = await s.actor(task, 'A');
+        const { lease } = await s.claim(task, actorId);
+        const page = s.service.broker.tasks.get(task).resource.page;
+        const field = page.getByRole('textbox', { name: '姓名', exact: true });
+        const observe = () => s.request({ method: 'observe', task, actorId, lease }).then(ok);
+        const observed = await observe();
+
+        if (change === 'reload') {
+          const url = page.url();
+          await page.reload();
+          assert.equal(page.url(), url);
+        } else {
+          await field.evaluate(element => element.replaceWith(element.cloneNode()));
+        }
+
+        const action = { method: 'act', task, actorId, lease, observationId: observed.observationId,
+          requestId: 'stale-target', sequence: 1,
+          operation: { type: 'fill_form', fields: [{ role: 'textbox', name: '姓名', value: '写入原控件' }] } };
+        const refused = ok(await s.request(action));
+        assert.deepEqual([refused.phase, await field.inputValue()], ['not_dispatched', '']);
+        assert.equal(refused.code, change === 'reload' ? 'PAGE_CHANGED' : 'TARGET_CHANGED');
+        assert.equal(refused.pageId, pageId);
+        assert.equal(refused.documentId, observed.documentId);
+        assert.equal(ok(await s.request(action)).duplicate, true);
+        assert.equal(ok(await s.request({ method: 'status' })).tasks[0].state, 'active');
+
+        const fresh = await observe();
+        assert.equal(fresh.pageId, pageId);
+        assert.equal(fresh.documentId === observed.documentId, change === 'replace');
+        const written = ok(await s.request({ ...action, requestId: 'fresh-target', sequence: 2, observationId: fresh.observationId }));
+        assert.equal(written.phase, 'completed');
+        assert.equal(written.documentId, fresh.documentId);
+        assert.equal(await field.inputValue(), '写入原控件');
+      } finally { await s.cleanup(); }
+    });
+  }
+});
+
+test('批量输入开始后第二个控件被替换，保留已有输入并暂停核对', required, async () => {
+  const s = await setup();
+  try {
+    const task = 'partial-fill';
+    const { pageId } = await s.open(task);
+    const actorId = await s.actor(task, 'A');
+    const { lease } = await s.claim(task, actorId);
+    const page = s.service.broker.tasks.get(task).resource.page;
+    const name = page.getByRole('textbox', { name: '姓名', exact: true });
+    const note = page.getByRole('textbox', { name: '备注', exact: true });
+    await name.evaluate(element => element.addEventListener('input', () => {
+      const original = element.form.elements.note;
+      const replacement = original.cloneNode();
+      replacement.value = '同名新控件';
+      original.replaceWith(replacement);
+    }, { once: true }));
+    const observation = ok(await s.request({ method: 'observe', task, actorId, lease }));
+    const action = { method: 'act', task, actorId, lease, observationId: observation.observationId,
+      requestId: 'partial-fill', sequence: 1,
+      operation: { type: 'fill_form', fields: [
+        { role: 'textbox', name: '姓名', value: '第一项已输入' },
+        { role: 'textbox', name: '备注', value: '第二项尚未输入' },
+      ] } };
+    const receipt = ok(await s.request(action));
+    assert.deepEqual([receipt.phase, receipt.pageId, receipt.documentId], ['outcome_unknown', pageId, observation.documentId]);
+    assert.deepEqual([await name.inputValue(), await note.inputValue()], ['第一项已输入', '同名新控件']);
+    assert.equal(ok(await s.request({ method: 'status' })).tasks[0].state, 'paused');
+    assert.equal((await s.request(action)).error.code, 'TASK_PAUSED');
+    assert.deepEqual(ok(await s.request({ method: 'receipt', task, actorId, requestId: action.requestId })), { known: true, ...receipt });
+  } finally { await s.cleanup(); }
+});
+
 test('真实资源：三任务占满，释放一个后第四任务继续，其余页与存储保留，最后环境可关闭', required, async () => {
   const s = await setup({ capacity: () => ({ limit: 3, basis: { test: true } }) });
   let observer;

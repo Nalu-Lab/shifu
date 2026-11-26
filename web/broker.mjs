@@ -57,7 +57,8 @@ export function snapshotPart(observation, cursor = 0) {
   }
   let end = Math.min(bytes.length, cursor + 8192);
   while (end < bytes.length && (bytes[end] & 0xc0) === 0x80) end--;
-  return { observationId: observation.id, snapshot: bytes.subarray(cursor, end).toString(), nextCursor: end < bytes.length ? end : null, totalBytes: bytes.length };
+  return { observationId: observation.id, pageId: observation.pageId, documentId: observation.documentId,
+    snapshot: bytes.subarray(cursor, end).toString(), nextCursor: end < bytes.length ? end : null, totalBytes: bytes.length };
 }
 
 export class Broker {
@@ -376,16 +377,18 @@ export class Broker {
       }
       if (request.sequence !== actor.sequence + 1) fail('SEQUENCE_REUSED', '顺序号不连续或已执行，旧动作不会重新派发。');
       if (task.inFlight) fail('BUSY', '本任务正在执行另一调用。');
+      const observation = task.resource.observation;
       if (op.type !== 'navigate') {
-        const observation = task.resource.observation;
         if (!observation || request.observationId !== observation.id) fail('STALE_OBSERVATION', '先观察当前页面，再用本次观察填写或点击。');
         for (const locator of op.type === 'fill_form' ? op.fields : [op.target]) {
           if (observation.targets.get(targetKey(locator)) !== 1) fail('TARGET_NOT_OBSERVED', '目标须在当前观察范围中出现一次；请缩小观察范围或使用准确名称。');
         }
       }
+      const target = { pageId: task.resource.pageId, ...(op.type !== 'navigate' ? { documentId: observation.documentId } : {}) };
+      const receipt = { task: task.id, requestId: request.requestId, operation: op.type, ...target };
       actor.sequence = request.sequence;
       task.inFlight = true;
-      task.pending = { requestId: request.requestId, operation: op.type, actorId: request.actorId, sequence: request.sequence, phase: 'dispatched' };
+      task.pending = { requestId: request.requestId, operation: op.type, actorId: request.actorId, sequence: request.sequence, phase: 'dispatched', ...target };
       try { await this.persist(); }
       catch {
         task.inFlight = false;
@@ -397,22 +400,25 @@ export class Broker {
       let result;
       try {
         await this.provider.act(task.resource, op);
-        result = { task: task.id, requestId: request.requestId, phase: 'completed', operation: op.type,
+        result = { ...receipt, phase: 'completed',
           ...(op.type === 'navigate' ? { loaded: task.resource.loaded } : {}) };
         task.pending = null;
-      } catch {
+      } catch (error) {
         task.resource.observation = null;
         if (op.type === 'navigate') {
           // A navigation only loads a page; it does not submit anything on the site, so a timeout or
           // refused page is an ordinary failure. The task stays active and the actor may go elsewhere.
-          result = { task: task.id, requestId: request.requestId, phase: 'navigation_failed', operation: op.type,
+          result = { ...receipt, phase: 'navigation_failed',
             message: '页面没有响应或无法打开；任务仍可用，可跳到其他页面。' };
+          task.pending = null;
+        } else if (error instanceof BrowserError && error.phase === 'not_dispatched') {
+          result = { ...receipt, phase: 'not_dispatched', code: error.code, message: error.message };
           task.pending = null;
         } else {
           task.state = 'paused';
           this.notify(task);
           task.pending.phase = 'outcome_unknown';
-          result = { task: task.id, requestId: request.requestId, phase: 'outcome_unknown', operation: op.type,
+          result = { ...receipt, phase: 'outcome_unknown',
             message: '调用未正常结束，操作可能已生效或部分完成。核对后由本人恢复，不自动重试。' };
         }
       } finally { task.inFlight = false; }
