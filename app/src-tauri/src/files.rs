@@ -55,12 +55,19 @@ pub fn read(path: &str) -> Result<Vec<u8>, String> {
     std::fs::read(path).map_err(|e| format!("读不了 {path}：{e}"))
 }
 
-/// macOS reads Word documents without launching an editor or writing a converted file beside the source.
+/// The `textutil -format` name for a word-processor file, by extension (`.rtfd` is a folder, so it is left out).
+fn word_format(path: &Path) -> Option<&'static str> {
+    let ext = path.extension()?.to_str()?.to_ascii_lowercase();
+    ["docx", "doc", "rtf", "odt", "wordml"].into_iter().find(|f| *f == ext)
+}
+
+/// macOS reads Word, RTF and OpenDocument text without launching an editor or writing a converted file beside the source.
 pub fn docx_preview(path: &str) -> Result<String, String> {
     let written = Path::new(path);
-    if !written.is_absolute() || !written.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("docx")) {
-        return Err("请选择完整路径的 DOCX 文件预览".into());
-    }
+    let format = match word_format(written) {
+        Some(format) if written.is_absolute() => format,
+        _ => return Err("请选择完整路径的 Word、RTF 或 ODT 文件预览".into()),
+    };
     let meta = std::fs::metadata(written).map_err(|e| format!("读不了 {path}：{e}"))?;
     if !meta.is_file() {
         return Err(format!("{path} 不是文件"));
@@ -69,7 +76,7 @@ pub fn docx_preview(path: &str) -> Result<String, String> {
         return Err("文件超过 30 MB，请用默认程序打开".into());
     }
     let mut child = Command::new("/usr/bin/textutil")
-        .args(["-format", "docx", "-convert", "html", "-encoding", "UTF-8", "-strip", "-noload", "-nostore", "-stdout", "--"])
+        .args(["-format", format, "-convert", "html", "-encoding", "UTF-8", "-strip", "-noload", "-nostore", "-stdout", "--"])
         .arg(written)
         .stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null())
         .spawn()
@@ -86,11 +93,11 @@ pub fn docx_preview(path: &str) -> Result<String, String> {
     let status = child.wait().map_err(|e| format!("无法生成文档预览，请用默认程序打开：{e}"))?;
     // textutil can report a corrupt document on stderr while returning success with empty stdout.
     if !status.success() || bytes.is_empty() {
-        return Err("无法预览这个 DOCX 文件，请用默认程序打开".into());
+        return Err("无法预览这个文档，请用默认程序打开".into());
     }
     let html = String::from_utf8(bytes).map_err(|_| "文档预览文字解码失败，请用默认程序打开".to_string())?;
     if !html.contains("<html") || !html.contains("<body") || !html.contains("</html>") {
-        return Err("无法预览这个 DOCX 文件，请用默认程序打开".into());
+        return Err("无法预览这个文档，请用默认程序打开".into());
     }
     Ok(html)
 }
@@ -197,6 +204,33 @@ mod tests {
         std::fs::File::create(&large).unwrap().set_len(MAX_READ + 1).unwrap();
         assert!(docx_preview(large.to_str().unwrap()).unwrap_err().contains("默认程序"));
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn word_preview_reads_rtf_and_doc_through_their_own_textutil_format() {
+        let dir = std::env::temp_dir().join(format!("shifu-word-formats-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let source = dir.join("source.txt");
+        std::fs::write(&source, "旧版文档正文\n第二段").unwrap();
+        for format in ["rtf", "doc", "odt"] {
+            let document = dir.join(format!("旧 版.{}", format.to_uppercase()));
+            let made = Command::new("/usr/bin/textutil").args(["-convert", format, "-output"]).arg(&document).arg(&source).output().unwrap();
+            assert!(made.status.success() && document.is_file(), "textutil could not make {format}");
+            let original = std::fs::read(&document).unwrap();
+            let preview = docx_preview(document.to_str().unwrap()).unwrap();
+            assert!(preview.contains("旧版文档正文") && preview.contains("第二段"), "{format}: {preview}");
+            assert_eq!(std::fs::read(&document).unwrap(), original);
+        }
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 4);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn word_preview_accepts_only_word_processor_extensions() {
+        for (path, format) in [("/a/b.docx", Some("docx")), ("/a/b.DOC", Some("doc")), ("/a/b.rtf", Some("rtf")), ("/a/b.odt", Some("odt")), ("/a/b.wordml", Some("wordml")), ("/a/b.rtfd", None), ("/a/b.xlsx", None), ("/a/doc", None)] {
+            assert_eq!(word_format(Path::new(path)), format, "{path}");
+        }
     }
 
     #[cfg(target_os = "macos")]

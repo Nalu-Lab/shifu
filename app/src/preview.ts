@@ -3,6 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import type { GroupPanelPartInitParameters, IContentRenderer, PanelUpdateEvent, Parameters } from "dockview";
 import MarkdownIt from "markdown-it";
 import { docxPreview, fileRead, fileSave, pathOpen, pathReveal } from "./api";
+import { CANNOT_SHOW, cannotShow, wordFormat } from "./filekind";
 import { reportError } from "./store";
 
 const IMAGE: Record<string, string> = {
@@ -259,7 +260,11 @@ export class FilePanel implements IContentRenderer {
 
   private async load(path: string, line?: number): Promise<void> {
     const ext = path.split(".").pop()?.toLowerCase() ?? "";
-    if (ext === "docx") {
+    if (cannotShow(path)) {
+      this.body.append(note(CANNOT_SHOW));
+      return;
+    }
+    if (wordFormat(path)) {
       const loading = note("正在载入文档…");
       loading.setAttribute("role", "status");
       this.body.append(loading);
@@ -298,7 +303,7 @@ export class FilePanel implements IContentRenderer {
       frame.src = blobUrl("application/pdf");
       this.body.append(frame);
     } else if (bytes.subarray(0, 8000).includes(0)) {
-      this.body.append(note("这不是文本文件，Shifu 里看不了，请用默认程序打开。"));
+      this.body.append(note(CANNOT_SHOW));
     } else {
       const text = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes.subarray(0, MAX_TEXT));
       const pre = document.createElement("pre");

@@ -11,6 +11,7 @@ import { mouseReport } from "./mousereport";
 import { pageNotches, ScrollStrip, wheelNotches, wheelReport } from "./scrollstrip";
 import { type Cell, CodexFileLinkLabelCache, fileUris, glueRows, linkColumns, linkChoices, needsCodexFileLinkLabels, opensOutsideShifu, parseLinkTarget, pathCandidates, shellEscape, underlinedFileLinks } from "./links";
 import { type MenuItem, showMenu } from "./menu";
+import { wordFormat } from "./filekind";
 import { openFile } from "./preview";
 import { getTheme, isDark, onThemeChange, terminalTheme, type Theme } from "./theme";
 import { getFontSizes, onFontSizesChange } from "./fontsize";
@@ -338,7 +339,7 @@ export class TerminalPanel implements IContentRenderer {
       return hit ? [hit] : [];
     });
     showMenu(e.clientX, e.clientY, found.map(({ path }) => {
-      const inShifu = !opensOutsideShifu(path) || /\.docx$/i.test(path);
+      const inShifu = !opensOutsideShifu(path) || wordFormat(path) !== null;
       return {
         label: path.split("/").pop() ?? path,
         hint: inShifu ? "在 Shifu 里打开" : "用默认程序打开",
@@ -352,7 +353,7 @@ export class TerminalPanel implements IContentRenderer {
     showMenu(e.clientX, e.clientY, [
       ...(isDir || opensOutsideShifu(path) ? [] : [{ label: "在 Shifu 里查看", run: view }]),
       { label: isDir ? "在 Finder 中打开" : "用默认程序打开", run: () => pathOpen(path).catch(reportError) },
-      ...(!isDir && /\.docx$/i.test(path) ? [{ label: "在 Shifu 中预览", run: view }] : []),
+      ...(!isDir && wordFormat(path) !== null ? [{ label: "在 Shifu 中预览", run: view }] : []),
       { label: "在 Finder 中显示", run: () => pathReveal(path).catch(reportError) },
     ]);
   }
