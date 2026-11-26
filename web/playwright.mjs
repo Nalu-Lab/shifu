@@ -50,7 +50,8 @@ export class PlaywrightProvider {
     context.setDefaultNavigationTimeout(this.navigationTimeout);
     try {
       const page = await context.newPage();
-      const resource = { context, page, pageId: randomUUID(), observation: null };
+      const cdp = await context.newCDPSession(page);
+      const resource = { context, page, cdp, pageId: randomUUID(), observation: null };
       // Popups stay in this owned context and are included in its eventual disposal.
       // A popup is never silently selected as the task's page.
       await this.goto(resource, url);
@@ -62,28 +63,46 @@ export class PlaywrightProvider {
     }
   }
 
+  async documentId(resource) {
+    const { frameTree } = await resource.cdp.send('Page.getFrameTree');
+    return frameTree.frame.loaderId;
+  }
+
+  async requireDocument(resource, documentId) {
+    if (await this.documentId(resource) !== documentId) {
+      throw new BrowserError('PAGE_CHANGED', '页面已跳转或重载，请重新观察后再操作。');
+    }
+  }
+
   async observe(resource, scope) {
+    resource.observation = null;
+    const documentId = await this.documentId(resource);
     if (await resource.page.evaluate(() => document.body === null)) {
       throw new BrowserError('PAGE_NOT_READY', '页面主体尚未建成，暂不能观察控件；可用find读取已到正文，或稍后再观察。', 'not_dispatched');
     }
     const locator = scope ? resource.page.getByRole(scope.role, { name: scope.name, exact: true }) : resource.page.locator('body');
-    const tree = await locator.ariaSnapshotJSON({ timeout: this.actionTimeout });
-    const text = JSON.stringify(tree, null, 2);
-    if (Buffer.byteLength(text) > 256 * 1024) {
-      throw new BrowserError('OBSERVATION_TOO_LARGE', '观察内容超过256 KiB，请指定正文等区域，例如scope:{role:"main",name:""}。');
-    }
+    const tree = await locator.ariaSnapshotJSON({ mode: 'ai', timeout: this.actionTimeout });
+    await this.requireDocument(resource, documentId);
     const targets = new Map();
+    const refs = new Map();
     const visit = node => {
       if (!node || typeof node !== 'object') return;
       if (Array.isArray(node)) { node.forEach(visit); return; }
+      // AI snapshots can expand frames. The task pool observes and acts in the main document.
+      if (node.role === 'iframe') { delete node.children; return; }
       if (node.role && typeof node.name === 'string') {
         const key = targetKey(node);
         targets.set(key, (targets.get(key) || 0) + 1);
+        if (node.ref) refs.set(key, node.ref);
       }
       if (node.children) visit(node.children);
     };
     visit(tree);
-    resource.observation = { id: randomUUID(), text, targets, locator, scope };
+    const text = JSON.stringify(tree, null, 2);
+    if (Buffer.byteLength(text) > 256 * 1024) {
+      throw new BrowserError('OBSERVATION_TOO_LARGE', '观察内容超过256 KiB，请指定正文等区域，例如scope:{role:"main",name:""}。');
+    }
+    resource.observation = { id: randomUUID(), pageId: resource.pageId, documentId, text, targets, refs, locator, scope };
     return resource.observation;
   }
 
@@ -107,16 +126,37 @@ export class PlaywrightProvider {
 
   async act(resource, operation) {
     const observation = resource.observation;
-    const locate = target => observation.scope && targetKey(observation.scope) === targetKey(target)
-      ? observation.locator : observation.locator.getByRole(target.role, { name: target.name, exact: true });
-    if (operation.type === 'fill_form') {
-      for (const field of operation.fields) await locate(field).fill(field.value);
-    } else if (operation.type === 'click') {
-      await locate(operation.target).click();
-    } else if (operation.type === 'navigate') {
-      await this.goto(resource, operation.url);
+    const handles = [];
+    try {
+      if (operation.type === 'navigate') {
+        await this.goto(resource, operation.url);
+        return;
+      }
+      await this.requireDocument(resource, observation.documentId);
+      const targets = operation.type === 'fill_form' ? operation.fields : [operation.target];
+      for (const target of targets) {
+        const key = targetKey(target);
+        const ref = observation.refs.get(key);
+        if (!ref) throw new BrowserError('TARGET_CHANGED', '原控件已无法定位，请重新观察。');
+        const named = observation.scope && targetKey(observation.scope) === key
+          ? observation.locator : observation.locator.getByRole(target.role, { name: target.name, exact: true });
+        const matches = await named.and(resource.page.locator(`aria-ref=${ref}`)).elementHandles();
+        handles.push(...matches);
+        if (matches.length !== 1) {
+          throw new BrowserError('TARGET_CHANGED', '原控件已更换，或已离开观察范围，请重新观察。');
+        }
+      }
+      await this.requireDocument(resource, observation.documentId);
+      // Pin every element before starting writes. A detached handle cannot resolve to a replacement.
+      if (operation.type === 'fill_form') {
+        for (let i = 0; i < handles.length; i++) await handles[i].fill(operation.fields[i].value);
+      } else {
+        await handles[0].click();
+      }
+    } finally {
+      resource.observation = null;
+      await Promise.allSettled(handles.map(handle => handle.dispose()));
     }
-    resource.observation = null;
   }
 
   // Some real pages (e.g. MDN behind slow third-party scripts) take 15s+ to reach DOMContentLoaded

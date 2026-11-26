@@ -1,0 +1,2 @@
+- `shifu web` 绑定观察时的网页和控件。页面重载或同名控件被换掉时，旧请求会在写入前停止，并提示重新观察。
+- `shifu web` binds actions to the page and controls it observed. A reload or a same-name replacement stops the old request before input and prompts a fresh observation.
