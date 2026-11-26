@@ -105,10 +105,9 @@ cd site && python3 -m http.server 62200 --bind 127.0.0.1
 - **GitHub Pages：** 仓库设置 → Pages → 从分支部署，目录选 `/site`（或用 Actions 把 `site/` 作为 artifact 发布）。
 - **Vercel / Netlify / Cloudflare Pages：** 新建项目，根目录设为 `site`，构建命令留空，输出目录 `.`。
 
-部署前要改的：
+现在的部署（2026-11-25）：https://shifu.yutailin.com ，DNS 在 Vercel（`vercel dns`，A 记录指向 shifu-relay 136.109.124.132），文件在那台机器的 `/opt/shifu-site/current`（`releases/<提交>` 的链接），由已有的 Caddy 直接当静态文件发出。`tools/build.py` 里的 `SITE_URL` 让 canonical、hreflang、`og:url`、`og:image` 都是绝对地址。
 
-1. canonical、hreflang、`og:image` 现在是相对地址（源文件和 build.py 里都有 TODO）。拿到域名后在 `tools/build.py` 里设 `SITE_URL = "https://<域名>"`，canonical 和 hreflang 会变成绝对地址；`og:image` / `twitter:image` 也要改成绝对地址，并补 `og:url`。
-2. 新版本发布时只改 `tools/build.py` 顶部的 `RELEASE`，然后重新生成。
+新版本发布时只改 `tools/build.py` 顶部的 `RELEASE`，重新生成，再把 `site/` 传到新的 `releases/<提交>` 并切换 `current`。
 
 ## 还没做的
 
@@ -117,5 +116,5 @@ cd site && python3 -m http.server 62200 --bind 127.0.0.1
 - 截图是 1x 分辨率（拍摄机器是 1080p 外接屏，窗口 1200×800），在 Retina 屏上略软；换 Retina 屏重拍会更清晰。
 - Gemini CLI 在演示里作为普通命令显示，侧栏没有它的图标，这和当前源码的实际表现一致。
 - 没有浅色模式、没有站内搜索、没有独立的文档页（文档链接都指向 GitHub 上的 docs/）。
-- 没有部署，没有域名，没有 sitemap / robots.txt。
+- 没有 sitemap / robots.txt。
 - 「Shifu 与 Anthropic、OpenAI 等厂商无关联」这句页脚声明是常规写法，发布前请作者确认。
