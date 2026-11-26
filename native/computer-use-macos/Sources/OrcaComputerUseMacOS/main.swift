@@ -666,6 +666,7 @@ final class Provider {
                 "actions": [
                     "click": true,
                     "typeText": true,
+                    "typeTextElement": true,
                     "pressKey": true,
                     "hotkey": true,
                     "pasteText": true,
@@ -1075,8 +1076,32 @@ final class Provider {
     }
 
     private func typeText(params: [String: JSONValue]) throws -> [String: Any] {
+        let index = try params["elementIndex"].map { _ in try requiredInteger(params, "elementIndex") }
+        let prior = try index.flatMap { try cachedSnapshot(params: params)?.elements[$0] }
         let snapshot = try currentKeyboardSnapshot(params: params)
         let text = try requiredString(params, "text")
+        if let index {
+            let target = try element(snapshot, index)
+            // Identical-looking fields can change order without changing their signatures.
+            guard let prior, CFEqual(prior.element, target.element) else {
+                throw ProviderError.coded("element_not_found", "element \(index) changed since the last snapshot; run get-app-state again")
+            }
+            let reader = AXSnapshotReader()
+            let role = reader.stringAttribute(target.element, kAXRoleAttribute as String) ?? ""
+            guard !reader.isSecureTextElement(target.element, role: role),
+                  let verification = try TextInput.replaceSelection(target.element, with: text, targeted: true)
+            else {
+                throw ProviderError.coded("value_not_settable", "element \(index) does not expose writable text")
+            }
+            var action = actionMetadata(
+                targetWindowId: snapshot.windowId,
+                path: "accessibility",
+                actionName: "AXReplaceSelection",
+                verification: verification
+            )
+            action["targetElementIndex"] = index
+            return action
+        }
         if let focused = focusedRecord(snapshot), let verification = try TextInput.replaceSelection(focused.element, with: text) {
             return actionMetadata(targetWindowId: snapshot.windowId, path: "accessibility", actionName: "AXReplaceSelection", verification: verification)
         }
@@ -2628,7 +2653,7 @@ private final class AXSnapshotReader {
         return Array((visible.isEmpty ? rows : visible).prefix(20))
     }
 
-    private func isSecureTextElement(_ element: AXUIElement, role: String) -> Bool {
+    func isSecureTextElement(_ element: AXUIElement, role: String) -> Bool {
         guard SnapshotRenderHeuristics.shouldProbeSecureTextMetadata(role: role) else {
             return false
         }
@@ -3130,7 +3155,7 @@ private enum Input {
 }
 
 private enum TextInput {
-    static func replaceSelection(_ element: AXUIElement, with text: String) throws -> [String: Any]? {
+    static func replaceSelection(_ element: AXUIElement, with text: String, targeted: Bool = false) throws -> [String: Any]? {
         guard isSettable(element, kAXValueAttribute as String),
               let current = rawStringAttribute(element, kAXValueAttribute as String)
         else {
@@ -3149,14 +3174,20 @@ private enum TextInput {
             throw AccessibilityMessaging.unanswered("the text write")
         }
         guard result == .success else {
+            if targeted {
+                throw ProviderError.coded("accessibility_error", "AX text write failed with \(result.rawValue); read the field before retrying")
+            }
             return nil
         }
         setSelectedTextRange(element, CFRange(location: startOffset + text.utf16.count, length: 0))
-        guard rawStringAttribute(element, kAXValueAttribute as String) == next else {
-            return nil
+        let readback = rawStringAttribute(element, kAXValueAttribute as String)
+        guard readback == next else {
+            // Keep the receipt for a dispatched indexed write even when its result is uncertain.
+            guard targeted else { return nil }
+            return unverifiedAction(reason: readback == nil ? "readback_unsupported" : "value_mismatch")
         }
         return verifiedAction(
-            property: "focusedText",
+            property: targeted ? "elementText" : "focusedText",
             expected: text,
             actualPreview: preview(next)
         )

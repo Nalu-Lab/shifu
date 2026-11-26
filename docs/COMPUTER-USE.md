@@ -51,9 +51,12 @@ shifu computer get-app-state --app com.apple.TextEdit --window-id 123 --json
 # N 来自刚读到的 treeText，不是控件总数。
 shifu computer click --app com.apple.TextEdit --window-id 123 --element-index N --json
 shifu computer set-value --app com.apple.TextEdit --element-index N --value '文字' --json
+shifu computer type-text --app com.apple.TextEdit --window-id 123 --element-index N --text '文字' --json
 ```
 
 其余操作见 `shifu computer help`，包括输入/粘贴、单键/快捷键、滚动（`--pages`）、拖动，以及控件提供的次级动作。坐标是所选窗口的局部坐标。截图上的横纵像素分别除以返回的 `scaleX` 和 `scaleY` 后再用于操作，旧字段 `scale` 仍报告横向比例。文字可用 `--text-stdin` / `--value-stdin` 从标准输入传入，避免进入命令历史。
+
+`type-text --element-index N` 直接写入刚观察到的文字控件，替换该控件的选区，无选区信息时在末尾追加。动作回执包含 `targetElementIndex` 和该控件的回读状态。`unverified` 时先重新读取，避免重复写入。控件变更、文字不可写或辅助程序版本不匹配时直接报错。`type-text` 省略索引时沿用焦点输入。
 
 `list-windows` 和 `get-app-state` 都返回 `visibility`。`on_screen` 是在屏窗口，`minimized` 是最小化窗口，`app_hidden` 是随应用隐藏的窗口，`offscreen` 是其余可读的离屏窗口。离屏窗口必须能按真实窗口 ID 在辅助功能接口中匹配，某些其他桌面上的窗口因此可能缺席。列表保留在屏窗口的排序，并在末尾补离屏窗口。用 ID 可直接后台读取离屏窗口的控件。离屏截图会单独报告失败，后台合成键鼠输入要求目标窗口在屏。
 
