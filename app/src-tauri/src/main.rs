@@ -664,7 +664,7 @@ fn menu_in_chinese(preferred: Option<&str>) -> bool {
     preferred.is_some_and(|l| l.starts_with("zh"))
 }
 
-/// Cmd+N / Cmd+T / Cmd+W / Cmd+J (and Cmd+K, Cmd+B, Cmd+D, Shift+Cmd+D) live in the native menu: macOS handles menu shortcuts before the page sees the key,
+/// Cmd+N / Cmd+T / Cmd+W / Cmd+J / Cmd+O (and Cmd+K, Cmd+B, Cmd+D, Shift+Cmd+D) live in the native menu: macOS handles menu shortcuts before the page sees the key,
 /// and the stock menu would make Cmd+W close the whole window.
 fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let chinese = menu_in_chinese(preferred_language().as_deref());
@@ -686,6 +686,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         .item(&item("new", tr("在当前任务里加 agent", "Add Agent to Current Task"), "CmdOrCtrl+T")?)
         .item(&item("close", tr("关闭面板", "Close Panel"), "CmdOrCtrl+W")?)
         .item(&item("reopen-closed", tr("重新打开关闭的标签", "Reopen Closed Tab"), "CmdOrCtrl+Shift+T")?)
+        .item(&item("open-file", tr("打开文件…", "Open File…"), "CmdOrCtrl+O")?)
         .separator()
         .item(&item("jump", tr("跳到等你最久的 agent", "Jump to Longest-Waiting Agent"), "CmdOrCtrl+J")?)
         .build()?;

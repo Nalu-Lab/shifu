@@ -355,7 +355,7 @@ function longer(text: string, link: FoundLink): FoundLink[] {
   return found;
 }
 
-// Office, iWork and archives lead with their default app. DOCX also has a read-only Shifu preview.
+// Office, iWork and archives lead with their default app. DOCX, DOC and ODT also have a read-only Shifu preview.
 const OUTSIDE = new Set(["doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp", "key", "pages", "numbers", "zip", "dmg"]);
 
 /** Files whose path menu leads with the system default app. */

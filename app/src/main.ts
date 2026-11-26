@@ -1,4 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
+import { open as openPanel } from "@tauri-apps/plugin-dialog";
+import { pickedPaths } from "./filekind";
 import { applyStoredFontSizes, stepTerminal } from "./fontsize";
 import "@xterm/xterm/css/xterm.css";
 import "dockview/dist/styles/dockview.css";
@@ -445,6 +447,13 @@ async function main() {
   undoNotice.addEventListener("focusin", () => window.clearTimeout(undoTimer));
   undoNotice.addEventListener("focusout", expireUndo);
   dismissUndo.addEventListener("click", hideUndo);
+  /** File > Open File (Cmd+O): the picked files open as tabs beside the current conversation, or alone with no task. */
+  const openPickedFiles = async () => {
+    const picked = await openPanel({ multiple: true, directory: false, title: "打开文件", defaultPath: getCurrentTask()?.project });
+    const paths = pickedPaths(picked);
+    if (paths.length) hideProgress();
+    for (const path of paths) workspace.openFile(path, undefined);
+  };
   let reopening: Promise<void> = Promise.resolve();
   const reopenClosed = () => {
     hideUndo();
@@ -537,7 +546,7 @@ async function main() {
   });
   await listen<string>("notify-error", ({ payload }) => reportError(payload));
 
-  // Cmd+N / Cmd+T / Cmd+W / Cmd+J come from the native menu (the default Cmd+W would close the window).
+  // Cmd+N / Cmd+T / Cmd+W / Cmd+J / Cmd+O come from the native menu (the default Cmd+W would close the window).
   await listen<string>("menu", ({ payload }) => {
     if (handleRemoteControlMenu(payload)) return;
     closeMenu();
@@ -546,6 +555,7 @@ async function main() {
       showAddAgentPopover(sidebar.newButton, (kind) => addAgent(kind, workspace.api.activeGroup));
     else if (payload === "close") workspace.closeActive();
     else if (payload === "reopen-closed") reopenClosed();
+    else if (payload === "open-file") void openPickedFiles().catch(reportError);
     else if (payload === "split-down") split("below");
     else if (payload === "split-right") split("right");
     else if (payload === "sidebar") sideToggle.click();

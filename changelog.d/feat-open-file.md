@@ -1,0 +1,2 @@
+- 菜单「文件 › 打开文件…」（⌘O）可以自己挑文件在 Shifu 里打开，不必等终端里出现路径：选中的文件在当前对话旁开标签页，没有任务时也能开。Word 预览扩展到 DOC、RTF、ODT；表格、幻灯片、Pages、Numbers 等看不了的文件不再显示乱码，而是提示「用默认程序打开」。
+- File › Open File… (⌘O) opens any file you pick in Shifu, without waiting for its path to show up in a terminal: it opens as a tab beside the current conversation, or on its own when there is no task. The Word preview now also reads DOC, RTF and ODT; spreadsheets, slides, Pages, Numbers and other files Shifu cannot show get a short note pointing to "用默认程序打开" instead of garbled text.
