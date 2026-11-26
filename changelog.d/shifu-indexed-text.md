@@ -1,2 +1,2 @@
-- Computer Use 可按控件索引输入文字，并回读确认写入的控件。（还没装）
-- Computer Use types into a specified text element and reads it back to verify the write. (Not installed yet.)
+- Computer Use 可按控件索引输入文字，并回读确认写入的控件。
+- Computer Use types into a specified text element and reads it back to verify the write.
