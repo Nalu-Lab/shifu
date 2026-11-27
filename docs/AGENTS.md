@@ -16,7 +16,7 @@
 | `detect` | 在 PATH 里找哪些程序来判断装没装（只看文件，不运行） | `["agy", "antigravity"]` |
 | `label`、`install_url` | 显示名，「未安装」里的安装说明链接 | |
 | `install_command`、`login_command` | 启动后马上退出时面板里给的安装、登录命令（没有就只给链接，见 `launch_failure.rs`） | `Some("codex login")` |
-| `bypass_args` / `own_args` | 权限开关是「免确认」/「用 Agent 自己的设置」时加的参数 | `["--yolo"]` |
+| `bypass_args` / `own_args` | 权限开关是「免确认」/「按 Agent 自己的设置」时加的参数 | `["--yolo"]` |
 | `bypass_env` | 免确认要靠环境变量而不是参数时用 | 目前没有 Agent 用到；留给只认环境变量的 Agent |
 | `model_args` / `effort_args` | 模型、思考档位的参数模板，`{model}`、`{effort}` 会被替换 | `["-m", "{model}"]` |
 | `resume_by_id` / `resume_latest` | 按保存的会话 id 恢复；没有 id 时怎么恢复（空 = 重新开） | `["--session", "{id}"]` / `["--continue"]` |
@@ -45,7 +45,7 @@
 - **状态：** Shifu 把状态插件写到 `SHIFU_HOME/opencode/shifu-status.js`（每次启动重写，里面带当前 `shifu` 的路径），再在启动命令前加 `OPENCODE_CONFIG_CONTENT='{"plugin":["<那个文件>"]}'`。读了已安装包里的源码：opencode 依次加载全局配置、`OPENCODE_CONFIG`、项目配置、`.opencode` 目录，最后加载 `OPENCODE_CONFIG_CONTENT` 并合并进去，`plugin` 列表是追加的。所以你的 provider、模型、插件都照常生效，`~/.config/opencode` 和项目的 `.opencode/` 都不会被 Shifu 改。
 - **事件对应：** 插件初始化 → `SessionStart`（空闲）；新建主会话 `session.created` → `SessionStart`（记下会话 id）；`session.status` 变忙 → `UserPromptSubmit`（运行中）；`session.idle` → `Stop`，带最后一条助手回复（回复以问句结尾时显示为「在问你」）；`permission.asked` → `PermissionRequest`（等你批准，显示权限名和命令）；`permission.replied` → `PermissionResult`；`question.asked` / `question.replied` → 提问工具；`session.error` 为中止时发 `Interrupt`，其他错误在 `Stop` 里带 `Error: …`。子代理会话（有 `parentID`）的事件不算。
 - **恢复：** 有会话 id 用 `--session <id>`，没有用 `--continue`。**模型：** `-m provider/model`；App 用 `opencode models` 列出可选模型。
-- **权限：** 「免确认」加 `--auto`：自动批准所有没被你明确 `deny` 的权限，你写的 `deny` 仍然有效。「用自己的设置」什么都不加。opencode 默认本来就不问 bash，想要批准要在自己的配置里写 `"permission": {"bash": "ask"}`。
+- **权限：** 「免确认」加 `--auto`：自动批准所有没被你明确 `deny` 的权限，你写的 `deny` 仍然有效。「按 Agent 自己的设置」什么都不加。opencode 默认本来就不问 bash，想要批准要在自己的配置里写 `"permission": {"bash": "ask"}`。
 - **注意：** 如果你自己也设置了 `OPENCODE_CONFIG_CONTENT`，Shifu 启动的会话里它会被 Shifu 的这份替换。opencode 自己会往 `~/.config/opencode` 装 `@opencode-ai/plugin`（`node_modules`、`package.json`）；不经 Shifu 直接开 opencode 也一样，不是 Shifu 写的。`--pure` 会关掉外部插件，状态也就没了。
 
 ## Pi（`@mariozechner/pi-coding-agent`，命令 `pi`，按 0.73.1 验证）

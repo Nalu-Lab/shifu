@@ -6,13 +6,13 @@ Shifu provides an [Apple Silicon preview package](https://github.com/Nalu-Lab/sh
 
 Use the download for ordinary sessions; source-build instructions are in the developer section below.
 
-Claude, Codex, CodeBuddy, Kimi, Qwen Code and opencode start in no-confirmation mode by default (opencode with `--auto`, which still honours rules you explicitly deny), using flags such as `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox` and `--yolo`. They can edit files and run commands without individual approval. To change this, set 权限 in the new-task popover to 用 Agent 自己的设置 (use the agent's own settings). Conversations started or resumed after that get none of these flags, and each agent's own configuration decides when it asks.
+Before the first conversation, Shifu asks once how agents may act. 按 Agent 自己的设置 (each agent's own settings) is preselected: no no-approval flags are added, and each agent's own configuration decides when it asks. If you choose 免确认（全权） (no confirmation), Claude, Codex, CodeBuddy, Kimi, Qwen Code and opencode start with flags such as `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox` and `--yolo` (opencode with `--auto`, which still honours rules you explicitly deny), and edit files and run commands without individual approval. You can change it any time under 权限 in the new-task popover; conversations started or resumed after that use the new setting. Upgrades from an earlier version are not asked and keep their setting (no confirmation unless you changed it). The terminal edition's `shifu new` works the same way: a fresh install starts agents with their own settings until a choice is saved. Pi has no approval prompts, so the setting does not affect it.
 
 The app is signed with Shifu's own fixed certificate (not one issued by Apple) and is not notarized. If macOS blocks it the first time, confirm its source and follow the app-specific prompt in System Settings → Privacy & Security.
 
 ## Quick start
 
-[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately. StepFun requires [Node/Pi and subscription-key setup](STEPFUN.md#english).
+[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately. The app's setup checklist (准备情况, shown on first open and later in the Shifu menu) lists anything missing, with the install command and instructions link. StepFun requires [Node/Pi and subscription-key setup](STEPFUN.md#english).
 
 ### Option A: let your AI install it
 
@@ -23,7 +23,7 @@ Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and 
 1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
 2. Download the ZIP and SHA256SUMS from the same release linked in the README. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
 3. Follow the package instructions: put Shifu.app in ~/Applications. The app carries its matching CLI, so conversation status, notifications and the project manager work with the app alone. Only if I want shifu in my terminal, install the package's bin/shifu to ~/.cargo/bin/shifu, add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
-4. Explain that the app is signed with Shifu's own certificate, not notarized by Apple, and starts agents in no-confirmation mode. Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
+4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and that before the first conversation it asks once how agents may act: their own settings are preselected, and no-confirmation mode is my choice to make. Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
 5. Help me choose a project and start my first agent conversation. On the first Codex launch, let me review its hooks before deciding whether to trust them.
 ```
 

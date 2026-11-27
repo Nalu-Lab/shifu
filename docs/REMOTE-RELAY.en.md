@@ -25,7 +25,7 @@ Install Homebrew tmux and your chosen Claude Code or Codex separately, and sign 
 5. Open the app. This package is signed with Shifu's own fixed certificate and not notarized. If macOS blocks it, check the download source and follow the app-specific prompt under System Settings → Privacy & Security. See [Apple's instructions](https://support.apple.com/102445). Initial launch, embedded component permissions and native input still need confirmation on the target Mac.
 6. Install and sign into the chosen agent, then open a project in remote Shifu. When first starting Codex through Shifu, review its displayed hooks before deciding whether to trust them.
 
-Shifu starts Claude/Codex in no-confirmation mode by default. Approved devices can enter input into remote agents and create sessions; what an agent can do depends on its login and runtime permissions. Use a dedicated test project for the first connection.
+Shifu starts Claude/Codex with the permission setting you chose (in no-confirmation mode if you chose it, or if you upgraded from an earlier version without changing it). Approved devices can enter input into remote agents and create sessions; what an agent can do depends on its login and runtime permissions. Use a dedicated test project for the first connection.
 
 ## Relay and pairing
 
