@@ -194,38 +194,23 @@ h1 {
 
 /* One zoom for every product image: the hero's. A crop of N source pixels is shown at N * (hero width / 1200). */
 .scaled { width: calc(var(--w) / 1200 * min(1120px, 100vw - 2 * var(--pad))); max-width: 100%; height: auto; }
-.hero-glow { position: relative; }
-.hero-glow::before {
-  content: ""; position: absolute; left: 10%; right: 10%; top: -40px; height: 220px; z-index: -1;
-  background: radial-gradient(ellipse at center, rgba(242,181,68,.13), transparent 65%);
-  filter: blur(20px);
-}
 figcaption, .caption { margin-top: var(--s3); color: var(--muted); font-size: 13px; text-align: center; }
 
-/* ---------- Agents strip ---------- */
-.agents { padding: var(--s7) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg-raised); }
-.agents-head { text-align: center; color: var(--muted); font-size: 14px; }
-/* Marquee of supported tools: two identical lists, the track slides by exactly one list width. */
-.marquee {
-  --chip: var(--surface);
-  margin-top: var(--s5); overflow: hidden; position: relative; border-radius: 12px;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-}
-.marquee:focus-visible { outline-offset: 2px; -webkit-mask-image: none; mask-image: none; }
-.marquee-track { display: flex; width: max-content; animation: marquee 38s linear infinite; }
-.marquee:hover .marquee-track, .marquee:focus-within .marquee-track { animation-play-state: paused; }
-@keyframes marquee { to { transform: translateX(-50%); } }
-.marquee-list { display: flex; gap: var(--s3); padding: 6px var(--s3) 6px 0; margin: 0; }
+/* ---------- Agent support tiers ---------- */
+.tiers { margin-top: var(--s6); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4) var(--s5); }
+.tier { padding-top: var(--s5); border-top: 1px solid var(--line); }
+.tier h3 { font-size: 18px; }
+.tier p { margin-top: var(--s2); color: var(--text-2); font-size: 15px; }
+.tier .tier-note { margin-top: var(--s3); color: var(--muted); font-size: 14px; }
+.tier a, .agents-note a, .sleep-note a { color: var(--text-2); }
+.tools { margin-top: var(--s4); padding: 0; display: flex; flex-wrap: wrap; gap: var(--s2); }
 .tool {
-  list-style: none; flex: none; display: inline-flex; align-items: center; gap: 10px;
-  padding: 10px 16px; border: 1px solid var(--line); border-radius: 999px;
-  background: var(--chip); color: var(--text); font: 500 15px/1.2 var(--font); white-space: nowrap;
+  list-style: none; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  padding: 7px 12px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface);
+  font-size: 14px; color: var(--text); --chip: var(--surface);
 }
-.tool .mark { width: 18px; height: 18px; flex: none; color: var(--text); }
-.tool small { font: 400 12px/1 var(--font); color: var(--muted); padding: 3px 7px; border-radius: 999px; background: rgba(255,255,255,.05); }
-.tool small.next { color: var(--amber); background: rgba(242,181,68,.1); }
-.agents-note { margin: var(--s4) auto 0; max-width: 60em; text-align: center; color: var(--muted); font-size: 13px; }
+.tool .mark { width: 16px; height: 16px; flex: none; color: var(--text); }
+.agents-note { margin-top: var(--s6); max-width: 60em; color: var(--muted); font-size: 13px; }
 
 /* ---------- Sections ---------- */
 section { position: relative; }
@@ -398,6 +383,24 @@ kbd {
 .js .reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
 .js .reveal.in { opacity: 1; transform: none; }
 
+/* Sessions: what happens while the Mac sleeps */
+.sleep-note { grid-column: 1 / -1; margin-top: 0; max-width: 60em; color: var(--text-2); font-size: 15px; padding: var(--s4) var(--s5); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-raised); }
+.sleep-note b { color: var(--text); font-weight: 600; }
+
+/* Problem → demo */
+.problem .lead + .lead { margin-top: var(--s3); }
+.problem .legend { margin-top: var(--s7); }
+.problem .hero-shot { margin-top: var(--s5); }
+
+/* Install steps generated from docs/INSTALL*.md */
+.install-steps { grid-template-columns: minmax(0, 1fr); }
+.install-steps li p + p { margin-top: var(--s2); }
+.install-steps code, .notice code { font-size: .88em; }
+.install-grid > * { min-width: 0; }
+.notice ul { grid-template-columns: minmax(0, 1fr); }
+.notice li code { white-space: normal; overflow-wrap: anywhere; }
+.notice .permission-note a { color: var(--text-2); }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1000px) {
   .feature { grid-template-columns: 1fr; gap: var(--s5); margin-top: var(--s8); }
@@ -405,6 +408,7 @@ kbd {
   .how { grid-template-columns: 1fr; gap: var(--s6); }
   .install-grid { grid-template-columns: 1fr; }
   .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tiers { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
   .nav-links { display: none; }
@@ -441,10 +445,6 @@ kbd {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marquee { -webkit-mask-image: none; mask-image: none; }
-  .marquee-track { width: auto; justify-content: center; }
-  .marquee-list { flex-wrap: wrap; justify-content: center; padding: 6px 0; }
-  .marquee-dup { display: none; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js .reveal { opacity: 1; transform: none; }
