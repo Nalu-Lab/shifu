@@ -50,6 +50,7 @@ import {
   taskSetCurrent,
   tasksLoad,
   type CliReport,
+  setBeforeAgentStart,
 } from "./api";
 import { baselineSeen } from "./attention";
 import { agentLabel, type AgentView } from "./format";
@@ -58,6 +59,7 @@ import { waitForVerdict } from "./jev";
 import { currentlyNeeding, nextNotices, type Notice, type Notified, staleNotices } from "./notify";
 import { closeNewPopover, showAddAgentPopover, showNewTaskPopover } from "./newpopover";
 import { shouldShowGuide, showGuide } from "./onboarding";
+import { ensurePermissionsChosen } from "./permissions";
 import { startPtyBus } from "./ptybus";
 import { Sidebar, type Role } from "./sidebar";
 import { botKindKey } from "./botpicker";
@@ -109,6 +111,8 @@ import { Workspace } from "./workspace";
 import type { DockviewGroupPanel } from "dockview";
 
 async function main() {
+  // A fresh install is asked how agents may act before the first one starts (permissions.ts).
+  setBeforeAgentStart(ensurePermissionsChosen);
   applyStoredTheme();
   applyStoredFontSizes();
   // The picker uses last launch's list until this answers (a couple of seconds).

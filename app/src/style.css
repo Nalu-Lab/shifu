@@ -2859,6 +2859,46 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   padding-top: 4px;
 }
 
+/* ---------- first-run permission question (permissions.ts) ---------- */
+
+.guide.perm-ask {
+  z-index: 950;
+}
+
+.perm-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perm-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 0.5px solid var(--line-strong);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.perm-option:has(input:checked) {
+  border-color: var(--text-2);
+}
+
+.perm-option input {
+  margin: 2px 0 0;
+}
+
+.perm-option > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perm-option-label {
+  font-weight: 600;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: default;

@@ -18,6 +18,7 @@ import {
   splitAgents,
 } from "./models";
 import { vendorIcon } from "./vendoricons";
+import { PERMISSION_OPTIONS, hintOf } from "./permissions";
 
 /** The agent a new task starts with: the one last picked here or in the first-run guide, kept across restarts. */
 const KIND_KEY = "shifu.defaultKind";
@@ -271,11 +272,6 @@ export function present(anchor: HTMLElement, which: string, pop: HTMLElement, bl
   return true;
 }
 
-const PERMISSION_OPTIONS: { id: Permissions; label: string; hint: string }[] = [
-  { id: "bypass", label: "免确认（全权）", hint: "改文件、跑命令都不逐项问你。只在信任的项目里用。" },
-  { id: "own", label: "用 Agent 自己的设置", hint: "不加免确认参数，按各家自己的配置决定何时问你。" },
-];
-
 /** 权限: one choice for every agent started or resumed from now on (`launch::Permissions`). Filled in once the
  *  saved choice is read; a change is saved at once. */
 export function permissionPicker(): HTMLElement {
@@ -291,7 +287,7 @@ export function permissionPicker(): HTMLElement {
   const hint = document.createElement("div");
   hint.className = "perm-hint";
   const paint = () => {
-    hint.textContent = PERMISSION_OPTIONS.find((o) => o.id === sel.value)?.hint ?? "";
+    hint.textContent = hintOf(sel.value);
   };
   sel.addEventListener("change", () => {
     paint();
