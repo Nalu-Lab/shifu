@@ -155,7 +155,7 @@ mod tests {
         Agent {
             name: format!("{command}-x"), kind, command: command.into(), cwd: "/tmp".into(), created_at: 100,
             status, status_since: 100, window_id: None, pane_id: Some("%1".into()), session_id: None,
-            last_message: None, waiting_for: None, model: None, effort: None, label: None,
+            last_message: None, waiting_for: None, approval: None, model: None, effort: None, label: None,
         }
     }
 

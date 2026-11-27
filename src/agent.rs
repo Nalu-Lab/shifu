@@ -67,6 +67,11 @@ pub struct Agent {
     /// or the closing line of its reply. `None` while it works, and in records written before this field existed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub waiting_for: Option<String>,
+    /// Which tool call the pending approval is for (`hook::approval_key`: who asked, the tool, what it touches), so a
+    /// parallel call or a sub-agent finishing does not clear it. Only while `NeedsApproval`; absent in older records,
+    /// which fall back to the plain rules in `status::next_status`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approval: Option<String>,
     /// Picked when the agent was created; `None` leaves it to the CLI's own default. Passed again on resume.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
@@ -294,7 +299,7 @@ mod tests {
             window_id: Some("@1".to_string()),
             pane_id: Some(pane.to_string()),
             session_id: None,
-            last_message: None, waiting_for: None,
+            last_message: None, waiting_for: None, approval: None,
             model: None,
             effort: None,
             label: None,

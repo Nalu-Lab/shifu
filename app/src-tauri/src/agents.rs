@@ -272,6 +272,7 @@ mod tests {
             session_id: None,
             last_message: Some("done".to_string()),
             waiting_for: Some("要合并吗？".to_string()),
+            approval: None,
             model: None,
             effort: None,
             label: None,
