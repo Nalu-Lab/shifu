@@ -21,8 +21,11 @@ import {
   taskLabel,
   taskNeedsYou,
   taskStatus,
-  waitingPresentation,
+  WAITING_GROUPS,
   type Waiting,
+  type WaitingGroup,
+  waitingGroup,
+  waitingSummary,
 } from "./tasks";
 
 export interface SidebarActions {
@@ -324,16 +327,16 @@ class WaitingRow {
 
   update(waiting: Waiting, now: number): void {
     this.waiting = waiting;
-    const { status, text } = waitingPresentation(waiting.agent, now);
+    const { status, line, full } = waitingSummary(waiting.agent, now);
     this.dot.className = `dot s-${status}`;
     this.task.textContent = agentLabel(waiting.agent);
     paintMark(this.kind, waiting.agent.kind);
     // A background question can arrive long after the agent entered its current state.
     this.age.hidden = status === "asked" && !!waiting.agent.pending_questions?.length;
     this.age.textContent = ageText(now - waiting.agent.status_since);
-    this.what.textContent = text;
-    this.what.hidden = !text;
-    this.element.title = [`${statusLabel(status)}  ${waiting.agent.name}`, text].filter(Boolean).join("\n");
+    this.what.textContent = line;
+    this.what.hidden = !line;
+    this.element.title = [`${statusLabel(status)}  ${waiting.agent.name}`, full].filter(Boolean).join("\n");
   }
 }
 
@@ -703,6 +706,10 @@ export class Sidebar {
   private readonly errorBox = el("div", "sidebar-error");
   private readonly noticeBox = el("div", "sidebar-error");
   private readonly waitingRows = new Map<string, WaitingRow>();
+  /** One quiet heading per urgency group in 在等你 (等你批准, 待回复, 做完了), shown when the group has rows. */
+  private readonly waitingGroupLabels = new Map<WaitingGroup, HTMLElement>(
+    WAITING_GROUPS.map(({ key, label }) => [key, el("div", "wait-group", label)]),
+  );
   private readonly projectViews = new Map<string, ProjectView>();
   private readonly collapsed = new Set<string>();
   private activeName: string | null = null;
@@ -979,8 +986,15 @@ export class Sidebar {
     const rows = cached(this.waitingRows, waiting.map((w) => w.agent.name), (name) => new WaitingRow(this.actions, waiting.find((w) => w.agent.name === name)!));
     waiting.forEach((w, i) => rows[i].update(w, ctx.now));
     this.waitingBox.hidden = waiting.length === 0;
-    // The label stays first; the rows follow it.
-    syncChildren(this.waitingBox, [this.waitingLabel, ...rows.map((r) => r.element)]);
+    // The label stays first; each group's heading comes before its rows, which are already in group order.
+    const children: HTMLElement[] = [this.waitingLabel];
+    let group: WaitingGroup | null = null;
+    waiting.forEach((w, i) => {
+      const next = waitingGroup(w.agent);
+      if (next !== group) children.push(this.waitingGroupLabels.get((group = next))!);
+      children.push(rows[i].element);
+    });
+    syncChildren(this.waitingBox, children);
 
     const projects = this.shownProjects();
     const views = cached(this.projectViews, projects.map((p) => p.path), (path) =>

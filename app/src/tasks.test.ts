@@ -114,7 +114,8 @@ describe("taskStatus", () => {
         for (const members of [[completed, followup], [followup, completed]]) {
           expect(taskStatus(t, members)).toBe("asked");
           expect(taskNeedsYou(t, members)).toBe(mark === "new");
-          const expected = mark === "new" ? [completed, followup].sort((a, b) => a.status_since - b.status_since || a.name.localeCompare(b.name)) : [followup];
+          // The question comes first whichever waited longer: it blocks on the user, the result can wait.
+          const expected = mark === "new" ? [followup, completed] : [followup];
           expect(waitingList([t], members).map(w => w.agent.name)).toEqual(expected.map(a => a.name));
         }
       }
