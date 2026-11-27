@@ -10,7 +10,7 @@ import { applyStoredTheme } from "./theme";
 import { ProgressPage } from "./progress";
 import { progressReader } from "./progressrefresh";
 import { EndNotices } from "./endnotices";
-import { pickArgs, pickFor, refreshClis, refreshModels, setClis } from "./models";
+import { getClis, onClisChange, pickArgs, pickFor, refreshClis, refreshModels, setClis } from "./models";
 import {
   agentKill,
   agentResume,
@@ -50,6 +50,7 @@ import {
   taskSetCurrent,
   tasksLoad,
   type CliReport,
+  setBeforeAgentStart,
 } from "./api";
 import { baselineSeen } from "./attention";
 import { agentLabel, type AgentView } from "./format";
@@ -58,6 +59,8 @@ import { waitForVerdict } from "./jev";
 import { currentlyNeeding, nextNotices, type Notice, type Notified, staleNotices } from "./notify";
 import { closeNewPopover, showAddAgentPopover, showNewTaskPopover } from "./newpopover";
 import { shouldShowGuide, showGuide } from "./onboarding";
+import { ensurePermissionsChosen } from "./permissions";
+import { setupReady, showSetupChecklist } from "./setupcheck";
 import { startPtyBus } from "./ptybus";
 import { Sidebar, type Role } from "./sidebar";
 import { botKindKey } from "./botpicker";
@@ -109,6 +112,8 @@ import { Workspace } from "./workspace";
 import type { DockviewGroupPanel } from "dockview";
 
 async function main() {
+  // A fresh install is asked how agents may act before the first one starts (permissions.ts).
+  setBeforeAgentStart(ensurePermissionsChosen);
   applyStoredTheme();
   applyStoredFontSizes();
   // The picker uses last launch's list until this answers (a couple of seconds).
@@ -526,6 +531,17 @@ async function main() {
   if (file.current) await showTask(file.current);
   // First open: the one-screen guide (docs/ONBOARDING.md, 第 3 阶段). A failed read shows nothing.
   if (shouldShowGuide(file.tasks.length, await guideDoneGet().catch(() => true))) showGuide(createTask);
+  // Otherwise, while tmux or every agent CLI is missing, the setup checklist (the guide has it in step 1).
+  else {
+    const check = () => {
+      const report = getClis();
+      if (!report) return;
+      stopCheck();
+      if (!setupReady(report)) showSetupChecklist();
+    };
+    const stopCheck = onClisChange(check);
+    check();
+  }
 
   await listen<AgentView[]>("agents", async ({ payload }) => {
     // Sessions created by the remote helper join their project's existing task without changing focus.
@@ -567,6 +583,10 @@ async function main() {
       sidebar.focusSearch();
     }
     else if (payload === "appearance") showAppearancePopover(sidebar.newButton);
+    else if (payload === "setup-check") {
+      void refreshClis().catch(reportError);
+      showSetupChecklist();
+    }
     else if (payload === "jump") {
       closeNewPopover();
       const first = getWaitingList()[0];

@@ -78,6 +78,8 @@ pub fn cmd_new(args: &[String]) -> Res<()> {
         println!("{NEW_USAGE}");
         return Ok(());
     };
+    // Read before anything is written into SHIFU_HOME: a home this version has not seen is judged by what is in it.
+    let perms = crate::launch::permissions();
     let dir = resolve_dir(parsed.dir.as_deref())?;
     let shifu = shifu_exe()?;
     let shifu_str = shifu.to_string_lossy().to_string();
@@ -91,7 +93,7 @@ pub fn cmd_new(args: &[String]) -> Res<()> {
     let name = make_name(&parsed.agent, &dir, &taken);
 
     let settings_path = write_claude_hooks(kind, &shifu_str)?;
-    let launch = agent_command(kind, &parsed.agent, &shifu_str, &settings_path, &parsed.extra, crate::launch::permissions());
+    let launch = agent_command(kind, &parsed.agent, &shifu_str, &settings_path, &parsed.extra, perms);
 
     let now = now_secs();
     let record = Agent {

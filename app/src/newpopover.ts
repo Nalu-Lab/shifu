@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { type CliReport, type Permissions, pathOpen, permissionsGet, permissionsSet, recentDirs } from "./api";
+import { type Permissions, pathOpen, permissionsGet, permissionsSet, recentDirs } from "./api";
 import { pickFolder, projectName } from "./tasks";
 import { shortPath } from "./format";
 import { addPickedFolder, reportError } from "./store";
@@ -18,6 +18,7 @@ import {
   splitAgents,
 } from "./models";
 import { vendorIcon } from "./vendoricons";
+import { PERMISSION_OPTIONS, hintOf } from "./permissions";
 
 /** The agent a new task starts with: the one last picked here or in the first-run guide, kept across restarts. */
 const KIND_KEY = "shifu.defaultKind";
@@ -92,25 +93,6 @@ export function missingLine(missing: readonly AgentSpec[]): HTMLElement | null {
     line.append(link);
   });
   return line;
-}
-
-/** What was found on this Mac, for the empty page and the first-run guide: tmux missing first (nothing runs
- *  without it), then the agents found, then the missing ones with their install pages. */
-export function setupNotes(clis: CliReport | null): HTMLElement[] {
-  if (!clis) return [];
-  const notes: HTMLElement[] = [];
-  const note = (text: string) => {
-    const n = document.createElement("div");
-    n.className = "empty-note";
-    n.textContent = text;
-    notes.push(n);
-  };
-  if (!clis.tmux) note("没找到 tmux：Shifu 的每个对话都在 tmux 里运行。在终端运行 brew install tmux，装好后回到这里。");
-  const found = clis.agents.filter((a) => a.path !== null);
-  note(found.length ? `这台 Mac 上找到：${found.map((a) => a.name).join("、")}` : "这台 Mac 上还没找到 Agent 命令行工具，装好一个后回到这里。");
-  const line = missingLine(splitAgents(clis).missing);
-  if (line) notes.push(line);
-  return notes;
 }
 
 /** One button showing the chosen agent's mark and name; it drops down the others, each with its mark. Eight
@@ -271,11 +253,6 @@ export function present(anchor: HTMLElement, which: string, pop: HTMLElement, bl
   return true;
 }
 
-const PERMISSION_OPTIONS: { id: Permissions; label: string; hint: string }[] = [
-  { id: "bypass", label: "免确认（全权）", hint: "改文件、跑命令都不逐项问你。只在信任的项目里用。" },
-  { id: "own", label: "用 Agent 自己的设置", hint: "不加免确认参数，按各家自己的配置决定何时问你。" },
-];
-
 /** 权限: one choice for every agent started or resumed from now on (`launch::Permissions`). Filled in once the
  *  saved choice is read; a change is saved at once. */
 export function permissionPicker(): HTMLElement {
@@ -291,7 +268,7 @@ export function permissionPicker(): HTMLElement {
   const hint = document.createElement("div");
   hint.className = "perm-hint";
   const paint = () => {
-    hint.textContent = PERMISSION_OPTIONS.find((o) => o.id === sel.value)?.hint ?? "";
+    hint.textContent = hintOf(sel.value);
   };
   sel.addEventListener("change", () => {
     paint();

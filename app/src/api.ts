@@ -10,7 +10,16 @@ import type { Changed, TaskFile } from "./tasks";
 import type { CatAppearance } from "./cattraits";
 
 export const agentsList = () => invoke<AgentView[]>("agents_list");
-export const agentNew = (kind: string, cwd: string) => invoke<string>("agent_new", { kind, cwd });
+/** Runs before every command that starts an agent's process: on a fresh install it asks the permission question
+ *  first (permissions.ts). `kind` is left out where only the agent's name is known. */
+let beforeAgentStart: (kind?: string) => Promise<void> = () => Promise.resolve();
+export const setBeforeAgentStart = (gate: (kind?: string) => Promise<void>) => {
+  beforeAgentStart = gate;
+};
+const starting = <T>(kind: string | undefined, cmd: string, args: Record<string, unknown>) =>
+  beforeAgentStart(kind).then(() => invoke<T>(cmd, args));
+
+export const agentNew = (kind: string, cwd: string) => starting<string>(kind, "agent_new", { kind, cwd });
 /** Ends the agent and takes it off its task. */
 export const agentKill = (name: string) => invoke<TaskFile>("agent_kill", { name });
 /** null before the first start of this version. */
@@ -57,16 +66,16 @@ export const botList = () => invoke<ResidentBot[]>("bot_list");
 export const botJoin = (id: BotId) => invoke<ResidentBot[]>("bot_join", { id });
 export const botLeave = (id: BotId) => invoke<ResidentBot[]>("bot_leave", { id });
 export const botSave = (id: BotId, profile: BotProfile) => invoke<ResidentBot[]>("bot_save", { id, profile });
-export const botOpen = (id: BotId, kind: string, pick: PickArgs) => invoke<Changed>("bot_open", { id, kind, ...pick });
+export const botOpen = (id: BotId, kind: string, pick: PickArgs) => starting<Changed>(kind, "bot_open", { id, kind, ...pick });
 
 export const pmDir = () => invoke<string>("pm_dir");
 /** Why the installed `shifu` CLI does not match this app, or null when it does. */
 export const cliMismatch = () => invoke<string | null>("cli_mismatch");
 export const pmOpen = (kind: string, pick: { model: string | null; effort: string | null }) =>
-  invoke<Changed>("pm_open", { kind, ...pick });
+  starting<Changed>(kind, "pm_open", { kind, ...pick });
 export const dailyDir = () => invoke<string>("daily_dir");
 export const dailyOpen = (kind: string, pick: { model: string | null; effort: string | null }) =>
-  invoke<Changed>("daily_open", { kind, ...pick });
+  starting<Changed>(kind, "daily_open", { kind, ...pick });
 export const searchConversations = (query: string) => invoke<Hit[]>("search_conversations", { query });
 export const modelsList = () => invoke<AgentModels[]>("models_list");
 export const tasksLoad = () => invoke<TaskFile>("tasks_load");
@@ -74,8 +83,9 @@ export const tasksLoad = () => invoke<TaskFile>("tasks_load");
 /** `model`/`effort` null = the CLI's own default. */
 type PickArgs = { model: string | null; effort: string | null };
 export const taskNew = (project: string, name: string, kind: string, pick: PickArgs) =>
-  invoke<Changed>("task_new", { project, name, kind, ...pick });
-export const taskAddAgent = (id: string, kind: string, pick: PickArgs) => invoke<Changed>("task_add_agent", { id, kind, ...pick });
+  starting<Changed>(kind, "task_new", { project, name, kind, ...pick });
+export const taskAddAgent = (id: string, kind: string, pick: PickArgs) =>
+  starting<Changed>(kind, "task_add_agent", { id, kind, ...pick });
 export const taskRename = (id: string, name: string) => invoke<TaskFile>("task_rename", { id, name });
 export const taskSetCurrent = (id: string) => invoke<TaskFile>("task_set_current", { id });
 /** Drag an agent's tab onto another task: only its ownership changes, the agent keeps running. */
@@ -120,9 +130,9 @@ export const fileSave = (path: string, expected: string, text: string) => invoke
 /** Raw bytes in the body; the name in a header, percent-encoded because headers are ASCII. */
 export const dropSave = (name: string, bytes: ArrayBuffer) =>
   invoke<string>("drop_save", bytes, { headers: { "x-name": encodeURIComponent(name) } });
-export const agentResume = (name: string) => invoke<void>("agent_resume", { name });
+export const agentResume = (name: string) => starting<void>(undefined, "agent_resume", { name });
 /** Starts an agent that ended at its launch again, fresh (see `retry_agent`). */
-export const agentRetry = (name: string) => invoke<void>("agent_retry", { name });
+export const agentRetry = (name: string) => starting<void>(undefined, "agent_retry", { name });
 
 /** Why an agent ended right after it started (src/launch_failure.rs). */
 export interface LaunchFailure {
@@ -187,6 +197,12 @@ export interface CliFound {
   /** Full path of the program; null when it is not installed. */
   path: string | null;
   install_url: string;
+  /** One terminal command that installs it, when there is one. */
+  install_command?: string | null;
+  /** The command that signs in, for agents that have one (the others sign in inside the agent). */
+  login_command?: string | null;
+  /** Sign-in found in the file the CLI keeps it in; null when it cannot be told without guessing. */
+  signed_in?: boolean | null;
 }
 export interface CliReport {
   agents: CliFound[];
@@ -196,10 +212,12 @@ export interface CliReport {
 /** Which agent CLIs (and tmux) are installed here: file checks only, nothing is started. */
 export const clisDetect = () => invoke<CliReport>("clis_detect");
 
-/** How agents start: "bypass" adds each CLI's no-approval flag (the default), "own" leaves it to the agent's own
- *  settings. Mirrors `launch::Permissions`; applies to every new or resumed agent. */
+/** How agents start: "bypass" adds each CLI's no-approval flag, "own" leaves it to the agent's own settings.
+ *  Mirrors `launch::Permissions`; applies to every new or resumed agent. A fresh install reads "own" until the
+ *  user answers the first-run question (`permissionsChosen` false until then); earlier users keep "bypass". */
 export type Permissions = "bypass" | "own";
 export const permissionsGet = () => invoke<Permissions>("permissions_get");
+export const permissionsChosen = () => invoke<boolean>("permissions_chosen");
 export const permissionsSet = (mode: Permissions) => invoke<void>("permissions_set", { mode });
 /** Whether the first-run guide was finished or skipped (`guide_done` in settings.json). */
 export const guideDoneGet = () => invoke<boolean>("guide_done_get");

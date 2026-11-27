@@ -2859,6 +2859,120 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   padding-top: 4px;
 }
 
+/* ---------- first-run permission question (permissions.ts) ---------- */
+
+.guide.perm-ask {
+  z-index: 950;
+}
+
+.perm-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perm-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 0.5px solid var(--line-strong);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.perm-option:has(input:checked) {
+  border-color: var(--text-2);
+}
+
+.perm-option input {
+  margin: 2px 0 0;
+}
+
+.perm-option > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perm-option-label {
+  font-weight: 600;
+}
+
+/* ---------- setup checklist (setupcheck.ts) ---------- */
+
+.setup-check {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 420px;
+  font-size: 12px;
+  text-align: left;
+}
+
+.setup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setup-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.setup-mark {
+  width: 12px;
+  text-align: center;
+}
+
+.setup-item.ok .setup-mark {
+  color: var(--green);
+}
+
+.setup-item.missing .setup-mark {
+  color: var(--red);
+}
+
+.setup-item.note .setup-mark {
+  color: var(--amber);
+}
+
+.setup-label {
+  font-weight: 600;
+}
+
+.setup-detail {
+  color: var(--text-2);
+}
+
+.setup-command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0 18px;
+}
+
+.setup-command code {
+  min-width: 0;
+  overflow-x: auto;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--bg);
+  font-family: "Maple Mono NF CN", Menlo, monospace;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.setup-command .btn {
+  flex: none;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: default;

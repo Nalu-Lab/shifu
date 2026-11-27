@@ -6,13 +6,13 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 
 普通会话优先使用下载包；源码构建方式收在下方开发者说明。
 
-Shifu 默认用免确认模式启动 Claude、Codex、CodeBuddy、Kimi、Qwen Code 和 opencode（opencode 加 `--auto`，你明确 deny 的规则仍然有效；如 `--dangerously-skip-permissions`、`--dangerously-bypass-approvals-and-sandbox`、`--yolo`）。它们执行文件修改和命令时不会逐项请求批准。新建任务窗口里的「权限」可改成「用 Agent 自己的设置」：之后新开或恢复的对话不再加这些参数，按各家自己的配置决定何时询问。Pi 本身不弹批准，这个开关对它不起作用。
+第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」：不加免确认参数，按各家自己的配置决定何时询问。选「免确认（全权）」时，Claude、Codex、CodeBuddy、Kimi、Qwen Code 和 opencode 用免确认参数启动（opencode 加 `--auto`，你明确 deny 的规则仍然有效；如 `--dangerously-skip-permissions`、`--dangerously-bypass-approvals-and-sandbox`、`--yolo`），执行文件修改和命令时不会逐项请求批准。以后在新建任务窗口的「权限」里随时能改，之后新开或恢复的对话按新的设置启动。从旧版升级的不会被问，保持原来的设置（没改过的就是免确认）；终端版 `shifu new` 也一样，全新安装在没选之前按 Agent 自己的设置启动。Pi 本身不弹批准，这个开关对它不起作用。
 
 应用用 Shifu 自己的固定证书签名（不是 Apple 颁发的），尚未公证。首次打开若被 macOS 拦截，确认来源后按「系统设置 → 隐私与安全性」中的对应提示处理。
 
 ## 快速开始
 
-[下载 Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1)，内含 App、匹配 CLI 和安装说明。普通会话无需 Rust；另备 tmux 和已登录的 Agent 即可。StepFun 需[单独设置 Node/Pi 和订阅密钥](STEPFUN.md)。
+[下载 Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1)，内含 App、匹配 CLI 和安装说明。普通会话无需 Rust；另备 tmux 和已登录的 Agent 即可。缺什么，App 的「准备情况」（第一次打开时自动出现，以后在 Shifu 菜单里）会列出来，附安装命令和说明链接。StepFun 需[单独设置 Node/Pi 和订阅密钥](STEPFUN.md)。
 
 ### 方式 A：让你的 AI 帮你装
 
@@ -23,7 +23,7 @@ Shifu 默认用免确认模式启动 Claude、Codex、CodeBuddy、Kimi、Qwen Co
 1. 确认当前 Mac 使用 Apple Silicon，检查 tmux 和我要使用的 Agent 是否已安装、登录；缺什么先告诉我。
 2. 下载 README 指向的同一 Release 中的 ZIP 和 SHA256SUMS，核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
 3. 按包内说明，将 Shifu.app 放到 ~/Applications；App 自带同版命令行，只拖 App 也能用对话状态、提醒和项目经理。我要在终端里用 shifu 时，再将同包 bin/shifu 装到 ~/.cargo/bin/shifu，将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
-4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证，且默认用免确认模式启动 Agent；系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
+4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；第一次开对话前它会问一次 Agent 的权限，默认「按 Agent 自己的设置」，「免确认（全权）」由我自己决定。系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
 5. 打开后带我选一个项目、创建第一条 Agent 对话；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。
 ```
 

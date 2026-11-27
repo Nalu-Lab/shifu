@@ -21,6 +21,13 @@ pub struct Found {
     /// Full path of the program; `None` when it is not installed.
     pub path: Option<String>,
     pub install_url: String,
+    /// One terminal command that installs it, when there is one (`agents_spec`); else only `install_url`.
+    pub install_command: Option<String>,
+    /// The command that signs in, for agents that have one; the others sign in inside the agent.
+    pub login_command: Option<String>,
+    /// Whether its sign-in was found: only for agents whose credentials sit in a known file (`signed_in`), only
+    /// once it is installed, and filled in by the app's report (`None` from `detect`, which is called often).
+    pub signed_in: Option<bool>,
 }
 
 /// The common install folders a login shell may not list (or there is no login shell answer yet). Missing folders
@@ -170,9 +177,37 @@ pub fn detect(path: &str) -> Vec<Found> {
                 name: spec.label.into(),
                 path: found.map(|p| p.to_string_lossy().into_owned()),
                 install_url: spec.install_url.into(),
+                install_command: spec.install_command.map(Into::into),
+                login_command: spec.login_command.map(Into::into),
+                signed_in: None,
             }
         })
         .collect()
+}
+
+/// Whether `kind` looks signed in, from a file or variable its CLI itself keeps: nothing is run and no secret is
+/// read out (only whether the file is there, or for Claude whether `oauthAccount` is in its config). `None` for
+/// agents without such a place (their sign-in lives in the keychain or their own store), so nothing is guessed.
+/// `Some(false)` means only that none was found: the agent still offers to sign in when it starts.
+///
+/// - Claude Code: `oauthAccount` in `$CLAUDE_CONFIG_DIR/.claude.json` (default `~/.claude.json`), or `ANTHROPIC_API_KEY`.
+/// - Codex: `$CODEX_HOME/auth.json` (default `~/.codex/auth.json`), written by `codex login`.
+/// - Gemini CLI: `~/.gemini/oauth_creds.json`, or `GEMINI_API_KEY`.
+pub fn signed_in(kind: &str, user_home: &Path, var: impl Fn(&str) -> Option<String>) -> Option<bool> {
+    let set = |key: &str| var(key).is_some_and(|v| !v.is_empty());
+    let dir = |key: &str, default: &str| var(key).filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| user_home.join(default));
+    match kind {
+        "claude" => Some(
+            set("ANTHROPIC_API_KEY")
+                || std::fs::read_to_string(dir("CLAUDE_CONFIG_DIR", "").join(".claude.json"))
+                    .ok()
+                    .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+                    .is_some_and(|v| v["oauthAccount"].is_object()),
+        ),
+        "codex" => Some(dir("CODEX_HOME", ".codex").join("auth.json").is_file()),
+        "gemini" => Some(set("GEMINI_API_KEY") || user_home.join(".gemini/oauth_creds.json").is_file()),
+        _ => None,
+    }
 }
 
 /// The PATH sessions the app starts are given; `None` until the app sets it (then tmux's own environment is used).
@@ -191,6 +226,52 @@ pub fn agent_path() -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sign_in_is_read_only_from_the_files_each_cli_keeps() {
+        let home = std::env::temp_dir().join(format!("shifu-signin-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&home);
+        std::fs::create_dir_all(&home).unwrap();
+        let none = |_: &str| None;
+        assert_eq!(signed_in("claude", &home, none), Some(false));
+        assert_eq!(signed_in("codex", &home, none), Some(false));
+        assert_eq!(signed_in("gemini", &home, none), Some(false));
+        // Agents whose sign-in is not in a known file are not guessed.
+        for kind in ["kimi", "codebuddy", "qwen", "opencode", "pi", "antigravity", "stepfun", "terminal"] {
+            assert_eq!(signed_in(kind, &home, none), None, "{kind}");
+        }
+        // Claude's config without an account (first run, or signed out) is not signed in.
+        std::fs::write(home.join(".claude.json"), r#"{"numStartups": 3}"#).unwrap();
+        assert_eq!(signed_in("claude", &home, none), Some(false));
+        std::fs::write(home.join(".claude.json"), r#"{"oauthAccount": {"emailAddress": "x"}}"#).unwrap();
+        assert_eq!(signed_in("claude", &home, none), Some(true));
+        std::fs::create_dir_all(home.join(".codex")).unwrap();
+        std::fs::write(home.join(".codex/auth.json"), "{}").unwrap();
+        assert_eq!(signed_in("codex", &home, none), Some(true));
+        std::fs::create_dir_all(home.join(".gemini")).unwrap();
+        std::fs::write(home.join(".gemini/oauth_creds.json"), "{}").unwrap();
+        assert_eq!(signed_in("gemini", &home, none), Some(true));
+        // The variables that move or replace those files.
+        let elsewhere = home.join("elsewhere");
+        let moved = |key: &str| (key == "CODEX_HOME" || key == "CLAUDE_CONFIG_DIR").then(|| elsewhere.to_string_lossy().into_owned());
+        assert_eq!(signed_in("codex", &home, moved), Some(false));
+        assert_eq!(signed_in("claude", &home, moved), Some(false));
+        let keyed = |key: &str| (key == "ANTHROPIC_API_KEY" || key == "CLAUDE_CONFIG_DIR").then(|| if key == "ANTHROPIC_API_KEY" { "k".to_string() } else { elsewhere.to_string_lossy().into_owned() });
+        assert_eq!(signed_in("claude", &home, keyed), Some(true));
+        std::fs::remove_dir_all(&home).unwrap();
+    }
+
+    #[test]
+    fn detect_carries_the_install_and_sign_in_commands_from_the_table() {
+        let found = detect("/nonexistent-shifu-path");
+        let claude = found.iter().find(|f| f.kind == "claude").unwrap();
+        assert_eq!(claude.path, None);
+        assert_eq!(claude.install_command.as_deref(), Some("curl -fsSL https://claude.ai/install.sh | bash"));
+        assert_eq!(claude.login_command.as_deref(), Some("claude auth login"));
+        assert_eq!(claude.signed_in, None);
+        let kimi = found.iter().find(|f| f.kind == "kimi").unwrap();
+        assert_eq!((kimi.install_command.as_deref(), kimi.login_command.as_deref()), (None, None));
+    }
 
     #[test]
     fn the_path_is_read_between_the_markers_whatever_the_rc_files_print() {

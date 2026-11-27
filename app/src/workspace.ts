@@ -12,7 +12,8 @@ import type {
 import { AGENT_MIME, layoutLoad, layoutSave } from "./api";
 import { AgentTab, FileTab } from "./tab";
 import { getClis, onClisChange, splitAgents } from "./models";
-import { missingLine, setupNotes } from "./newpopover";
+import { missingLine } from "./newpopover";
+import { setupNotes } from "./setupcheck";
 import { vendorIcon } from "./vendoricons";
 import { TerminalPanel } from "./terminal";
 import { FILE_PREFIX, FilePanel, isFilePanel, setFileOpener } from "./preview";

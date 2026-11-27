@@ -2,9 +2,10 @@
  *  and it was neither finished nor skipped. Default agent, 权限, a test notification, then the first project
  *  folder: the task is created with the default agent, which opens right away. */
 import { open } from "@tauri-apps/plugin-dialog";
-import { type CliReport, guideDoneSet, notifySend } from "./api";
+import { type CliReport, type Permissions, guideDoneSet, notifySend, permissionsSet } from "./api";
 import { type AgentSpec, getClis, onClisChange, splitAgents } from "./models";
-import { agentDropdown, currentDefaultKind, permissionPicker, setDefaultKind, setupNotes } from "./newpopover";
+import { agentDropdown, currentDefaultKind, permissionPicker, setDefaultKind } from "./newpopover";
+import { checklistElement } from "./setupcheck";
 import { reportError } from "./store";
 import { projectName } from "./tasks";
 
@@ -67,7 +68,8 @@ export function showGuide(create: CreateTask): void {
       setDefaultKind(kind);
       agentBox.append(agentDropdown(agents, kind, (picked) => setDefaultKind(picked)));
     }
-    agentBox.append(...setupNotes(getClis()));
+    const report = getClis();
+    if (report) agentBox.append(checklistElement(report));
     paintStart();
   };
 
@@ -119,6 +121,9 @@ export function showGuide(create: CreateTask): void {
     busy = true;
     paintStart();
     try {
+      // What step 2 shows is the answer to the first-run permission question, so it is not asked again.
+      const shown = permissions.querySelector("select");
+      if (shown && !shown.disabled) await permissionsSet(shown.value as Permissions);
       await create(folder, "", kind);
       close();
     } catch (e) {
@@ -129,12 +134,13 @@ export function showGuide(create: CreateTask): void {
   });
   const foot = el("div", "guide-foot");
   foot.append(skip, start);
+  const permissions = permissionPicker();
 
   card.append(
     el("h1", "guide-title", "开始使用 Shifu"),
     el("p", "guide-lead", "四步设好，也可以先跳过，以后在新建任务里都能改。"),
     step(1, "默认 Agent", agentBox),
-    step(2, "权限（所有对话）", permissionPicker()),
+    step(2, "权限（所有对话）", permissions),
     step(3, "通知", notifyBody),
     step(4, "第一个项目", folderBody),
     foot,

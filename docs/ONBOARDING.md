@@ -37,11 +37,11 @@
   - 空白页说明这台 Mac 上找到了哪些 Agent；没有 tmux 时先提示 `brew install tmux`。
   - 回到窗口时重新检查一次，所以刚装的 CLI 能直接出现。
 
-## 第 2 阶段：权限用预设还是用 Agent 自己的设置（已完成）
+## 第 2 阶段：权限用预设还是按 Agent 自己的设置（已完成）
 
-- 加一个设置项：「免确认（全权）」或「用 Agent 自己的设置」。
-- 默认保持免确认，这是 11-09 的决定：和 Orca 一样默认全权。
-- 选「用 Agent 自己的设置」时，`launch.rs` 不加免确认参数，模型也照旧不传，交给各家的配置。
+- 加一个设置项：「免确认（全权）」或「按 Agent 自己的设置」。
+- 当时默认免确认（11-09 的决定，和 Orca 一样默认全权）；11-27 起全新安装改为先问，见第 5 阶段。
+- 选「按 Agent 自己的设置」时，`launch.rs` 不加免确认参数，模型也照旧不传，交给各家的配置。
 - 设置存在 `<SHIFU_HOME>/settings.json` 的 `agent_permissions`（`bypass` 或 `own`）。App（`~/.shifu/app`）和终端版（`~/.shifu`）各有一份；App 在新建任务窗口的「权限」里改。
 - 每次新开和恢复对话时读取，改了之后对已经在跑的对话不生效。Qwen 选 `own` 时传 `--approval-mode default`。
 
@@ -67,3 +67,28 @@
 - **命令写在 `src/agents_spec.rs`：** `install_command`（Claude 用官方安装脚本，其余用 npm 包名，2026-11-23 核对过包里的命令名；Kimi、Antigravity、StepFun 没有一条命令，只给安装说明链接）和 `login_command`（只有 `claude auth login`、`codex login` 两条是真有的命令）。
 - **实测：** 这台 Mac 上的 Claude、Codex、Antigravity、Qwen Code 在没登录时都不退出，而是自己显示登录界面，所以「没登录」这一类主要留给以后真会退出的 Agent。
 - **面板：** 原因、可复制的命令、安装说明链接、最后的输出，按钮从「恢复会话」换成「重试」。重试按第一次的方式重新启动（`retry_agent`，不加 `--continue`，以免接上同一文件夹里别的对话），并先清空窗格，下次失败只读这次的输出。
+
+## 第 5 阶段：第一次开对话前问权限（已完成，分支 `improve/firstrun`）
+
+- **为什么：** 外部评审指出，全新安装一上来就用 `--dangerously-skip-permissions` 这类参数启动 Agent，用户没有机会知情。
+- **全新安装：** 第一个 Agent 启动前盖上一个问题（`app/src/permissions.ts`）：「按 Agent 自己的设置」默认选中、标为推荐；「免确认（全权）」要自己选，下面一行写明风险。只有「继续」能关掉它，选择存进 `agent_permissions`，以后在新建任务窗口的「权限」里照旧能改。引导第 2 步显示的权限，点「建立任务并开始」时就算回答过，不再问第二次。
+- **怎么拦：** `api.ts` 里所有会启动 Agent 进程的调用（新建任务、加 Agent、项目经理、日报、常驻 Bot、恢复、重试）先过 `setBeforeAgentStart` 装上的关卡；普通终端不问。还没回答时，不经窗口启动的路径（手机遥控、终端版）一律按 `own` 启动，不会默认全权。
+- **老用户不受影响**（`src/launch.rs` 的 `settle_permissions_in`）：App 启动时第一件事、在往 `~/.shifu/app` 写任何东西之前判断一次：
+  - 已经存了 `agent_permissions`：照用。
+  - 没存，但目录里已经有东西（对话记录、`settings.json`、`shell-path` 缓存、任务等，旧版运行过就会有）：说明用过旧版，而旧版没存设置时就是免确认，于是写入 `agent_permissions: "bypass"`，以后也不问。
+  - 目录不存在或是空的（隐藏文件不算）：全新安装，写入 `permissions_ask: true`，之后读到它就按 `own` 并等窗口来问；回答后删掉这个标记。标记写好以后，引导、缓存、对话记录再往目录里写东西，也不会被误当成老用户。
+  - `settings.json` 读不出来：按以前的免确认，不覆盖那个文件。
+- 终端版（`~/.shifu`）同样处理，`shifu new` 在写任何文件之前先判断；`~/.shifu` 里只有 App 的 `app/` 目录不算用过终端版。
+
+## 第 6 阶段：准备情况清单（已完成，分支 `improve/firstrun`）
+
+- **目标：** 新用户不用开终端排查，就知道第一个 Agent 还差什么。见 `app/src/setupcheck.ts`。
+- **列什么：** tmux；这台 Mac 上找到的 Agent（沿用第 1 阶段的检测，只看文件）；一个都没找到时，列出全部 Agent，各带可复制的安装命令（`agents_spec` 的 `install_command`）和安装说明链接。装了至少一个以后，其余的只留一行安装链接。
+- **登录：** 只看各家自己存登录信息的文件，不运行程序、不读出密钥（`shifu::clis::signed_in`）：
+  - Claude Code：`~/.claude.json`（或 `$CLAUDE_CONFIG_DIR/.claude.json`）里有 `oauthAccount`，或有 `ANTHROPIC_API_KEY`；
+  - Codex：`~/.codex/auth.json`（或 `$CODEX_HOME/auth.json`）存在；
+  - Gemini CLI：`~/.gemini/oauth_creds.json` 存在，或有 `GEMINI_API_KEY`。
+  - 其他 Agent 的登录在钥匙串或各自的存储里，没有可靠又便宜的判断办法，就不显示登录状态，不猜。
+  - 没找到登录信息只显示提醒（「第一次开对话时按它的提示登录」，有登录命令的附上命令），不算没准备好：这些 Agent 没登录时会在自己界面里请你登录（第 4 阶段实测）。
+- **在哪里看到：** 引导第 1 步；空白页（没准备好时显示清单，准备好后只说找到了什么）；没有引导时，启动后若缺 tmux 或一个 Agent 都没有，自动弹出；Shifu 菜单「准备情况…」随时打开。回到窗口或点「重新检查」会重新检测并刷新。
+- **还做不到：** tmux 和 Agent 本身仍要在终端里装（清单给出确切命令和链接）；没有 Homebrew 时要先按 tmux 安装说明装。
