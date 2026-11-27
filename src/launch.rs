@@ -146,6 +146,8 @@ fn kimi_hooks(shifu: &str) -> Vec<toml::Value> {
 
 /// Antigravity loads named groups from ~/.gemini/config/hooks.json, not --settings.
 /// Keep the user's groups intact. Outside Shifu these handlers only consume stdin and return a neutral response.
+/// The file is global, so PreToolUse answers `allow` only for an Antigravity that Shifu started in no-confirmation
+/// mode (`SHIFU_ID` plus `ANTIGRAVITY_BYPASS_ENV` from the agent table); everywhere else Antigravity asks as usual.
 pub fn antigravity_config(user: &str, shifu: &str) -> Result<Option<String>, String> {
     let mut config: Value = if user.trim().is_empty() { json!({}) } else {
         serde_json::from_str(user).map_err(|e| format!("Antigravity 的 hooks.json 读不懂: {e}"))?
@@ -153,10 +155,17 @@ pub fn antigravity_config(user: &str, shifu: &str) -> Result<Option<String>, Str
     let groups = config.as_object_mut().ok_or("Antigravity 的 hooks.json 必须是 JSON 对象")?;
     let mut group = serde_json::Map::new();
     for event in ["SessionStart", "PreInvocation", "PreToolUse", "PostToolUse", "Stop"] {
-        let response = if event == "PreToolUse" { r#"{"decision":"allow"}"# } else { "{}" };
+        let response = if event == "PreToolUse" {
+            format!(
+                "if [ -n \"${{SHIFU_ID:-}}\" ] && [ \"${{{ANTIGRAVITY_BYPASS_ENV}:-}}\" = 1 ]; then printf '%s\\n' {}; else printf '%s\\n' {}; fi",
+                sh_quote(r#"{"decision":"allow"}"#), sh_quote("{}")
+            )
+        } else {
+            format!("printf '%s\\n' {}", sh_quote("{}"))
+        };
         let command = format!(
-            "if [ -n \"${{SHIFU_ID:-}}\" ] && [ -n \"${{SHIFU_HOME:-}}\" ]; then {}; else cat >/dev/null; fi; printf '%s\\n' {}",
-            hook_command(shifu, "antigravity", event), sh_quote(response)
+            "if [ -n \"${{SHIFU_ID:-}}\" ] && [ -n \"${{SHIFU_HOME:-}}\" ]; then {}; else cat >/dev/null; fi; {response}",
+            hook_command(shifu, "antigravity", event)
         );
         let handler = json!({"type":"command", "command":command, "timeout":5});
         let handlers = if event.ends_with("ToolUse") { json!([{"matcher":"*", "hooks":[handler]}]) } else { json!([handler]) };
@@ -192,6 +201,10 @@ fn codex_flags(shifu: &str, perms: Permissions) -> Vec<String> {
 /// 免确认时各家的参数在 `agents_spec::AGENTS`（11-09 起老用户默认 bypass；11-27 起新装先问，见 `Permissions`）。
 /// CodeBuddy 用和 Claude 一样的参数；它的 --help 写明高风险、极高风险的操作仍会问。
 const CODEX_BYPASS: &str = "--dangerously-bypass-approvals-and-sandbox";
+
+/// Set (to `1`) only on an Antigravity that Shifu starts in no-confirmation mode; its PreToolUse hook answers `allow`
+/// only when it sees this. Antigravity has no no-approval flag, so this is its `bypass_env` in `agents_spec`.
+pub const ANTIGRAVITY_BYPASS_ENV: &str = "SHIFU_ANTIGRAVITY_BYPASS";
 
 /// How agents are started: with their no-approval flag (`Bypass`), or with none, so each agent's own settings
 /// decide what it asks (`Own`). Kept in `<SHIFU_HOME>/settings.json`, so the app (`~/.shifu/app`) and the terminal
@@ -522,8 +535,9 @@ mod tests {
     #[test]
     fn the_table_keeps_the_codex_bypass_flag_it_documents() {
         assert_eq!(agents_spec::of_kind(Kind::Codex).unwrap().bypass_args, [CODEX_BYPASS]);
-        assert_eq!(resume_command(Kind::Antigravity, "agy", "/s", "", None, &[], Permissions::Bypass), "'agy'");
-        assert_eq!(resume_command(Kind::Antigravity, "antigravity", "/s", "", Some("c-1"), &[], Permissions::Bypass), "'agy' '--conversation' 'c-1'");
+        assert_eq!(resume_command(Kind::Antigravity, "agy", "/s", "", None, &[], Permissions::Bypass), "SHIFU_ANTIGRAVITY_BYPASS='1' 'agy'");
+        assert_eq!(resume_command(Kind::Antigravity, "agy", "/s", "", None, &[], Permissions::Own), "'agy'");
+        assert_eq!(resume_command(Kind::Antigravity, "antigravity", "/s", "", Some("c-1"), &[], Permissions::Bypass), "SHIFU_ANTIGRAVITY_BYPASS='1' 'agy' '--conversation' 'c-1'");
         assert_eq!(resume_command(Kind::Qwen, "qwen", "/s", "", None, &[], Permissions::Bypass), "'/s' qwen");
         assert_eq!(resume_command(Kind::Qwen, "qwen", "/s", "", Some("q1"), &[], Permissions::Own), "'/s' qwen --approval-mode default '--resume' 'q1'");
         assert!(agent_command(Kind::Other, "terminal", "/s", "", &[], Permissions::Bypass).ends_with(" -l"));
@@ -634,7 +648,7 @@ mod tests {
         assert_eq!(group["PreToolUse"][0]["matcher"], "*");
         let cmd = group["PreToolUse"][0]["hooks"][0]["command"].as_str().unwrap();
         assert!(cmd.contains("SHIFU_ID") && cmd.contains("SHIFU_HOME"));
-        assert!(cmd.contains("decision") && cmd.contains("allow"));
+        assert!(cmd.contains("decision") && cmd.contains("allow") && cmd.contains(ANTIGRAVITY_BYPASS_ENV));
         assert!(!cmd.contains("auto_approve"));
         assert_eq!(antigravity_config(&changed, "/a path/shifu").unwrap(), None);
         assert!(antigravity_config("[]", "/x").is_err());
