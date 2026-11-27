@@ -267,7 +267,14 @@ pub struct Entry {
     pub window: Option<String>,
 }
 
-/// 等你批准 → 等你回复 → 运行中 → 启动中/空闲 → 已退出；同组内等得最久的在上。
+/// Within 等你回复, a question to the user comes before a finished turn, as in the app's 在等你: the hook's
+/// `waiting_for` (the question asked, or the reply's closing line) ends on a question mark.
+fn asks_question(agent: &Agent, status: Status) -> bool {
+    let end = |text: &str| text.trim_end_matches(|c: char| c.is_whitespace() || matches!(c, '*' | '_' | '`' | '~' | ')' | '）')).ends_with(['?', '？']);
+    status == Status::NeedsReply && agent.waiting_for.as_deref().is_some_and(end)
+}
+
+/// 等你批准 → 等你回复（先问题、后做完的）→ 运行中 → 启动中/空闲 → 已退出；同组内等得最久的在上。
 pub fn sorted_entries(agents: Vec<Agent>, panes: &HashMap<String, PaneInfo>) -> Vec<Entry> {
     let mut entries: Vec<Entry> = agents
         .into_iter()
@@ -278,7 +285,8 @@ pub fn sorted_entries(agents: Vec<Agent>, panes: &HashMap<String, PaneInfo>) -> 
         })
         .collect();
     entries.sort_by(|a, b| {
-        (a.status.rank(), a.agent.status_since, &a.agent.name).cmp(&(b.status.rank(), b.agent.status_since, &b.agent.name))
+        let key = |e: &Entry| (e.status.rank(), !asks_question(&e.agent, e.status), e.agent.status_since);
+        key(a).cmp(&key(b)).then_with(|| a.agent.name.cmp(&b.agent.name))
     });
     entries
 }
@@ -366,6 +374,21 @@ mod tests {
         let panes = live(&["%2", "%3", "%4", "%5", "%6", "%7"]);
         let order: Vec<String> = sorted_entries(agents, &panes).into_iter().map(|e| e.agent.name).collect();
         assert_eq!(order, ["approve", "reply-old", "reply-new", "run-old", "run-new", "idle", "exited"]);
+    }
+
+    #[test]
+    fn a_question_comes_before_an_older_finished_turn() {
+        // `shifu jump` goes to the first one: the question blocks on the user, the result can wait.
+        let mut asking = sample("asking", Status::NeedsReply, 50, "%1");
+        asking.waiting_for = Some("**要我现在合并吗？**".into());
+        let mut done = sample("done", Status::NeedsReply, 10, "%2");
+        done.waiting_for = Some("改好了。".into());
+        let mut quoted = sample("example", Status::NeedsReply, 20, "%3");
+        quoted.waiting_for = Some("Which option do you prefer?".into());
+        let approve = sample("approve", Status::NeedsApproval, 99, "%4");
+        let order: Vec<String> = sorted_entries(vec![done, asking, approve, quoted], &live(&["%1", "%2", "%3", "%4"]))
+            .into_iter().map(|e| e.agent.name).collect();
+        assert_eq!(order, ["approve", "example", "asking", "done"]);
     }
 
     #[test]

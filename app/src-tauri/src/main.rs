@@ -688,7 +688,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         .item(&item("reopen-closed", tr("重新打开关闭的标签", "Reopen Closed Tab"), "CmdOrCtrl+Shift+T")?)
         .item(&item("open-file", tr("打开文件…", "Open File…"), "CmdOrCtrl+O")?)
         .separator()
-        .item(&item("jump", tr("跳到等你最久的 agent", "Jump to Longest-Waiting Agent"), "CmdOrCtrl+J")?)
+        .item(&item("jump", tr("跳到最急的在等你的 agent", "Jump to Most Urgent Waiting Agent"), "CmdOrCtrl+J")?)
         .build()?;
     let edit_menu = SubmenuBuilder::new(app, tr("编辑", "Edit"))
         .undo()
