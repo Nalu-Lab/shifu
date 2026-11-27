@@ -189,36 +189,90 @@ fn codex_flags(shifu: &str, perms: Permissions) -> Vec<String> {
     flags
 }
 
-/// 用户 11-09 要 Claude、Codex、CodeBuddy 都像 Orca 那样默认 bypass 启动（各家的参数在 `agents_spec::AGENTS`）。
+/// 免确认时各家的参数在 `agents_spec::AGENTS`（11-09 起老用户默认 bypass；11-27 起新装先问，见 `Permissions`）。
 /// CodeBuddy 用和 Claude 一样的参数；它的 --help 写明高风险、极高风险的操作仍会问。
 const CODEX_BYPASS: &str = "--dangerously-bypass-approvals-and-sandbox";
 
-/// How agents are started: with their no-approval flag (`Bypass`, the default since 11-09, as Orca does), or with
-/// none, so each agent's own settings decide what it asks (`Own`). Kept in `<SHIFU_HOME>/settings.json`, so the
-/// app (`~/.shifu/app`) and the terminal edition (`~/.shifu`) each have their own. Read at every start and resume.
+/// How agents are started: with their no-approval flag (`Bypass`), or with none, so each agent's own settings
+/// decide what it asks (`Own`). Kept in `<SHIFU_HOME>/settings.json`, so the app (`~/.shifu/app`) and the terminal
+/// edition (`~/.shifu`) each have their own. Read at every start and resume.
+///
+/// Until 11-27 a missing setting meant `Bypass` (the 11-09 default, as Orca does). Now a fresh install is asked
+/// once before its first agent starts (`own` preselected), and anything that starts an agent before that answer
+/// gets `Own`. A home that was already in use keeps `Bypass`: see `settle_permissions_in`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Permissions {
-    #[default]
     Bypass,
+    #[default]
     Own,
 }
+
+/// Set in settings.json of a home that was empty when this version first looked at it: the user has not chosen
+/// yet and the app asks before the first agent starts. Removed when the choice is saved.
+const ASK_KEY: &str = "permissions_ask";
 
 fn settings_path() -> std::path::PathBuf {
     crate::agent::shifu_home().join("settings.json")
 }
 
-/// The saved choice; `Bypass` when nothing (or nothing readable) is saved.
+/// The saved choice, after `settle_permissions`. Not chosen yet (a fresh install): `Own`.
 pub fn permissions() -> Permissions {
-    permissions_in(&settings_path())
+    settle_permissions().unwrap_or_default()
 }
 
-fn permissions_in(path: &std::path::Path) -> Permissions {
-    std::fs::read_to_string(path)
-        .ok()
-        .and_then(|text| serde_json::from_str::<Value>(&text).ok())
-        .and_then(|v| serde_json::from_value(v["agent_permissions"].clone()).ok())
-        .unwrap_or_default()
+/// The saved choice; `None` while a fresh install has not chosen. Settles a home it has not seen before; see
+/// `settle_permissions_in`. The app calls it first thing, before anything writes into its home.
+pub fn settle_permissions() -> Option<Permissions> {
+    settle_permissions_in(&crate::agent::shifu_home())
+}
+
+/// The choice saved in `home`'s settings.json, deciding it once for a home that has none:
+///
+/// - `agent_permissions` saved: that.
+/// - `permissions_ask` saved (a fresh install that has not answered yet): `None`.
+/// - settings.json there but unreadable: `Bypass`, as before, and nothing is written over it.
+/// - Otherwise the home is seen by this version for the first time. Anything already in it (agent records,
+///   settings, the shell PATH cache, ...) means an earlier version was used, which started agents with `Bypass`
+///   when nothing was saved: `Bypass` is saved, so an upgrade changes nothing. An empty or missing home is a fresh
+///   install: `permissions_ask` is saved and `None` returned.
+///
+/// The terminal edition's `~/.shifu` holds the app's home `app/`; that alone does not count as use. Hidden files
+/// (`.DS_Store`) do not count either.
+fn settle_permissions_in(home: &std::path::Path) -> Option<Permissions> {
+    let path = home.join("settings.json");
+    let text = std::fs::read_to_string(&path).ok();
+    let settings = text.as_deref().and_then(|t| serde_json::from_str::<Value>(t).ok());
+    if let Some(saved) = settings.as_ref().and_then(|v| serde_json::from_value(v["agent_permissions"].clone()).ok()) {
+        return Some(saved);
+    }
+    if settings.as_ref().is_some_and(|v| v[ASK_KEY] == json!(true)) {
+        return None;
+    }
+    if text.is_some() && settings.is_none() {
+        return Some(Permissions::Bypass);
+    }
+    if used_before(home) {
+        if let Err(e) = save_permissions_in(&path, Permissions::Bypass) {
+            eprintln!("shifu: saving agent_permissions failed: {e}");
+        }
+        return Some(Permissions::Bypass);
+    }
+    if let Err(e) = save_setting_in(&path, ASK_KEY, json!(true)) {
+        eprintln!("shifu: saving {ASK_KEY} failed: {e}");
+    }
+    None
+}
+
+/// Whether an earlier version left anything in `home`; see `settle_permissions_in`.
+fn used_before(home: &std::path::Path) -> bool {
+    std::fs::read_dir(home).is_ok_and(|entries| {
+        entries.filter_map(Result::ok).any(|e| {
+            let name = e.file_name();
+            let name = name.to_string_lossy();
+            !name.starts_with('.') && name != "app"
+        })
+    })
 }
 
 /// Saves the choice, keeping any other setting in the file.
@@ -227,7 +281,8 @@ pub fn save_permissions(perms: Permissions) -> Result<(), String> {
 }
 
 fn save_permissions_in(path: &std::path::Path, perms: Permissions) -> Result<(), String> {
-    save_setting_in(path, "agent_permissions", serde_json::to_value(perms).map_err(|e| e.to_string())?)
+    save_setting_in(path, "agent_permissions", serde_json::to_value(perms).map_err(|e| e.to_string())?)?;
+    remove_setting_in(path, ASK_KEY)
 }
 
 /// Whether the app's first-run guide was finished or skipped (`guide_done` in the same file). Not set: show it
@@ -259,6 +314,18 @@ fn save_setting_in(path: &std::path::Path, key: &str, value: Value) -> Result<()
         .filter(Value::is_object)
         .unwrap_or_else(|| json!({}));
     settings[key] = value;
+    let text = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
+    crate::app_session::write_atomic(path, &text)
+}
+
+/// Takes one key out of settings.json, keeping the others; nothing to do when it is not there.
+fn remove_setting_in(path: &std::path::Path, key: &str) -> Result<(), String> {
+    let Some(mut settings) = std::fs::read_to_string(path).ok().and_then(|text| serde_json::from_str::<Value>(&text).ok()) else {
+        return Ok(());
+    };
+    if settings.as_object_mut().and_then(|o| o.remove(key)).is_none() {
+        return Ok(());
+    }
     let text = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
     crate::app_session::write_atomic(path, &text)
 }
@@ -462,20 +529,72 @@ mod tests {
         assert!(agent_command(Kind::Other, "terminal", "/s", "", &[], Permissions::Bypass).ends_with(" -l"));
     }
 
+    fn temp_home(tag: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("shifu-perms-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        dir
+    }
+
+    fn settings(home: &std::path::Path) -> Value {
+        serde_json::from_str(&std::fs::read_to_string(home.join("settings.json")).unwrap()).unwrap()
+    }
+
     #[test]
-    fn the_choice_is_saved_beside_other_settings_and_defaults_to_bypass() {
-        let dir = std::env::temp_dir().join(format!("shifu-perms-{}", std::process::id()));
-        let path = dir.join("settings.json");
-        assert_eq!(permissions_in(&path), Permissions::Bypass);
-        std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(&path, r#"{"other": 1}"#).unwrap();
-        save_permissions_in(&path, Permissions::Own).unwrap();
-        assert_eq!(permissions_in(&path), Permissions::Own);
-        let saved: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-        assert_eq!(saved, json!({"other": 1, "agent_permissions": "own"}));
+    fn a_fresh_install_is_asked_and_starts_with_own_until_it_answers() {
+        for (tag, prepare) in [("missing", None), ("empty", Some(&[][..])), ("hidden", Some(&[".DS_Store"][..])), ("cli", Some(&["app"][..]))] {
+            let home = temp_home(tag);
+            if let Some(entries) = prepare {
+                std::fs::create_dir_all(&home).unwrap();
+                for e in entries {
+                    std::fs::create_dir_all(home.join(e)).unwrap();
+                }
+            }
+            assert_eq!(settle_permissions_in(&home), None, "{tag}");
+            assert_eq!(settings(&home), json!({"permissions_ask": true}), "{tag}");
+            // Later writes (guide_done, the shell PATH cache, agent records) do not turn it into an old home.
+            save_setting_in(&home.join("settings.json"), "guide_done", json!(true)).unwrap();
+            std::fs::create_dir_all(home.join("agents")).unwrap();
+            std::fs::write(home.join("shell-path"), "/bin").unwrap();
+            assert_eq!(settle_permissions_in(&home), None, "{tag}");
+            assert_eq!(settle_permissions_in(&home).unwrap_or_default(), Permissions::Own, "{tag}");
+            // Answering saves the choice and drops the marker, keeping the other settings.
+            save_permissions_in(&home.join("settings.json"), Permissions::Bypass).unwrap();
+            assert_eq!(settle_permissions_in(&home), Some(Permissions::Bypass), "{tag}");
+            assert_eq!(settings(&home), json!({"guide_done": true, "agent_permissions": "bypass"}), "{tag}");
+            std::fs::remove_dir_all(&home).unwrap();
+        }
+    }
+
+    #[test]
+    fn a_home_used_by_an_earlier_version_keeps_bypass_without_asking() {
+        for (tag, file) in [("agents", "agents/claude-x.json"), ("settings", "settings.json"), ("cache", "shell-path")] {
+            let home = temp_home(tag);
+            std::fs::create_dir_all(home.join(file).parent().unwrap()).unwrap();
+            std::fs::write(home.join(file), if file == "settings.json" { r#"{"guide_done": true}"# } else { "{}" }).unwrap();
+            assert_eq!(settle_permissions_in(&home), Some(Permissions::Bypass), "{tag}");
+            assert_eq!(settings(&home)["agent_permissions"], json!("bypass"), "{tag}");
+            assert!(settings(&home).get("permissions_ask").is_none(), "{tag}");
+            // Saved now, so emptying the home later does not change it.
+            std::fs::remove_dir_all(home.join("agents")).ok();
+            std::fs::remove_file(home.join("shell-path")).ok();
+            assert_eq!(settle_permissions_in(&home), Some(Permissions::Bypass), "{tag}");
+            std::fs::remove_dir_all(&home).unwrap();
+        }
+    }
+
+    #[test]
+    fn a_saved_choice_wins_and_an_unreadable_file_is_left_alone() {
+        let home = temp_home("saved");
+        std::fs::create_dir_all(&home).unwrap();
+        let path = home.join("settings.json");
+        std::fs::write(&path, r#"{"other": 1, "agent_permissions": "own"}"#).unwrap();
+        assert_eq!(settle_permissions_in(&home), Some(Permissions::Own));
+        save_permissions_in(&path, Permissions::Bypass).unwrap();
+        assert_eq!(settings(&home), json!({"other": 1, "agent_permissions": "bypass"}));
         std::fs::write(&path, "not json").unwrap();
-        assert_eq!(permissions_in(&path), Permissions::Bypass);
-        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(settle_permissions_in(&home), Some(Permissions::Bypass));
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "not json");
+        std::fs::remove_dir_all(&home).unwrap();
     }
 
     #[test]
@@ -487,7 +606,7 @@ mod tests {
         assert!(!guide_done_in(&path));
         save_setting_in(&path, "guide_done", json!(true)).unwrap();
         assert!(guide_done_in(&path));
-        assert_eq!(permissions_in(&path), Permissions::Own);
+        assert_eq!(settle_permissions_in(&dir), Some(Permissions::Own));
         std::fs::write(&path, r#"{"guide_done": "yes"}"#).unwrap();
         assert!(!guide_done_in(&path));
         std::fs::remove_dir_all(&dir).unwrap();

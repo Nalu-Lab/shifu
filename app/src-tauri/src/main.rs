@@ -145,10 +145,18 @@ async fn power_lid_setup(power: State<'_, power::Power>) -> Result<power::Status
     power.authorize_lid()
 }
 
-/// How new and resumed agents start: "bypass" (no-approval flags) or "own" (each agent's own settings).
+/// How new and resumed agents start: "bypass" (no-approval flags) or "own" (each agent's own settings). A fresh
+/// install that has not chosen yet reads as "own", which is what its agents would get.
 #[tauri::command]
 fn permissions_get() -> shifu::launch::Permissions {
     shifu::launch::permissions()
+}
+
+/// Whether the choice was made (or carried over from an earlier version). `false` only on a fresh install that
+/// has not answered: the window asks before the first agent starts.
+#[tauri::command]
+fn permissions_chosen() -> bool {
+    shifu::launch::settle_permissions().is_some()
 }
 
 #[tauri::command]
@@ -727,6 +735,9 @@ fn main() {
         return;
     }
     let cfg = config::init();
+    // Before anything writes into the home: an existing user's home keeps starting agents as before (`bypass`),
+    // a fresh one is marked so the window asks before its first agent (`shifu::launch::settle_permissions_in`).
+    shifu::launch::settle_permissions();
     std::fs::create_dir_all(&cfg.home).unwrap_or_else(|e| panic!("cannot create {}: {e}", cfg.home.display()));
     // Read before the window can start an agent: one new session and the tmux server no longer looks gone.
     let power = power::Power::new(&cfg.home);
@@ -816,6 +827,7 @@ fn main() {
             models_list,
             permissions_get,
             permissions_set,
+            permissions_chosen,
             guide_done_get,
             guide_done_set,
             clis::clis_detect,
