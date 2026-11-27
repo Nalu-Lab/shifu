@@ -46,7 +46,7 @@ site/
 - 网站页面不是用当前源文件和文档生成的；
 - 演示脚注没写发布版本，或写了 `RELEASE` / `DEMO` 以外的版本号。
 
-本地：`python3 scripts/release/check-docs.py`（按 `build.py` 的 `RELEASE` 检查；判断 CLI 时读该标签的 `tauri.conf.json`，本地没有标签就用当前源码并提示）。发布工作流在推标签后、构建前运行 `--tag "$GITHUB_REF_NAME"`；PR 检查也运行一次。所以发版顺序是：改版本号、`RELEASE`、README / INSTALL 下载链接 → 生成网站 → 提交 → 推标签。
+本地：`python3 scripts/release/check-docs.py`（按 `build.py` 的 `RELEASE` 检查；判断 CLI 时读该标签的 `tauri.conf.json`，本地没有标签就用当前源码并提示）。发布工作流应在推标签后、构建前运行 `--tag "$GITHUB_REF_NAME"`，PR 检查也运行一次（这两处工作流改动需要有 `workflow` 权限的人提交，内容见引入本脚本的 PR 描述）。所以发版顺序是：改版本号、`RELEASE`、README / INSTALL 下载链接 → 生成网站 → 提交 → 推标签。
 
 ### 语言与网址
 
