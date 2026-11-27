@@ -47,7 +47,17 @@ pub fn report() -> Report {
         .map(PathBuf::from)
         .or_else(|| clis::find_program(&path, &["tmux"]))
         .map(|p| p.to_string_lossy().into_owned());
-    Report { agents: clis::detect(&path), tmux, shell_read: SHELL_READ.load(Ordering::Relaxed) }
+    let user_home = PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
+    let mut agents = clis::detect(&path);
+    with_sign_in(&mut agents, |kind| clis::signed_in(kind, &user_home, |key| std::env::var(key).ok()));
+    Report { agents, tmux, shell_read: SHELL_READ.load(Ordering::Relaxed) }
+}
+
+/// Fills in `signed_in` for the installed agents (for the setup checklist); a missing agent has nothing to sign in.
+fn with_sign_in(agents: &mut [Found], check: impl Fn(&str) -> Option<bool>) {
+    for agent in agents.iter_mut().filter(|a| a.path.is_some()) {
+        agent.signed_in = check(&agent.kind);
+    }
 }
 
 /// Whether `kind`'s CLI was found, as `isInstalled` in models.ts reads the report: an agent the list does not know
@@ -104,11 +114,23 @@ mod tests {
             name: kind.into(),
             path: path.map(Into::into),
             install_url: String::new(),
+            install_command: None,
+            login_command: None,
+            signed_in: None,
         };
         let report = [found("claude", Some("/bin/claude")), found("antigravity", None)];
         assert!(is_installed(&report, "claude"));
         assert!(!is_installed(&report, "antigravity"));
         assert!(is_installed(&report, "unknown"));
+    }
+
+    #[test]
+    fn sign_in_is_checked_only_for_installed_agents() {
+        let mut agents = shifu::clis::detect("/nonexistent-shifu-path");
+        agents[1].path = Some("/bin/codex".into());
+        with_sign_in(&mut agents, |kind| Some(kind == "codex"));
+        assert_eq!(agents[1].signed_in, Some(true));
+        assert!(agents.iter().enumerate().all(|(i, a)| i == 1 || a.signed_in.is_none()));
     }
 
     #[test]

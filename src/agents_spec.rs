@@ -52,7 +52,7 @@ pub struct AgentSpec {
     pub install_command: Option<&'static str>,
     /// What to run in a terminal to sign in, for agents that have such a command; the others sign in inside the agent.
     pub login_command: Option<&'static str>,
-    /// Added when Shifu's permission switch is on Bypass (the default) or Own.
+    /// Added when Shifu's permission switch is on Bypass or Own (a fresh install is asked; see `launch::Permissions`).
     pub bypass_args: &'static [&'static str],
     pub own_args: &'static [&'static str],
     /// Environment set for Bypass, for agents whose no-approval switch is configuration rather than a flag.
