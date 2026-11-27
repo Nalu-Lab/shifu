@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { type CliReport, type Permissions, pathOpen, permissionsGet, permissionsSet, recentDirs } from "./api";
+import { type Permissions, pathOpen, permissionsGet, permissionsSet, recentDirs } from "./api";
 import { pickFolder, projectName } from "./tasks";
 import { shortPath } from "./format";
 import { addPickedFolder, reportError } from "./store";
@@ -93,25 +93,6 @@ export function missingLine(missing: readonly AgentSpec[]): HTMLElement | null {
     line.append(link);
   });
   return line;
-}
-
-/** What was found on this Mac, for the empty page and the first-run guide: tmux missing first (nothing runs
- *  without it), then the agents found, then the missing ones with their install pages. */
-export function setupNotes(clis: CliReport | null): HTMLElement[] {
-  if (!clis) return [];
-  const notes: HTMLElement[] = [];
-  const note = (text: string) => {
-    const n = document.createElement("div");
-    n.className = "empty-note";
-    n.textContent = text;
-    notes.push(n);
-  };
-  if (!clis.tmux) note("没找到 tmux：Shifu 的每个对话都在 tmux 里运行。在终端运行 brew install tmux，装好后回到这里。");
-  const found = clis.agents.filter((a) => a.path !== null);
-  note(found.length ? `这台 Mac 上找到：${found.map((a) => a.name).join("、")}` : "这台 Mac 上还没找到 Agent 命令行工具，装好一个后回到这里。");
-  const line = missingLine(splitAgents(clis).missing);
-  if (line) notes.push(line);
-  return notes;
 }
 
 /** One button showing the chosen agent's mark and name; it drops down the others, each with its mark. Eight

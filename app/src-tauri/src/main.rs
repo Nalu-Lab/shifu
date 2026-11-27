@@ -682,6 +682,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         .about(None)
         .separator()
         .item(&item("appearance", tr("外观…", "Appearance…"), "CmdOrCtrl+,")?)
+        .item(&MenuItemBuilder::with_id("setup-check", tr("准备情况…", "Setup Checklist…")).build(app)?)
         .separator()
         .hide()
         .hide_others()

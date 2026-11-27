@@ -4,7 +4,8 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { type CliReport, type Permissions, guideDoneSet, notifySend, permissionsSet } from "./api";
 import { type AgentSpec, getClis, onClisChange, splitAgents } from "./models";
-import { agentDropdown, currentDefaultKind, permissionPicker, setDefaultKind, setupNotes } from "./newpopover";
+import { agentDropdown, currentDefaultKind, permissionPicker, setDefaultKind } from "./newpopover";
+import { checklistElement } from "./setupcheck";
 import { reportError } from "./store";
 import { projectName } from "./tasks";
 
@@ -67,7 +68,8 @@ export function showGuide(create: CreateTask): void {
       setDefaultKind(kind);
       agentBox.append(agentDropdown(agents, kind, (picked) => setDefaultKind(picked)));
     }
-    agentBox.append(...setupNotes(getClis()));
+    const report = getClis();
+    if (report) agentBox.append(checklistElement(report));
     paintStart();
   };
 
