@@ -7,7 +7,7 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 普通会话优先使用下载包；源码构建方式收在下方开发者说明。
 
 <!-- permission-mode: the one place that describes the permission mode; the site's install notes are generated from it. -->
-**权限模式：**第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」：不加免确认参数，按各家自己的配置决定何时询问；选「免确认（全权）」时，改文件、跑命令不再逐项请求批准。以后在新建任务窗口的「权限」里随时能改。从旧版升级的不会被问，保持原来的设置。0.4.3 下载包还不会询问，默认就是免确认，可在「权限」里改成「用 Agent 自己的设置」。
+**权限模式：**第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」：不加免确认参数，按各家自己的配置决定何时询问；选「免确认（全权）」时，改文件、跑命令不再逐项请求批准。以后在新建任务窗口的「权限」里随时能改。从旧版升级的不会被问，保持原来的设置。0.4.3 下载包还不会询问。0.4.3 默认以免确认模式启动支持该模式的 Agent。要保留 Agent 自己的权限规则，开始前在新建任务的「权限」里选「用 Agent 自己的设置」。
 <!-- /permission-mode -->
 
 选「免确认（全权）」时，Claude、Codex、CodeBuddy、Kimi、Qwen Code 和 opencode 用免确认参数启动（opencode 加 `--auto`，你明确 deny 的规则仍然有效；如 `--dangerously-skip-permissions`、`--dangerously-bypass-approvals-and-sandbox`、`--yolo`）。改了设置后，新开或恢复的对话按新的设置启动。Pi 本身不弹批准，这个开关对它不起作用。
@@ -27,9 +27,9 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 ```text
 帮我安装 Shifu（https://github.com/Nalu-Lab/shifu）。先读 README 和 docs/INSTALL.md。
 1. 确认当前 Mac 使用 Apple Silicon，检查 tmux 和我要使用的 Agent 是否已安装、登录；缺什么先告诉我。
-2. 下载 README 指向的同一 Release 中的 ZIP 和 SHA256SUMS，核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
+2. 从 Release remote-v0.4.3-preview.1（https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1）下载 ZIP 和 SHA256SUMS，不要用别的 Release；核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
 3. 按包内说明，将 Shifu.app 放到 ~/Applications，将同包 bin/shifu 装到 ~/.cargo/bin/shifu：0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用它（之后的版本 App 自带同版命令行，这一步只在终端里用 shifu 时才需要，以包内说明为准）。将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
-4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；0.4.3 默认用免确认模式启动 Agent，要逐项询问就在新建任务的「权限」里改成「用 Agent 自己的设置」（之后的版本第一次开对话前会先问一次）。系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
+4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；还要告诉我：0.4.3 默认以免确认模式启动支持该模式的 Agent。要保留 Agent 自己的权限规则，开始前在新建任务的「权限」里选「用 Agent 自己的设置」。（之后的版本第一次开对话前会先问一次。）系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
 5. 打开后带我选一个项目、创建第一条 Agent 对话；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。
 ```
 
@@ -88,6 +88,7 @@ npm run build:desktop -- --debug
 - Claude Code、Codex、CodeBuddy 的 hooks 通过启动参数挂在 Shifu 开的那个进程上，**不改**你的 `~/.claude/settings.json`、`~/.codex/config.toml`。
 - **Kimi 例外**：Kimi 只认自己的配置文件，Shifu 会把 hooks 写进 `~/.kimi-code/config.toml`，你自己的 hook 原样保留，第一次写之前备份成 `config.toml.before-shifu`。在 Shifu 外面开的 Kimi 也会调用这些 hook，但它们发现不是 Shifu 开的就什么都不做。
 - 额度显示：Claude 的额度从它交给 statusLine 的数据里取（你自己的 statusLine 照常显示）；Codex 和 CodeBuddy 的额度读本机会话记录；Kimi 的额度复用 Kimi Code 本机有效登录令牌查询，不另存该令牌；Antigravity 通过当前登录的 `agy` 读取用量。
+- **Antigravity** 只从 `~/.gemini/config/hooks.json` 读 hooks，Shifu 在里面加一个 `shifu-status` 分组，其他分组原样保留；文件已存在时，第一次改动前备份成 `hooks.json.before-shifu`。
 - Shifu 用自己的 tmux socket（`shifu-app`，命令行版是 `shifu`），不碰你原来的 tmux。
 
 ## 已知问题

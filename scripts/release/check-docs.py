@@ -140,6 +140,26 @@ def check_cli_step(bundles, version):
                  f"but this tree {'bundles' if tree_bundles else 'does not bundle'} it")
 
 
+def check_prompt(build, tag):
+    """The Option A prompt (docs/INSTALL*.md, mirrored in README*) must name this release's tag and URL and no other,
+    and carry the release's permission sentence: the installing agent should never have to guess which release."""
+    if build.RELEASE["tag"] != tag:
+        return  # check_site reports the RELEASE mismatch; the prompt is judged against RELEASE
+    for lang, c in build.LANGS.items():
+        for rel, head in [(c["install"], c["option_a"]), (c["readme"], c["option_a"])]:
+            text = read(rel)
+            try:
+                a = text.index(head)
+                prompt = re.search(r"```text\n(.*?)\n```", text[a:], re.S)
+            except ValueError:
+                prompt = None
+            if not prompt:
+                fail(f"{rel}: Option A prompt not found")
+                continue
+            for p in build.prompt_problems(lang, prompt.group(1), rel):
+                fail(p)
+
+
 def check_permission(build, version):
     """The hero's permission line (RELEASE["permission"]) must say what docs/INSTALL*.md says about this release."""
     for lang, c in build.LANGS.items():
@@ -204,6 +224,7 @@ def main():
     bundles = app_bundles_cli(tag, use_tree=bool(args.tag))
     check_cli_step(bundles, version)
     check_permission(build, version)
+    check_prompt(build, tag)
     check_site(build, version, tag)
     if build.DEMO["version"] != version and not problems:
         print(f"note: the demo video and screenshots are from {build.DEMO['version']}; the note says so (see site/README.md to re-record)")
