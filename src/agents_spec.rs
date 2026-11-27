@@ -164,7 +164,7 @@ pub const AGENTS: &[AgentSpec] = &[
         login_command: None,
         bypass_args: NONE,
         own_args: NONE,
-        bypass_env: &[],
+        bypass_env: &[(crate::launch::ANTIGRAVITY_BYPASS_ENV, "1")],
         model_args: MODEL,
         effort_args: EFFORT,
         resume_by_id: &["--conversation", "{id}"],

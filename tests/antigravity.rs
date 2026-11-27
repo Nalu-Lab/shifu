@@ -10,7 +10,7 @@ fn antigravity_launch_and_resume_keep_the_exact_conversation_and_model() {
     assert_eq!(kind, Kind::of_command("agy"));
     let pick = model_flags(kind, Some("gemini-3.8-flash-low"), Some("low"));
     let launch = agent_command(kind, "antigravity", "/opt/shifu", "", &pick, Permissions::Bypass);
-    assert_eq!(launch, "'agy' '--model' 'gemini-3.8-flash-low' '--effort' 'low'");
+    assert_eq!(launch, "SHIFU_ANTIGRAVITY_BYPASS='1' 'agy' '--model' 'gemini-3.8-flash-low' '--effort' 'low'");
     let resumed = resume_command(kind, "antigravity", "/opt/shifu", "", Some("conversation-a"), &pick, Permissions::Bypass);
     assert!(resumed.contains("'--conversation' 'conversation-a'"));
     assert!(resumed.contains("'--model' 'gemini-3.8-flash-low'"));
@@ -51,23 +51,30 @@ fn antigravity_neutral_hooks_update_only_their_own_shifu_agent() {
     let config = shifu::launch::antigravity_config("{}", env!("CARGO_BIN_EXE_shifu")).unwrap().unwrap();
     let config: serde_json::Value = serde_json::from_str(&config).unwrap();
     let command = config["shifu-status"]["PreToolUse"][0]["hooks"][0]["command"].as_str().unwrap();
-    let run = |id: Option<&str>| {
+    let run_as = |id: Option<&str>, bypass: bool| {
         let mut cmd = Command::new("/bin/sh");
         cmd.args(["-c", command]).env("SHIFU_HOME", &root).env_remove("TMUX").env_remove("TMUX_PANE");
+        if bypass { cmd.env(shifu::launch::ANTIGRAVITY_BYPASS_ENV, "1"); } else { cmd.env_remove(shifu::launch::ANTIGRAVITY_BYPASS_ENV); }
         if let Some(id) = id { cmd.env("SHIFU_ID", id); } else { cmd.env_remove("SHIFU_ID"); }
         let mut child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
         child.stdin.take().unwrap().write_all(br#"{"conversationId":"conversation-a","toolCall":{"name":"ask_question"}}"#).unwrap();
         let output = child.wait_with_output().unwrap();
         assert!(output.status.success());
         assert!(output.stderr.is_empty());
-        assert_eq!(serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap(), serde_json::json!({"decision":"allow"}));
+        // The hooks file is global: only an Antigravity Shifu started in no-confirmation mode is told `allow`.
+        let expected = if id.is_some() && bypass { serde_json::json!({"decision":"allow"}) } else { serde_json::json!({}) };
+        assert_eq!(serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap(), expected);
     };
+    let run = |id: Option<&str>| run_as(id, false);
+    run_as(None, true);
     let record = serde_json::json!({"name":"agy-test","kind":"antigravity","command":"agy","cwd":"/tmp","created_at":0,
         "status":"running","status_since":0,"window_id":null,"pane_id":null,"session_id":null,"last_message":null});
     fs::write(&path, record.to_string()).unwrap();
     run(None);
     assert_eq!(serde_json::from_str::<serde_json::Value>(&fs::read_to_string(&path).unwrap()).unwrap(), record);
     run(Some("agy-test"));
+    fs::write(&path, record.to_string()).unwrap();
+    run_as(Some("agy-test"), true);
     let updated: serde_json::Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(updated["status"], "needs_reply");
     assert_eq!(updated["session_id"], "conversation-a");
