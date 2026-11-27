@@ -1,0 +1,2 @@
+- Codex 对话里多个文件共用一个链接标题时，即使路径含有编码的中文，点击也能列出仍在本机的文件。
+- Repeated file link titles in Codex now offer the files that still exist, including those with percent-encoded names.

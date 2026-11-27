@@ -300,7 +300,9 @@ export function underlinedFileLinks(text: string, cells: readonly Placed[], sour
     if (targets.length === 1) {
       links.push(pathCandidates(targets[0].target).map((path) => ({ ...targets[0], target: path, start, end })));
     } else if (targets.length > 1) {
-      links.push([{ ...targets[0], start, end, files: targets.map((target) => pathCandidates(target.target)) }]);
+      const files = targets.map((target) => pathCandidates(target.target));
+      // The title is clickable if any spelling of any menu entry exists.
+      links.push(files.flat().map((target) => ({ kind: "path", target, start, end, files })));
     }
     start = end - 1;
   }
