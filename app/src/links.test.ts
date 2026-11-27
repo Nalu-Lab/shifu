@@ -540,7 +540,11 @@ describe("Codex underlined file titles", () => {
     const links = underlinedFileLinks(text, cells, repeated);
     expect(links).toHaveLength(1);
     expect(text.slice(links[0][0].start, links[0][0].end)).toBe("PDF 审阅");
-    expect(links[0][0].files).toEqual([["/cv/%E7%AE%80%E5%8E%86-agent.pdf", "/cv/简历-agent.pdf"], ["/cv/data.pdf"]]);
+    // The terminal registers the first existing candidate before opening its menu.
+    for (const existing of ["/cv/简历-agent.pdf", "/cv/data.pdf"]) {
+      const hit = links[0].find((candidate) => candidate.target === existing);
+      expect(hit?.files).toEqual([["/cv/%E7%AE%80%E5%8E%86-agent.pdf", "/cv/简历-agent.pdf"], ["/cv/data.pdf"]]);
+    }
   });
 
   it("leaves plain prose, partial titles and web destinations unbound", () => {
