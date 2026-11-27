@@ -44,6 +44,7 @@ site/
 - README 的「方式 A / 方式 B」和 `docs/INSTALL*.md` 不是同一段文字；
 - 安装说明对「是否必须另装 CLI」的说法和这个版本的 App 不符：App 自带 CLI（`tauri.conf.json` 打包了 `cli-bundle/`）时只能说可选，否则必须说要装。文档用 `<!-- cli-step: required|optional -->` 标明，网站安装区带同样的 `data-cli-step`；包内说明（`scripts/release/INSTALL.*.md`）跟随当前源码；
 - 网站页面不是用当前源文件和文档生成的；
+- `RELEASE["permission"]` / `own_label` 和 `docs/INSTALL*.md` 权限段对这个版本的说法不一致，或生成页面的首屏权限说明没写这个版本；
 - 演示脚注没写发布版本，或写了 `RELEASE` / `DEMO` 以外的版本号。
 
 本地：`python3 scripts/release/check-docs.py`（按 `build.py` 的 `RELEASE` 检查；判断 CLI 时读该标签的 `tauri.conf.json`，本地没有标签就用当前源码并提示）。发布工作流应在推标签后、构建前运行 `--tag "$GITHUB_REF_NAME"`，PR 检查也运行一次（这两处工作流改动需要有 `workflow` 权限的人提交，内容见引入本脚本的 PR 描述）。所以发版顺序是：改版本号、`RELEASE`、README / INSTALL 下载链接 → 生成网站 → 提交 → 推标签。
@@ -80,15 +81,20 @@ site/
 
 ## 页面结构
 
-1. 顶栏：Logo、锚点导航（功能、安装、兼容性、隐私、FAQ）、「反馈」（GitHub issues）、语言切换、GitHub、下载
-2. 首屏：「多开 Agent，少操心。」/ "Run more agents. Manage less."、一句说明、下载主按钮、GitHub 次按钮、未公证提示
-3. 问题与演示：Agent 一多就漏掉等你的那个（注意力才是稀缺的）→ 四种会话状态图例 → 演示视频；视频下方一条脚注说明视频和截图录自哪个版本、是演示数据、横幅和按键提示是后期叠加（全站只有这一处，版本号由 `build.py` 填）
-4. 功能：三个大块——01「在等你」、02 真终端（含每个 Agent 一个 Git worktree）、03 退出 / 崩溃 / 重启后会话接得回来（一行流程 Agent → tmux → 窗口，以及一句 Mac 睡眠、合盖时会怎样，依据 `app/src-tauri/src/power.rs`、`lid.rs`）；其余放进「还有这些」网格：每个 Agent 一个工作区、任务与进度、通知、额度、另一台 Mac 和手机、操作窗口和网页
-5. 快速开始：左边三步，右边新建任务弹窗
-6. 安装：两个页签（让 AI 装 / 自己装），内容由 `docs/INSTALL*.md` 生成。长代码块默认只显示前几行，「展开全部（共 N 行）」按钮带 `aria-expanded`，可用键盘操作；复制按钮始终复制全文。旁边是「装之前要知道」（权限一条来自文档）
-7. 兼容性：三档 Agent 支持——完整状态（hooks / 插件 / 扩展：Claude Code、Codex、CodeBuddy、Kimi Code、opencode，以及没有批准提示的 Antigravity、Pi）、只有终端（Gemini CLI：`hooks: None`，不能恢复）、需要额外设置（Qwen Code、StepFun：自备命令行或运行时和密钥）。依据 `src/agents_spec.rs` 和 `docs/AGENTS.md`；图标取自 app/src/vendoricons.ts 和 app/src/assets/antigravity.svg，单色内联 SVG
-8. 开源与隐私：四条事实
-9. FAQ（`<details>`，无需 JS）与页脚（含「报告问题 / 提需求」）
+1. 顶栏：Logo、锚点导航（功能、兼容性、安装、隐私、FAQ）、「反馈」、语言切换、GitHub、下载（跳到 #install）。760px 以下锚点导航收进一个 `<details>` 菜单（不需要 JS）；480px 以下隐藏 GitHub 图标（菜单里有），「下载」二字保留
+2. 首屏：「多开 Agent，少操心。」/ "Run more agents. Manage less."（宽屏一行）、点明品类的一句说明、「免费开源 · 沿用你已有的 Agent 账号」、下载主按钮（跳到 #install，和顶栏一致；真正的 Release 链接在安装区，旁边就是注意事项）、GitHub 次按钮、「仅支持 Apple Silicon · 早期预览版 · 未经 Apple 公证」（英文页加「窗口目前是中文」），以及一行**随版本变化的权限说明**（见下）
+3. 演示：状态图例（手机上也显示，紧凑）→ 演示视频（右下角暂停 / 播放按钮；`prefers-reduced-motion` 时停在 poster，按钮变成居中的「播放演示」）→ 版本脚注 → 一行 Agent 名单，链接到兼容性。1440×900 下视频在首屏内可见
+4. 问题：「不用再挨个检查终端。」一句场景
+5. 功能：01「知道哪个 Agent 在等你」是整宽的主展示；02 真终端、03「关掉窗口，Agent 照样干活。」（退出 / 崩溃不影响；重启 Mac 会结束进程，支持恢复的 Agent 点开后接回会话；睡眠、合盖、电量、过热的细节收在 `<details>` 里，依据 `power.rs`、`lid.rs`）是两张较小的卡片；其余放进「还有这些」网格
+6. 快速开始：三步 + 新建任务弹窗
+7. 兼容性：能力矩阵 Agent | 实时状态 | 安装要求。完整：Claude Code、Codex、CodeBuddy、Kimi Code、opencode、Qwen Code；部分（不会出现「等你批准」）：Antigravity（hooks 里没有批准事件）、Pi（没有批准提示）、StepFun（跑在 Pi 上）；只有终端：Gemini CLI（`hooks: None`，不能恢复）。需额外设置：Qwen Code、StepFun。手机上每个 Agent 一行紧凑条目。依据 `src/agents_spec.rs`、`src/launch.rs`（`antigravity_config`）和 `docs/AGENTS.md`
+8. 安装：先是简介、安装要求、下载按钮和「装之前要知道」（权限放第一条，任何宽度都在命令之前），再是两个页签（让 AI 装 / 自己装，内容由 `docs/INSTALL*.md` 生成），最后一句完成标准
+9. 开源与隐私：一句「状态留在本机，Agent 照旧连各自的服务商」+ 四条事实
+10. FAQ（`<details>`）→ 结尾一个下载按钮 + GitHub 链接 → 页脚
+
+### 首屏的权限说明
+
+`tools/build.py` 的 `RELEASE["permission"]` 决定首屏和「装之前要知道」第一条怎么写：`"no-confirmation"`（0.4.3：默认免确认，告诉用户在「权限」里改成 `RELEASE["own_label"]`）或 `"asks"`（之后的版本：第一次开对话前问一次）。文案模板在 `PERMISSION_LINE`。生成时会和 `docs/INSTALL*.md` 的 permission-mode 段对照：`"no-confirmation"` 要求那段写着「{版本} 下载包还不会询问…免确认」/ "The {版本} download does not ask…no-confirmation" 并出现 `own_label`；`"asks"` 要求那段没有这句。对不上时构建失败，`check-docs.py` 也会列出来。发新版时改 `RELEASE` 的同时改这两个字段。
 
 ## 设计决定
 

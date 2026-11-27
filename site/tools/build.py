@@ -7,7 +7,8 @@ Reads site/src/index.html and writes site/index.html (Chinese, the default) and 
 Standard library only; the output is plain static HTML that is committed, so hosting needs no build step.
 
 Release facts live here and nowhere else: change RELEASE (and DEMO after re-recording), rebuild, commit.
-Install steps and the permission-mode note come from docs/INSTALL.md and docs/INSTALL.en.md.
+Install steps and the permission-mode note come from docs/INSTALL.md and docs/INSTALL.en.md; the hero's permission
+line comes from RELEASE["permission"] and must agree with that note (the build fails otherwise).
 scripts/release/check-docs.py checks that the committed pages match a fresh build and the release.
 """
 import html
@@ -19,6 +20,13 @@ from html.parser import HTMLParser
 RELEASE = {
     "version": "0.4.3",                      # shown as "0.4.3 预览版" / "0.4.3 preview"
     "tag": "remote-v0.4.3-preview.1",        # GitHub release tag the download buttons point to
+    # How this release starts agents, shown under the hero's download button (see PERMISSION_LINE below):
+    #   "no-confirmation": it does not ask and starts agents without approvals (0.4.3);
+    #   "asks": it asks once before the first conversation (the releases after 0.4.3).
+    # own_label is that release's label for "each agent's own settings" in the new-task form's 权限 menu.
+    # check-docs.py fails when docs/INSTALL*.md's permission-mode block says otherwise for this version.
+    "permission": "no-confirmation",
+    "own_label": "用 Agent 自己的设置",
 }
 # The build the hero video and screenshots were recorded with. When it differs from RELEASE["version"] the demo
 # note says so; after re-recording (site/tools/video/), set it to the release version and the note says "current".
@@ -122,6 +130,48 @@ def url(path):
     return f"{SITE_URL}/{path}" if SITE_URL else ("./" if path == "" else path)
 
 
+# The hero's one-line permission summary for each RELEASE["permission"]; {v} is the version, {own} own_label.
+PERMISSION_LINE = {
+    "no-confirmation": {
+        "zh": "{v} 默认用免确认模式启动 Agent；要逐项确认，在新建任务的「权限」里改成「{own}」。",
+        "en": "{v} starts agents in no-confirmation mode. To keep approvals, set 权限 to {own} in the new-task form.",
+    },
+    "asks": {
+        "zh": "第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「{own}」；以后在新建任务的「权限」里随时能改。",
+        "en": "Before your first conversation, Shifu asks once how agents may act, with {own} (each agent's own settings) "
+              "preselected; change it any time under 权限 in the new-task form.",
+    },
+}
+# What the release-specific sentence of the docs' permission-mode block says when the release does not ask yet.
+NO_ASK_SENTENCE = {
+    "zh": lambda v: rf"{re.escape(v)} 下载包还不会询问[^。]*免确认",
+    "en": lambda v: rf"The {re.escape(v)} download does not ask[^.]*?no-confirmation",
+}
+
+
+def permission_problems(lang, block):
+    """Where docs/INSTALL*.md's permission-mode block disagrees with RELEASE["permission"]; empty when they agree."""
+    v, mode, own = RELEASE["version"], RELEASE["permission"], RELEASE["own_label"]
+    doc = LANGS[lang]["install"]
+    if mode not in PERMISSION_LINE:
+        return [f'RELEASE["permission"] is {mode!r}; expected one of {sorted(PERMISSION_LINE)}']
+    says_no_ask = re.search(NO_ASK_SENTENCE[lang](v), block) is not None
+    problems = []
+    if mode == "no-confirmation" and not says_no_ask:
+        problems.append(f"{doc}: the permission-mode block does not say the {v} download starts in no-confirmation mode, "
+                        f'but RELEASE["permission"] is "no-confirmation"')
+    if mode == "asks" and says_no_ask:
+        problems.append(f'{doc}: the permission-mode block says the {v} download does not ask, but RELEASE["permission"] is "asks"')
+    if mode == "no-confirmation" and own not in block:
+        problems.append(f'{doc}: the permission-mode block does not name RELEASE["own_label"] {own!r}')
+    return problems
+
+
+def hero_permission(lang):
+    return html.escape(PERMISSION_LINE[RELEASE["permission"]][lang].format(v=RELEASE["version"], own=RELEASE["own_label"]),
+                       quote=False)
+
+
 # ---- Install steps from docs/INSTALL*.md --------------------------------------------------------------------
 def md_inline(text, doc_dir="docs"):
     """The inline Markdown the install guide uses: `code`, **bold**, [text](link). Relative links go to GitHub."""
@@ -161,6 +211,8 @@ def install_doc(lang):
     a, b = doc.index(c["option_a"]), doc.index(c["option_b"])
     prompt = re.search(r"```text\n(.*?)\n```", doc[a:b], re.S)
     assert perm and step and prompt, f"{c['install']}: permission-mode block, cli-step marker or Option A prompt missing"
+    mismatch = permission_problems(lang, perm.group(1))
+    assert not mismatch, "; ".join(mismatch)
     # Option B: the numbered list right under its heading; items may hold an indented fenced code block.
     lines = doc[doc.index("\n", b) + 1:].split("\n")
     items, fence = [], None
@@ -234,6 +286,7 @@ def render(lang):
         "INSTALL_DOC": c["install"],
         "INSTALL_PROMPT": inst["prompt"], "INSTALL_STEPS": inst["steps"],
         "PERMISSION_NOTE": inst["permission"], "CLI_STEP": inst["cli_step"],
+        "HERO_PERMISSION": hero_permission(lang),
     }
     page = page.replace("-{L}.", f"-{lang}.")
     for k, v in values.items():
