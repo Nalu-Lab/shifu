@@ -46,10 +46,11 @@
     </a>
     <nav class="nav-links" aria-label="Primary">
       <a href="#features"><span>Features</span></a>
-      <a href="#how"><span>How it works</span></a>
-      <a href="#privacy"><span>Privacy</span></a>
       <a href="#install"><span>Install</span></a>
+      <a href="#agents"><span>Compatibility</span></a>
+      <a href="#privacy"><span>Privacy</span></a>
       <a href="#faq">FAQ</a>
+      <a href="https://github.com/Nalu-Lab/shifu/issues"><span>Feedback</span></a>
     </nav>
     <div class="nav-right">
       <a class="lang-toggle" id="lang-toggle" href="../" hreflang="zh-CN" lang="zh-CN" data-lang="zh-CN" aria-label="阅读中文版">
@@ -80,11 +81,11 @@
     </p>
     <h1>
       
-      <span>All your coding agents in one Mac window.</span>
+      <span>Run more agents.<br>Manage less.</span>
     </h1>
     <p class="hero-sub">
       
-      <span>When Claude Code, Codex and others run at once, Shifu puts the conversations that need you in one list. Each agent keeps its own real terminal, and sessions keep running after you close the window.</span>
+      <span>Run Claude Code, Codex and other coding agents side by side. See which one needs you, and jump straight to it.</span>
     </p>
     <div class="hero-cta">
       <a class="btn btn-primary" href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1">
@@ -100,6 +101,25 @@
       
       <span>Apple Silicon preview, self-signed and not notarized by Apple. Read the <a href="#install">install notes</a> first.</span>
     </p>
+  </div>
+</section>
+
+<!-- ============ Problem, then the demo ============ -->
+<section class="section problem" id="demo" aria-labelledby="problem-title">
+  <div class="wrap">
+    <p class="kicker"><span>The problem</span></p>
+    <h2 id="problem-title">
+      
+      <span>The more agents you run, the easier it is to miss the one waiting for you</span>
+    </h2>
+    <p class="lead">
+      
+      <span>With three or four agents running, the time goes into flipping between terminals: one stopped a while ago to ask for approval, one finished and nobody has looked, and one is asking you a question. Agents are not the scarce part; your attention is.</span>
+    </p>
+    <p class="lead">
+      
+      <span>Shifu puts them in one window and brings forward only the conversations that need you. Here is a real recording:</span>
+    </p>
 
     <ul class="legend" aria-label="Session states">
       <li><span class="dot dot-green-ring spin" aria-hidden="true"></span><span>Running</span></li>
@@ -108,7 +128,7 @@
       <li><span class="check" aria-hidden="true">✓</span><span>Done</span></li>
     </ul>
 
-    <figure class="hero-shot hero-glow">
+    <figure class="hero-shot">
       <div class="window hero-video">
         <video id="hero-video" class="scaled" style="--w:1200" width="1440" height="924" autoplay muted loop playsinline preload="metadata" poster="../assets/video/hero-poster-en.webp" data-mobile-poster="../assets/video/hero-m-poster-en.webp" aria-label="Demo video: three agents work in a split view; Codex stops to ask approval for git push, the sidebar moves it under “waiting for you” and a notification appears; ⌘J jumps there, Enter approves and it keeps going; Claude Code finishes and its row shows done.">
           <!-- Desktop first (browsers that ignore media take the first source), then the phone crop. -->
@@ -135,68 +155,26 @@
       </div>
       <figcaption id="demo-note">
         
-        <span>* The video and screenshots show the current version (0.4.2 preview plus Gemini CLI from source) running in an isolated demo; projects, tasks, terminal output and times are demo data, and the notification banner and key hints in the video are added overlays. The app's own labels are in Chinese for now.</span>
+        <span>* The video and screenshots were recorded with the 0.4.2 preview (plus Gemini CLI from source at the time); the current download is 0.4.3, and some interface details may differ. They come from an isolated demo: projects, tasks, terminal output and times are demo data, and the notification banner and key hints in the video are added overlays. The app's own labels are in Chinese for now.</span>
       </figcaption>
     </figure>
   </div>
 </section>
 
-<!-- ============ Agents ============ -->
-<section class="agents" aria-labelledby="agents-title">
-  <div class="wrap">
-    <p class="agents-head" id="agents-title">
-      
-      <span>Runs each agent's own CLI</span>
-    </p>
-    <div class="marquee" tabindex="0" role="region" aria-label="Supported coding tools (scrolling pauses on hover or focus)">
-     <div class="marquee-track">
-      <ul class="marquee-list">
-        <li class="tool"><svg class="mark" viewbox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/></svg><span class="tool-name">Claude Code</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.75 6.0L11.75 6.5L11.75 7.01L11.6 7.5L11.46 7.99L11.23 8.44L10.85 8.8L10.38 9.07L9.94 9.3L9.47 9.47L9.33 9.97L9.02 10.31L8.72 10.71L8.31 10.96L7.9 11.21L7.4 11.21L6.96 11.46L6.48 11.46L6.0 11.2L5.54 11.2L5.13 10.96L4.74 10.7L4.29 10.71L3.81 10.7L3.28 10.71L2.88 10.45L2.48 10.2L2.04 9.96L1.59 9.7L1.27 9.31L1.11 8.82L0.96 8.35L0.97 7.83L0.95 7.35L0.77 6.92L0.52 6.48L0.21 6.0L0.21 5.49L0.21 4.98L0.34 4.48L0.52 4.0L0.94 3.64L1.11 3.18L1.56 2.89L2.18 2.79L2.48 2.48L2.63 1.98L2.94 1.63L3.32 1.37L3.72 1.11L4.13 0.87L4.63 0.87L5.05 0.61L5.53 0.61L6.0 0.86L6.45 0.86L6.86 1.12L7.24 1.38L7.69 1.37L8.15 1.38L8.68 1.37L9.07 1.62L9.48 1.85L9.92 2.08L10.31 2.38L10.69 2.71L10.85 3.2L10.98 3.68L10.99 4.18L10.99 4.66L11.15 5.09L11.46 5.52Z"/><path d="M3.6 4.8L5 6L3.6 7.2M6.3 7.3H8.4" fill="none" style="stroke:var(--chip)" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="tool-name">Codex</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M0.0001 5.9182L0.0001 6.0001L0.0001 6.0821C0 8.8444 0 10.2426 0.8788 11.1214C1.0848 11.3274 1.3193 11.4851 1.5932 11.6058C1.5625 11.2148 1.6512 10.8775 1.855 10.6444C1.9344 10.5539 1.9369 10.5501 1.9196 10.398C1.8909 10.149 1.878 9.7805 1.891 9.5427L1.9014 9.3205L1.5679 8.7305C1.0513 7.8115 0.7233 7.0398 0.5967 6.4501C0.5299 6.1268 0.534 5.9834 0.6161 5.8773C0.6661 5.8132 0.8298 5.7469 1.0273 5.7104C1.5245 5.6231 2.6087 5.7021 3.815 5.9151L3.9403 5.9367L4.2156 5.6931C4.6728 5.2883 4.9764 5.0612 5.5363 4.7122C6.1198 4.3471 6.7783 4.0468 7.5198 3.809L7.7578 3.7327L7.8885 3.3893C8.3568 2.1531 8.8364 1.2418 9.1784 0.9386C9.296 0.8331 9.3031 0.829 9.3894 0.8238C9.5292 0.8136 9.6572 0.8807 9.8752 1.0791C10.3844 1.5418 11.0934 2.4931 11.5342 3.3054L11.7045 3.6207L11.9451 3.7403C11.955 3.7453 11.9652 3.7505 11.9756 3.756C11.9193 2.3548 11.7335 1.4908 11.1214 0.8788C10.2426 0 8.8444 0 6.0821 0.0001L6.0001 0.0001L5.9182 0.0001C3.1558 0 1.7576 0 0.8788 0.8788C0 1.7576 0 3.1558 0.0001 5.9182ZM12.0001 5.5869C11.3059 4.9017 10.2729 4.6581 9.3399 4.9737C9.0955 5.0564 8.8304 5.2094 8.3004 5.5154L5.2558 7.2732C4.7258 7.5792 4.4608 7.7322 4.2669 7.9026C3.481 8.5933 3.1852 9.6974 3.5204 10.6886C3.6031 10.9331 3.7561 11.1981 4.0621 11.7281C4.1171 11.8234 4.1672 11.9101 4.2133 11.9894C4.7159 12.0002 5.2807 12.0001 5.9182 12.0001L6.0001 12.0001L6.0821 12.0001C8.8444 12.0002 10.2426 12.0003 11.1214 11.1214C12.0003 10.2426 12.0002 8.8444 12.0001 6.0821L12.0001 6.0001L12.0001 5.9182C12.0001 5.8055 12.0001 5.6951 12.0001 5.5869ZM9.3152 7.2263Q9.5309 7.1018 9.7715 7.1662Q10.0122 7.2307 10.1367 7.4464L10.7843 8.5681Q10.9089 8.7838 10.8444 9.0245Q10.7799 9.2651 10.5642 9.3896Q10.4606 9.4494 10.342 9.465Q10.2234 9.4806 10.1079 9.4497Q9.9923 9.4187 9.8974 9.3459Q9.8025 9.2731 9.7427 9.1695L9.0951 8.0478Q9.0353 7.9442 9.0197 7.8256Q9.0041 7.707 9.035 7.5915Q9.066 7.4759 9.1388 7.381Q9.2116 7.2861 9.3152 7.2263ZM6.5262 9.0398Q6.4107 9.0088 6.2921 9.0244Q6.1735 9.0401 6.0699 9.0999Q5.9663 9.1597 5.8935 9.2546Q5.8207 9.3495 5.7897 9.465Q5.7588 9.5806 5.7744 9.6992Q5.79 9.8177 5.8498 9.9213L6.4974 11.043Q6.6219 11.2588 6.8625 11.3232Q7.1031 11.3877 7.3189 11.2632Q7.4225 11.2033 7.4953 11.1084Q7.5681 11.0135 7.5991 10.898Q7.63 10.7825 7.6144 10.6639Q7.5988 10.5453 7.539 10.4417L6.8914 9.32Q6.8316 9.2164 6.7367 9.1436Q6.6418 9.0708 6.5262 9.0398Z"/></svg><span class="tool-name">CodeBuddy</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2.6 0h6.8A2.6 2.6 0 0 1 12 2.6v6.8A2.6 2.6 0 0 1 9.4 12H2.6A2.6 2.6 0 0 1 0 9.4V2.6A2.6 2.6 0 0 1 2.6 0z"/><path style="fill:var(--chip)" d="M3.3 3.2h1.35v2.5L7 3.2h1.75L6.1 6l2.85 2.8H7.1L5.15 6.85l-.5.52V8.8H3.3z"/><circle cx="9.25" cy="2.85" r="0.8" style="fill:var(--chip)"/></svg><span class="tool-name">Kimi Code</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 180 180" aria-hidden="true" focusable="false"><path fill="currentColor" d="M144.248 149.062C151.748 154.688 162.998 150.938 152.685 140.625C121.748 110.625 128.31 28.125 89.8727 28.125C51.4352 28.125 57.9977 110.625 27.0602 140.625C15.8102 151.875 27.9977 154.688 35.4977 149.062C64.5602 129.375 62.6852 94.6875 89.8727 94.6875C117.06 94.6875 115.185 129.375 144.248 149.062Z"/></svg><span class="tool-name">Antigravity</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9.5 2H4a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H2.5V8.5H8a.5.5 0 0 0 0-1H4a3.5 3.5 0 0 1 0-7h5.5z"/></svg><span class="tool-name">StepFun</span><small>optional</small></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5.5 1a4.5 4.5 0 1 0 2.65 8.14L10 11l1-1-1.86-1.85A4.5 4.5 0 0 0 5.5 1zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg><span class="tool-name">Qwen Code</span><small>optional</small></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 0C6.45 3.35 8.65 5.55 12 6C8.65 6.45 6.45 8.65 6 12C5.55 8.65 3.35 6.45 0 6C3.35 5.55 5.55 3.35 6 0Z"/></svg><span class="tool-name">Gemini CLI</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2 1h8v10H2zM4 3v6h4V3z"/></svg><span class="tool-name">opencode</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M1.5 2.5h9V4h-9zM3.5 4H5v6.5H3.5zM7 4h1.5v5c0 .4.2.6.6.6h.9V11H8.8C7.6 11 7 10.4 7 9.2z"/></svg><span class="tool-name">Pi</span></li>
-      </ul>
-      <ul class="marquee-list marquee-dup" aria-hidden="true">
-        <li class="tool"><svg class="mark" viewbox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/></svg><span class="tool-name">Claude Code</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.75 6.0L11.75 6.5L11.75 7.01L11.6 7.5L11.46 7.99L11.23 8.44L10.85 8.8L10.38 9.07L9.94 9.3L9.47 9.47L9.33 9.97L9.02 10.31L8.72 10.71L8.31 10.96L7.9 11.21L7.4 11.21L6.96 11.46L6.48 11.46L6.0 11.2L5.54 11.2L5.13 10.96L4.74 10.7L4.29 10.71L3.81 10.7L3.28 10.71L2.88 10.45L2.48 10.2L2.04 9.96L1.59 9.7L1.27 9.31L1.11 8.82L0.96 8.35L0.97 7.83L0.95 7.35L0.77 6.92L0.52 6.48L0.21 6.0L0.21 5.49L0.21 4.98L0.34 4.48L0.52 4.0L0.94 3.64L1.11 3.18L1.56 2.89L2.18 2.79L2.48 2.48L2.63 1.98L2.94 1.63L3.32 1.37L3.72 1.11L4.13 0.87L4.63 0.87L5.05 0.61L5.53 0.61L6.0 0.86L6.45 0.86L6.86 1.12L7.24 1.38L7.69 1.37L8.15 1.38L8.68 1.37L9.07 1.62L9.48 1.85L9.92 2.08L10.31 2.38L10.69 2.71L10.85 3.2L10.98 3.68L10.99 4.18L10.99 4.66L11.15 5.09L11.46 5.52Z"/><path d="M3.6 4.8L5 6L3.6 7.2M6.3 7.3H8.4" fill="none" style="stroke:var(--chip)" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="tool-name">Codex</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M0.0001 5.9182L0.0001 6.0001L0.0001 6.0821C0 8.8444 0 10.2426 0.8788 11.1214C1.0848 11.3274 1.3193 11.4851 1.5932 11.6058C1.5625 11.2148 1.6512 10.8775 1.855 10.6444C1.9344 10.5539 1.9369 10.5501 1.9196 10.398C1.8909 10.149 1.878 9.7805 1.891 9.5427L1.9014 9.3205L1.5679 8.7305C1.0513 7.8115 0.7233 7.0398 0.5967 6.4501C0.5299 6.1268 0.534 5.9834 0.6161 5.8773C0.6661 5.8132 0.8298 5.7469 1.0273 5.7104C1.5245 5.6231 2.6087 5.7021 3.815 5.9151L3.9403 5.9367L4.2156 5.6931C4.6728 5.2883 4.9764 5.0612 5.5363 4.7122C6.1198 4.3471 6.7783 4.0468 7.5198 3.809L7.7578 3.7327L7.8885 3.3893C8.3568 2.1531 8.8364 1.2418 9.1784 0.9386C9.296 0.8331 9.3031 0.829 9.3894 0.8238C9.5292 0.8136 9.6572 0.8807 9.8752 1.0791C10.3844 1.5418 11.0934 2.4931 11.5342 3.3054L11.7045 3.6207L11.9451 3.7403C11.955 3.7453 11.9652 3.7505 11.9756 3.756C11.9193 2.3548 11.7335 1.4908 11.1214 0.8788C10.2426 0 8.8444 0 6.0821 0.0001L6.0001 0.0001L5.9182 0.0001C3.1558 0 1.7576 0 0.8788 0.8788C0 1.7576 0 3.1558 0.0001 5.9182ZM12.0001 5.5869C11.3059 4.9017 10.2729 4.6581 9.3399 4.9737C9.0955 5.0564 8.8304 5.2094 8.3004 5.5154L5.2558 7.2732C4.7258 7.5792 4.4608 7.7322 4.2669 7.9026C3.481 8.5933 3.1852 9.6974 3.5204 10.6886C3.6031 10.9331 3.7561 11.1981 4.0621 11.7281C4.1171 11.8234 4.1672 11.9101 4.2133 11.9894C4.7159 12.0002 5.2807 12.0001 5.9182 12.0001L6.0001 12.0001L6.0821 12.0001C8.8444 12.0002 10.2426 12.0003 11.1214 11.1214C12.0003 10.2426 12.0002 8.8444 12.0001 6.0821L12.0001 6.0001L12.0001 5.9182C12.0001 5.8055 12.0001 5.6951 12.0001 5.5869ZM9.3152 7.2263Q9.5309 7.1018 9.7715 7.1662Q10.0122 7.2307 10.1367 7.4464L10.7843 8.5681Q10.9089 8.7838 10.8444 9.0245Q10.7799 9.2651 10.5642 9.3896Q10.4606 9.4494 10.342 9.465Q10.2234 9.4806 10.1079 9.4497Q9.9923 9.4187 9.8974 9.3459Q9.8025 9.2731 9.7427 9.1695L9.0951 8.0478Q9.0353 7.9442 9.0197 7.8256Q9.0041 7.707 9.035 7.5915Q9.066 7.4759 9.1388 7.381Q9.2116 7.2861 9.3152 7.2263ZM6.5262 9.0398Q6.4107 9.0088 6.2921 9.0244Q6.1735 9.0401 6.0699 9.0999Q5.9663 9.1597 5.8935 9.2546Q5.8207 9.3495 5.7897 9.465Q5.7588 9.5806 5.7744 9.6992Q5.79 9.8177 5.8498 9.9213L6.4974 11.043Q6.6219 11.2588 6.8625 11.3232Q7.1031 11.3877 7.3189 11.2632Q7.4225 11.2033 7.4953 11.1084Q7.5681 11.0135 7.5991 10.898Q7.63 10.7825 7.6144 10.6639Q7.5988 10.5453 7.539 10.4417L6.8914 9.32Q6.8316 9.2164 6.7367 9.1436Q6.6418 9.0708 6.5262 9.0398Z"/></svg><span class="tool-name">CodeBuddy</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2.6 0h6.8A2.6 2.6 0 0 1 12 2.6v6.8A2.6 2.6 0 0 1 9.4 12H2.6A2.6 2.6 0 0 1 0 9.4V2.6A2.6 2.6 0 0 1 2.6 0z"/><path style="fill:var(--chip)" d="M3.3 3.2h1.35v2.5L7 3.2h1.75L6.1 6l2.85 2.8H7.1L5.15 6.85l-.5.52V8.8H3.3z"/><circle cx="9.25" cy="2.85" r="0.8" style="fill:var(--chip)"/></svg><span class="tool-name">Kimi Code</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 180 180" aria-hidden="true" focusable="false"><path fill="currentColor" d="M144.248 149.062C151.748 154.688 162.998 150.938 152.685 140.625C121.748 110.625 128.31 28.125 89.8727 28.125C51.4352 28.125 57.9977 110.625 27.0602 140.625C15.8102 151.875 27.9977 154.688 35.4977 149.062C64.5602 129.375 62.6852 94.6875 89.8727 94.6875C117.06 94.6875 115.185 129.375 144.248 149.062Z"/></svg><span class="tool-name">Antigravity</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9.5 2H4a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H2.5V8.5H8a.5.5 0 0 0 0-1H4a3.5 3.5 0 0 1 0-7h5.5z"/></svg><span class="tool-name">StepFun</span><small>optional</small></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5.5 1a4.5 4.5 0 1 0 2.65 8.14L10 11l1-1-1.86-1.85A4.5 4.5 0 0 0 5.5 1zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg><span class="tool-name">Qwen Code</span><small>optional</small></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 0C6.45 3.35 8.65 5.55 12 6C8.65 6.45 6.45 8.65 6 12C5.55 8.65 3.35 6.45 0 6C3.35 5.55 5.55 3.35 6 0Z"/></svg><span class="tool-name">Gemini CLI</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2 1h8v10H2zM4 3v6h4V3z"/></svg><span class="tool-name">opencode</span></li>
-        <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M1.5 2.5h9V4h-9zM3.5 4H5v6.5H3.5zM7 4h1.5v5c0 .4.2.6.6.6h.9V11H8.8C7.6 11 7 10.4 7 9.2z"/></svg><span class="tool-name">Pi</span></li>
-      </ul>
-     </div>
-    </div>
-    <p class="agents-note">
-      
-      <span>Qwen Code and StepFun need their own CLI and key. Gemini CLI does not report its waiting state yet. opencode and Pi are shown with neutral letter marks. Marks belong to their owners.</span>
-    </p>
-  </div>
-</section>
-
-<!-- ============ Features ============ -->
+<!-- ============ Features: three core benefits ============ -->
 <section class="section" id="features" aria-labelledby="features-title">
   <div class="wrap">
     <p class="kicker"><span>Features</span></p>
     <h2 id="features-title">
       
-      <span>Stop checking terminals one by one</span>
+      <span>Called only when you are needed</span>
     </h2>
 
     <!-- 1. Waiting for you -->
     <div class="feature reveal">
       <div class="feature-text">
         <p class="feature-n">01</p>
-        <h3><span>See who is waiting for you</span></h3>
+        <h3><span>“Waiting for you”: see who needs you</span></h3>
         <p>
           
           <span>The sidebar groups conversations by project and task and marks who is running, waiting for approval or waiting for your reply. The ones that need you collect at the top under “waiting for you”.</span>
@@ -229,6 +207,7 @@
         </p>
         <ul>
           <li><span>Click file paths in a terminal to open them in Shifu, the default app or Finder</span></li>
+          <li><span>In one repository, each agent can work in its own Git worktree (<code>shifu workspace</code>) so they do not overwrite each other</span></li>
           <li><span>Terminal text 10–24 pt, with <kbd>⌘=</kbd> <kbd>⌘-</kbd> <kbd>⌘0</kbd></span></li>
         </ul>
       </div>
@@ -243,7 +222,7 @@
     <div class="feature feature-textonly reveal">
       <div class="feature-text">
         <p class="feature-n">03</p>
-        <h3><span>Close the window. Agents keep running.</span></h3>
+        <h3><span>Sessions survive quitting, crashes and reboots</span></h3>
         <p>
           
           <span>A dedicated tmux server owns the sessions; the desktop window only displays and controls them. Quitting, reopening or even a crash does not end an agent. Tasks and split layouts come back, and after a reboot the conversation you open resumes its own session.</span>
@@ -256,11 +235,20 @@
         <span class="flow-arrow" aria-hidden="true">→</span>
         <span aria-hidden="true"><span>Shifu window (close any time)</span></span>
       </p>
+      <p class="sleep-note">
+        
+        <span><b>When the Mac sleeps, the agents stop too.</b> While Shifu runs it keeps the Mac from idle sleep by default (the display can still turn off). Closing the lid still puts it to sleep unless you authorize “keep running with the lid closed” once from the cup menu at the bottom right of the window; that mode pauses itself on battery at 10% or when macOS reports the Mac is running hot. <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/STEAMCUP.md">Docs (Chinese)</a></span>
+      </p>
     </div>
 
     <!-- More -->
     <h3 class="more-title"><span>More</span></h3>
     <ul class="more">
+      <li>
+        <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="4.5" r="1.8"/><circle cx="5" cy="15.5" r="1.8"/><circle cx="15" cy="8" r="1.8"/><path d="M5 6.3v7.4M15 9.8c0 3-4 2.5-8.6 4.6"/></svg>
+        <h4><span>A worktree per agent</span></h4>
+        <p><span><code>shifu workspace create</code> gives each agent its own Git worktree with a goal and scope, and flags overlapping scopes. One merge command lands the ready branches and lists conflicts or failed checks instead of merging them.</span> <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/WORKSPACES.md"><span>Docs</span> →</a></p>
+      </li>
       <li>
         <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 5h14M3 10h9M3 15h11"/><path d="m14 13 1.5 1.5L18 12"/></svg>
         <h4><span>Tasks and progress</span></h4>
@@ -286,27 +274,22 @@
         <h4><span>Computer and browser use</span></h4>
         <p><span><code>shifu computer</code> drives local windows and <code>shifu browser</code> drives web pages; both optional.</span> <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/COMPUTER-USE.md"><span>Docs (Chinese)</span> →</a></p>
       </li>
-      <li>
-        <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h10v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z"/><path d="M14 9h1.5a2 2 0 0 1 0 4H14"/><path d="M7 3v2M10 3v2"/></svg>
-        <h4><span>Keep long runs going</span></h4>
-        <p><span>The cup in the menu bar keeps the Mac awake, on a timer or with the lid closed.</span> <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/STEAMCUP.md"><span>Docs (Chinese)</span> →</a></p>
-      </li>
     </ul>
   </div>
 </section>
 
-<!-- ============ How it works ============ -->
-<section class="section" id="how" aria-labelledby="how-title">
+<!-- ============ Quick start ============ -->
+<section class="section" id="start" aria-labelledby="how-title">
   <div class="wrap how">
     <div>
-      <p class="kicker"><span>How it works</span></p>
+      <p class="kicker"><span>Quick start</span></p>
       <h2 id="how-title"><span>Three steps</span></h2>
       <ol class="steps">
         <li>
           <span class="step-n">01</span>
           <div>
             <h3><span>Install</span></h3>
-            <p><span>Download and verify the preview, put the app in <code>~/Applications</code> and the matching <code>shifu</code> in <code>~/.cargo/bin</code>. Install tmux and your agents.</span></p>
+            <p><span>Download and verify the 0.4.3 preview, then follow the <a href="#install">install steps</a> below. Install tmux and your agents.</span></p>
           </div>
         </li>
         <li>
@@ -332,9 +315,120 @@
       </picture>
       <figcaption>
         
-        <span>New task: permissions default to no approvals, or each agent's own settings.</span>
+        <span>New task: project, agent, model and thinking level, and the permission setting for all conversations.</span>
       </figcaption>
     </figure>
+  </div>
+</section>
+
+<!-- ============ Install (steps and permission note generated from docs/INSTALL*.md) ============ -->
+<section class="section" id="install" aria-labelledby="install-title" data-cli-step="required">
+  <div class="wrap">
+    <p class="kicker"><span>Install</span></p>
+    <h2 id="install-title"><span>Get the Apple Silicon preview</span></h2>
+    <p class="lead">
+      
+      <span>Download the <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1">0.4.3 preview release</a>: the app, the matching <code>shifu</code> CLI and setup instructions. Both methods below are the same text as the repository's <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/INSTALL.en.md">install guide</a>. It is an early version; read “Before you install” first.</span>
+    </p>
+
+    <div class="install-grid">
+      <div>
+        <div class="tabs" role="tablist" aria-label="Install method">
+          <button class="tab" role="tab" type="button" id="tab-ai" aria-controls="panel-ai" aria-selected="true">
+            <span>Let your AI install it</span>
+          </button>
+          <button class="tab" role="tab" type="button" id="tab-manual" aria-controls="panel-manual" aria-selected="false" tabindex="-1">
+            <span>Install it yourself</span>
+          </button>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-ai" aria-labelledby="tab-ai" tabindex="0">
+          <p>
+            
+            <span>Paste this into Claude Code or Codex:</span>
+          </p>
+          <div class="code" data-collapse><pre class="wrap-text">Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and docs/INSTALL.en.md first.
+1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
+2. Download the ZIP and SHA256SUMS from the same release linked in the README. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
+3. Follow the package instructions: put Shifu.app in ~/Applications and install the package's bin/shifu to ~/.cargo/bin/shifu. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need this one (later versions carry a matching CLI inside the app, and this step is then only for using shifu in a terminal; follow the package instructions). Add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
+4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and that 0.4.3 starts agents in no-confirmation mode; to be asked before each change, set permissions to the agent's own settings in the new-task form (later versions ask once before the first conversation). Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
+5. Help me choose a project and start my first agent conversation. On the first Codex launch, let me review its hooks before deciding whether to trust them.</pre><button class="copy" type="button">Copy</button></div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-manual" aria-labelledby="tab-manual" tabindex="0" hidden>
+          <ol class="install-steps"><li><p>Download the ZIP and <code>SHA256SUMS</code> from the same release. Run <code>shasum -a 256 -c SHA256SUMS</code> in the download directory before extracting.</p></li><li><p>For an existing installation, quit it and back up the old app and CLI first. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need the package's CLI; install it too (later versions carry a matching CLI inside the app, and this step is then only for using <code>shifu</code> in a terminal; follow the package instructions). In the extracted package directory, verify its contents, then install the CLI:</p><div class="code" data-collapse><pre>shasum -a 256 -c SHA256SUMS
+mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
+install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"
+rm -rf "$HOME/.cargo/bin/web" &amp;&amp; ditto bin/web "$HOME/.cargo/bin/web"   # runtime for shifu web
+export PATH="$HOME/.cargo/bin:$PATH"
+brew install tmux   # Skip if tmux is already installed</pre><button class="copy" type="button">Copy</button></div></li><li><p>After successful verification, move <code>Shifu.app</code> to <code>~/Applications</code>. Open it, choose a project and a signed-in agent, and start your first conversation. See the <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/INSTALL.en.md">installation guide</a> for details; use <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.en.md">remote setup and pairing</a> when connecting another Mac.</p></li></ol>
+          <p class="after-install">
+            
+            <span>The PATH setting only affects the current terminal; in a new one use <code>"$HOME/.cargo/bin/shifu"</code> or add the folder to your shell config.</span>
+          </p>
+        </div>
+      </div>
+
+      <aside class="notice" aria-labelledby="notice-title">
+        <h3 id="notice-title"><span class="dot dot-amber" aria-hidden="true"></span><span>Before you install</span></h3>
+        <ul>
+          <li><span><b>Apple Silicon only.</b> Intel, Linux and Windows are untried and have no package.</span></li>
+          <li><span><b>Not notarized.</b> The app is signed with Shifu's own fixed certificate. If macOS blocks it, confirm the source and allow it under System Settings → Privacy &amp; Security.</span></li>
+          <li class="permission-note"><b>Permission mode:</b> before the first conversation, Shifu asks once how agents may act. 按 Agent 自己的设置 (each agent's own settings) is preselected and recommended: no no-approval flags are added, and each agent's own configuration decides when it asks. With 免确认（全权） (no confirmation), agents edit files and run commands without individual approval. You can change it any time under 权限 in the new-task popover. Upgrades from an earlier version are not asked and keep their setting. The 0.4.3 download does not ask yet and starts in no-confirmation mode; set 权限 to 用 Agent 自己的设置 to change it.</li>
+          <li><span><b>Needs tmux and signed-in agents.</b> Shifu ships no agents or accounts.</span></li>
+          <li><span><b>On first Codex launch</b> you are asked to review the hooks Shifu passes; read them before trusting.</span></li>
+          <li><span><b>The window UI is in Chinese for now.</b> The menu bar follows the system language.</span></li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Compatibility: agent support tiers (from src/agents_spec.rs and docs/AGENTS.md) ============ -->
+<section class="section" id="agents" aria-labelledby="agents-title">
+  <div class="wrap">
+    <p class="kicker"><span>Compatibility</span></p>
+    <h2 id="agents-title"><span>Which agents work, and how far</span></h2>
+    <p class="lead">
+      
+      <span>Shifu starts each agent's own CLI. How much state the sidebar can show depends on whether the agent can report its events to Shifu.</span>
+    </p>
+    <div class="tiers">
+      <div class="tier reveal">
+        <h3><span>Full status</span></h3>
+        <p><span>Hooks, plugins or extensions report running, waiting for approval, asking you and done, which feed “waiting for you” and notifications.</span></p>
+        <ul class="tools">
+          <li class="tool"><svg class="mark" viewbox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/></svg><span class="tool-name">Claude Code</span></li>
+          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.75 6.0L11.75 6.5L11.75 7.01L11.6 7.5L11.46 7.99L11.23 8.44L10.85 8.8L10.38 9.07L9.94 9.3L9.47 9.47L9.33 9.97L9.02 10.31L8.72 10.71L8.31 10.96L7.9 11.21L7.4 11.21L6.96 11.46L6.48 11.46L6.0 11.2L5.54 11.2L5.13 10.96L4.74 10.7L4.29 10.71L3.81 10.7L3.28 10.71L2.88 10.45L2.48 10.2L2.04 9.96L1.59 9.7L1.27 9.31L1.11 8.82L0.96 8.35L0.97 7.83L0.95 7.35L0.77 6.92L0.52 6.48L0.21 6.0L0.21 5.49L0.21 4.98L0.34 4.48L0.52 4.0L0.94 3.64L1.11 3.18L1.56 2.89L2.18 2.79L2.48 2.48L2.63 1.98L2.94 1.63L3.32 1.37L3.72 1.11L4.13 0.87L4.63 0.87L5.05 0.61L5.53 0.61L6.0 0.86L6.45 0.86L6.86 1.12L7.24 1.38L7.69 1.37L8.15 1.38L8.68 1.37L9.07 1.62L9.48 1.85L9.92 2.08L10.31 2.38L10.69 2.71L10.85 3.2L10.98 3.68L10.99 4.18L10.99 4.66L11.15 5.09L11.46 5.52Z"/><path d="M3.6 4.8L5 6L3.6 7.2M6.3 7.3H8.4" fill="none" style="stroke:var(--chip)" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="tool-name">Codex</span></li>
+          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M0.0001 5.9182L0.0001 6.0001L0.0001 6.0821C0 8.8444 0 10.2426 0.8788 11.1214C1.0848 11.3274 1.3193 11.4851 1.5932 11.6058C1.5625 11.2148 1.6512 10.8775 1.855 10.6444C1.9344 10.5539 1.9369 10.5501 1.9196 10.398C1.8909 10.149 1.878 9.7805 1.891 9.5427L1.9014 9.3205L1.5679 8.7305C1.0513 7.8115 0.7233 7.0398 0.5967 6.4501C0.5299 6.1268 0.534 5.9834 0.6161 5.8773C0.6661 5.8132 0.8298 5.7469 1.0273 5.7104C1.5245 5.6231 2.6087 5.7021 3.815 5.9151L3.9403 5.9367L4.2156 5.6931C4.6728 5.2883 4.9764 5.0612 5.5363 4.7122C6.1198 4.3471 6.7783 4.0468 7.5198 3.809L7.7578 3.7327L7.8885 3.3893C8.3568 2.1531 8.8364 1.2418 9.1784 0.9386C9.296 0.8331 9.3031 0.829 9.3894 0.8238C9.5292 0.8136 9.6572 0.8807 9.8752 1.0791C10.3844 1.5418 11.0934 2.4931 11.5342 3.3054L11.7045 3.6207L11.9451 3.7403C11.955 3.7453 11.9652 3.7505 11.9756 3.756C11.9193 2.3548 11.7335 1.4908 11.1214 0.8788C10.2426 0 8.8444 0 6.0821 0.0001L6.0001 0.0001L5.9182 0.0001C3.1558 0 1.7576 0 0.8788 0.8788C0 1.7576 0 3.1558 0.0001 5.9182ZM12.0001 5.5869C11.3059 4.9017 10.2729 4.6581 9.3399 4.9737C9.0955 5.0564 8.8304 5.2094 8.3004 5.5154L5.2558 7.2732C4.7258 7.5792 4.4608 7.7322 4.2669 7.9026C3.481 8.5933 3.1852 9.6974 3.5204 10.6886C3.6031 10.9331 3.7561 11.1981 4.0621 11.7281C4.1171 11.8234 4.1672 11.9101 4.2133 11.9894C4.7159 12.0002 5.2807 12.0001 5.9182 12.0001L6.0001 12.0001L6.0821 12.0001C8.8444 12.0002 10.2426 12.0003 11.1214 11.1214C12.0003 10.2426 12.0002 8.8444 12.0001 6.0821L12.0001 6.0001L12.0001 5.9182C12.0001 5.8055 12.0001 5.6951 12.0001 5.5869ZM9.3152 7.2263Q9.5309 7.1018 9.7715 7.1662Q10.0122 7.2307 10.1367 7.4464L10.7843 8.5681Q10.9089 8.7838 10.8444 9.0245Q10.7799 9.2651 10.5642 9.3896Q10.4606 9.4494 10.342 9.465Q10.2234 9.4806 10.1079 9.4497Q9.9923 9.4187 9.8974 9.3459Q9.8025 9.2731 9.7427 9.1695L9.0951 8.0478Q9.0353 7.9442 9.0197 7.8256Q9.0041 7.707 9.035 7.5915Q9.066 7.4759 9.1388 7.381Q9.2116 7.2861 9.3152 7.2263ZM6.5262 9.0398Q6.4107 9.0088 6.2921 9.0244Q6.1735 9.0401 6.0699 9.0999Q5.9663 9.1597 5.8935 9.2546Q5.8207 9.3495 5.7897 9.465Q5.7588 9.5806 5.7744 9.6992Q5.79 9.8177 5.8498 9.9213L6.4974 11.043Q6.6219 11.2588 6.8625 11.3232Q7.1031 11.3877 7.3189 11.2632Q7.4225 11.2033 7.4953 11.1084Q7.5681 11.0135 7.5991 10.898Q7.63 10.7825 7.6144 10.6639Q7.5988 10.5453 7.539 10.4417L6.8914 9.32Q6.8316 9.2164 6.7367 9.1436Q6.6418 9.0708 6.5262 9.0398Z"/></svg><span class="tool-name">CodeBuddy</span></li>
+          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2.6 0h6.8A2.6 2.6 0 0 1 12 2.6v6.8A2.6 2.6 0 0 1 9.4 12H2.6A2.6 2.6 0 0 1 0 9.4V2.6A2.6 2.6 0 0 1 2.6 0z"/><path style="fill:var(--chip)" d="M3.3 3.2h1.35v2.5L7 3.2h1.75L6.1 6l2.85 2.8H7.1L5.15 6.85l-.5.52V8.8H3.3z"/><circle cx="9.25" cy="2.85" r="0.8" style="fill:var(--chip)"/></svg><span class="tool-name">Kimi Code</span></li>
+          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2 1h8v10H2zM4 3v6h4V3z"/></svg><span class="tool-name">opencode</span></li>
+          <li class="tool"><svg class="mark" viewbox="0 0 180 180" aria-hidden="true" focusable="false"><path fill="currentColor" d="M144.248 149.062C151.748 154.688 162.998 150.938 152.685 140.625C121.748 110.625 128.31 28.125 89.8727 28.125C51.4352 28.125 57.9977 110.625 27.0602 140.625C15.8102 151.875 27.9977 154.688 35.4977 149.062C64.5602 129.375 62.6852 94.6875 89.8727 94.6875C117.06 94.6875 115.185 129.375 144.248 149.062Z"/></svg><span class="tool-name">Antigravity</span></li>
+          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M1.5 2.5h9V4h-9zM3.5 4H5v6.5H3.5zM7 4h1.5v5c0 .4.2.6.6.6h.9V11H8.8C7.6 11 7 10.4 7 9.2z"/></svg><span class="tool-name">Pi</span></li>
+        </ul>
+        <p class="tier-note"><span>Antigravity and Pi never show “waiting for approval”: Pi has no approval prompts, and Antigravity reports only running and replies.</span></p>
+      </div>
+      <div class="tier reveal">
+        <h3><span>Terminal only</span></h3>
+        <p><span>Found and started, but the sidebar only knows it is running: Shifu cannot tell when it stops for you, and reopening it starts a new session.</span></p>
+        <ul class="tools">
+          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 0C6.45 3.35 8.65 5.55 12 6C8.65 6.45 6.45 8.65 6 12C5.55 8.65 3.35 6.45 0 6C3.35 5.55 5.55 3.35 6 0Z"/></svg><span class="tool-name">Gemini CLI</span></li>
+        </ul>
+      </div>
+      <div class="tier reveal">
+        <h3><span>Extra setup</span></h3>
+        <p><span>Status works, but you bring your own CLI or runtime and your own key; Shifu bundles neither.</span></p>
+        <ul class="tools">
+          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5.5 1a4.5 4.5 0 1 0 2.65 8.14L10 11l1-1-1.86-1.85A4.5 4.5 0 0 0 5.5 1zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg><span class="tool-name">Qwen Code</span></li>
+          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9.5 2H4a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H2.5V8.5H8a.5.5 0 0 0 0-1H4a3.5 3.5 0 0 1 0-7h5.5z"/></svg><span class="tool-name">StepFun</span></li>
+        </ul>
+        <p class="tier-note"><span>Qwen Code: your own Qwen Code CLI and a Bailian Token Plan key (<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/QWEN.md#english">setup</a>). StepFun: Node.js 20.6+, a separate Pi 0.73.1 and a Step Plan key (<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/STEPFUN.md#english">setup</a>).</span></p>
+      </div>
+    </div>
+    <p class="agents-note">
+      
+      <span>How each agent is wired in: <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/AGENTS.md">the agent table</a> (Chinese). opencode and Pi are shown with neutral letter marks; the other marks belong to their owners.</span>
+    </p>
   </div>
 </section>
 
@@ -376,92 +470,6 @@
           <span>The phone gateway listens on <code>127.0.0.1</code>; Mac-to-Mac uses your own HTTPS relay with end-to-end encrypted terminal data. Use a relay whose web client you trust.</span>
         </p>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============ Install ============ -->
-<section class="section" id="install" aria-labelledby="install-title">
-  <div class="wrap">
-    <p class="kicker"><span>Install</span></p>
-    <h2 id="install-title"><span>Get the Apple Silicon preview</span></h2>
-    <p class="lead">
-      
-      <span>The preview contains the app, the matching <code>shifu</code> CLI and setup instructions. It is an early version; read “Before you install” first.</span>
-    </p>
-
-    <div class="install-grid">
-      <div>
-        <div class="tabs" role="tablist" aria-label="Install method">
-          <button class="tab" role="tab" type="button" id="tab-ai" aria-controls="panel-ai" aria-selected="true">
-            <span>Let your AI install it</span>
-          </button>
-          <button class="tab" role="tab" type="button" id="tab-manual" aria-controls="panel-manual" aria-selected="false" tabindex="-1">
-            <span>Install it yourself</span>
-          </button>
-        </div>
-
-        <div class="tabpanel" role="tabpanel" id="panel-ai" aria-labelledby="tab-ai" tabindex="0">
-          <p>
-            
-            <span>Paste this into Claude Code or Codex:</span>
-          </p>
-          
-          <div class="code" data-collapse>
-            <pre class="wrap-text">Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and docs/INSTALL.en.md first.
-1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
-2. Download the ZIP and SHA256SUMS from the same release linked in the README. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
-3. Follow the package instructions: put Shifu.app in ~/Applications and its matching bin/shifu in ~/.cargo/bin/shifu. Add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
-4. Explain that the app is signed with Shifu's own certificate, not notarized by Apple, and starts agents in no-confirmation mode. Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
-5. Help me choose a project and start my first agent conversation. On the first Codex launch, let me review its hooks before deciding whether to trust them.</pre>
-            <button class="copy" type="button">Copy</button>
-          </div>
-        </div>
-
-        <div class="tabpanel" role="tabpanel" id="panel-manual" aria-labelledby="tab-manual" tabindex="0" hidden>
-          <ol>
-            <li>
-              
-              <span>Download the ZIP and <code>SHA256SUMS</code> from the <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1">0.4.3 preview release</a>. Run <code>shasum -a 256 -c SHA256SUMS</code> in the download folder, then unzip.</span>
-            </li>
-            <li>
-              
-              <span>For an existing install, quit it and back up the old app and CLI first. In the extracted folder, run:</span>
-            </li>
-          </ol>
-          <div class="code" data-collapse>
-            <pre>shasum -a 256 -c SHA256SUMS
-mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
-install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"
-rm -rf "$HOME/.cargo/bin/web" &amp;&amp; ditto bin/web "$HOME/.cargo/bin/web"
-export PATH="$HOME/.cargo/bin:$PATH"
-brew install tmux   # skip if already installed</pre>
-            <button class="copy" type="button"><span>Copy</span></button>
-          </div>
-          <ol start="3">
-            <li>
-              
-              <span>After verification, move <code>Shifu.app</code> to <code>~/Applications</code>, open it, and pick a project and a signed-in agent.</span>
-            </li>
-          </ol>
-          <p class="after-install">
-            
-            <span><code>export PATH</code> only affects the current terminal; in a new one use <code>"$HOME/.cargo/bin/shifu"</code> or add the folder to your shell config. Full details in the <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/INSTALL.en.md">install guide</a>.</span>
-          </p>
-        </div>
-      </div>
-
-      <aside class="notice" aria-labelledby="notice-title">
-        <h3 id="notice-title"><span class="dot dot-amber" aria-hidden="true"></span><span>Before you install</span></h3>
-        <ul>
-          <li><span><b>Apple Silicon only.</b> Intel, Linux and Windows are untried and have no package.</span></li>
-          <li><span><b>Not notarized.</b> The app is signed with Shifu's own fixed certificate. If macOS blocks it, confirm the source and allow it under System Settings → Privacy &amp; Security.</span></li>
-          <li><span><b>No approvals by default.</b> Claude, Codex, CodeBuddy, Kimi and Qwen Code start in no-approval mode and edit files and run commands without asking. In the new-task form, set permissions to each agent's own settings to change this.</span></li>
-          <li><span><b>Needs tmux and signed-in agents.</b> Shifu ships no agents or accounts.</span></li>
-          <li><span><b>On first Codex launch</b> you are asked to review the hooks Shifu passes; read them before trusting.</span></li>
-          <li><span><b>The window UI is in Chinese for now.</b> The menu bar follows the system language.</span></li>
-        </ul>
-      </aside>
     </div>
   </div>
 </section>
@@ -527,6 +535,7 @@ brew install tmux   # skip if already installed</pre>
       <span>MIT © Yutai Lin · Shifu is not affiliated with Anthropic, OpenAI or other agent vendors.</span>
     </p>
     <nav aria-label="Footer">
+      <a href="https://github.com/Nalu-Lab/shifu/issues"><span>Report a problem / request a feature</span></a>
       <a href="https://github.com/Nalu-Lab/shifu">GitHub</a>
       <a href="https://github.com/Nalu-Lab/shifu/releases"><span>Releases</span></a>
       <a href="https://github.com/Nalu-Lab/shifu/blob/main/CHANGELOG.md"><span>Changelog</span></a>

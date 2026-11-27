@@ -28,11 +28,25 @@ site/
 
 ### 改内容、发新版
 
-1. 改 `src/index.html`（文字、结构）或 `tools/build.py` 顶部的 `RELEASE`（版本号、Release 标签、Gemini 是否已进入下载包）。
-2. 运行 `python3 site/tools/build.py`（只用 Python 标准库），重新生成 `index.html` 和 `en/index.html`。
-3. 两张生成的页面一起提交。托管时不需要构建步骤。
+1. 改 `src/index.html`（文字、结构）或 `tools/build.py` 顶部的 `RELEASE`（版本号、Release 标签）和 `DEMO`（视频、截图是哪个版本录的）。
+2. **安装步骤不在这里改。**「让 AI 帮你装」的提示词、「自己装」的步骤和「装之前要知道」里的权限说明，都由 `build.py` 从 `docs/INSTALL.md` / `docs/INSTALL.en.md` 读出来生成（方式 A 的 `text` 代码块、方式 B 的编号列表、`<!-- permission-mode -->` 标记之间的一段）。改安装说明就改这两份文档，再重新生成。
+3. 运行 `python3 site/tools/build.py`（只用 Python 标准库），重新生成 `index.html` 和 `en/index.html`。
+4. 运行 `python3 scripts/release/check-docs.py`，确认版本、下载链接、安装步骤、生成页面和演示说明一致。两张生成的页面一起提交。托管时不需要构建步骤。
 
-`RELEASE["gemini_in_release"]` 改成 `True` 后，所有「下个版本 / next release」标记和相关说明会一起去掉。
+`DEMO["version"]` 和 `RELEASE["version"]` 不同时，演示脚注写「录制于 0.4.2 …；当前下载是 0.4.3」；重录后把 `DEMO["version"]` 改成发布版本，脚注自动变成「来自当前版本」。源文件里 `<!--if:demo_current-->…<!--/if:demo_current-->` / `<!--ifnot:…-->` 就是这个开关。
+
+### 发布前的一致性检查
+
+`scripts/release/check-docs.py`（只用标准库）在这些情况下失败：
+
+- 版本文件（`Cargo.toml`、`app/package.json`、`app/package-lock.json`、`tauri.conf.json`、`app/src-tauri/Cargo.toml`、`remote/Cargo.toml` 和三个 `Cargo.lock` 里的 shifu 包）与发布版本不同；
+- README、`docs/INSTALL*.md`、两张网站页面的下载链接指向别的 Release 标签；`build.py` 的 `RELEASE` 不是这个标签；
+- README 的「方式 A / 方式 B」和 `docs/INSTALL*.md` 不是同一段文字；
+- 安装说明对「是否必须另装 CLI」的说法和这个版本的 App 不符：App 自带 CLI（`tauri.conf.json` 打包了 `cli-bundle/`）时只能说可选，否则必须说要装。文档用 `<!-- cli-step: required|optional -->` 标明，网站安装区带同样的 `data-cli-step`；包内说明（`scripts/release/INSTALL.*.md`）跟随当前源码；
+- 网站页面不是用当前源文件和文档生成的；
+- 演示脚注没写发布版本，或写了 `RELEASE` / `DEMO` 以外的版本号。
+
+本地：`python3 scripts/release/check-docs.py`（按 `build.py` 的 `RELEASE` 检查；判断 CLI 时读该标签的 `tauri.conf.json`，本地没有标签就用当前源码并提示）。发布工作流应在推标签后、构建前运行 `--tag "$GITHUB_REF_NAME"`，PR 检查也运行一次（这两处工作流改动需要有 `workflow` 权限的人提交，内容见引入本脚本的 PR 描述）。所以发版顺序是：改版本号、`RELEASE`、README / INSTALL 下载链接 → 生成网站 → 提交 → 推标签。
 
 ### 语言与网址
 
@@ -49,6 +63,7 @@ site/
 - **左上角品牌名**：非正式 bundle 的实例会自称「Shifu 测试」，合成时用同一版本早先截图里的「Shifu」小块盖住，除此之外画面未改动。
 - 底部用量栏（本机真实额度）被裁掉。
 - 重做：`site/tools/video/` 里的脚本（需要先按「截图怎么来的」编出 App 和 CLI）：`run4.py zh|en` 布置并录制，`overlays.cjs` 画叠加层，`compose4.py zh|en` 合成，`encode4.sh` 输出 MP4（H.264、yuv420p、faststart）/ WebM / poster。脚本里的临时路径按自己的环境改。
+- **用 0.4.3 重录还没做**，原因：演示实例是一个真实的 macOS 窗口，WebView 只在窗口服务器上有可见窗口时才渲染，`screencapture -l` 也只截屏幕上的窗口；启动时还会短暂抢焦点（脚本随后切回）。所以录制要在一个可以被占用的图形会话里做：另一个 macOS 用户的登录会话、虚拟机或备用 Mac，或者本人不用电脑的时候。另外需要：给运行脚本的终端「屏幕录制」权限；`demo4.py` 用 `~/.cargo/bin/shifu computer list-windows` 找窗口 id（要电脑操作组件和权限）；把 `stage4.py` 里写死的两条复制路径改成 0.4.3 下载包里的 `Shifu.app/Contents/MacOS/shifu-app` 和 `bin/shifu`（保留独立的 `SHIFU_APP_HOME`、`shifu-app-demo` socket 和 `invalid.shifu-site-demo` bundle id）；ffmpeg 和 Playwright（叠加层、编码）；同版本的截图也要重拍（见下一节）。重录后把 `tools/build.py` 的 `DEMO["version"]` 改成 0.4.3。
 - 页面：`<video autoplay muted loop playsinline preload="metadata">`，桌面和手机各有 `media` 限定的源；`prefers-reduced-motion` 时不自动播放，停在 poster 上并显示「播放演示」按钮。
 
 ### 截图怎么来的
@@ -65,14 +80,15 @@ site/
 
 ## 页面结构
 
-1. 顶栏：Logo、锚点导航、语言切换、GitHub、下载
-2. 首屏：标题、一句说明、下载主按钮、GitHub 次按钮、未公证提示、四种会话状态图例、演示视频；视频下方一条脚注说明视频和截图都是演示数据、横幅和按键提示是后期叠加（全站只有这一处）
-3. 支持的工具：自动滚动的标志带（图标取自 app/src/vendoricons.ts 和 app/src/assets/antigravity.svg，单色内联 SVG，名字是文字）；悬停或聚焦时暂停，`prefers-reduced-motion` 下变成静止的换行排列
-4. 功能：只有三个大块，按顺序编号——01 在等你、02 真终端、03 关掉窗口继续跑（只留一行流程：Agent → tmux → 窗口）；其余放进「还有这些」网格：任务与进度、通知、额度、另一台 Mac 和手机、操作窗口和网页、长任务不睡，每项一个图标、一两行字和文档链接
-5. 三步开始：左边三步，右边新建任务弹窗
-6. 开源与隐私：四条事实
-7. 安装：两个页签（让 AI 装 / 自己装）。长代码块默认只显示前几行，「展开全部（共 N 行）」按钮带 `aria-expanded`，可用键盘操作，收起时按钮在屏幕上的位置不变；复制按钮始终复制全文。旁边是「装之前要知道」
-8. FAQ（`<details>`，无需 JS）与页脚
+1. 顶栏：Logo、锚点导航（功能、安装、兼容性、隐私、FAQ）、「反馈」（GitHub issues）、语言切换、GitHub、下载
+2. 首屏：「多开 Agent，少操心。」/ "Run more agents. Manage less."、一句说明、下载主按钮、GitHub 次按钮、未公证提示
+3. 问题与演示：Agent 一多就漏掉等你的那个（注意力才是稀缺的）→ 四种会话状态图例 → 演示视频；视频下方一条脚注说明视频和截图录自哪个版本、是演示数据、横幅和按键提示是后期叠加（全站只有这一处，版本号由 `build.py` 填）
+4. 功能：三个大块——01「在等你」、02 真终端（含每个 Agent 一个 Git worktree）、03 退出 / 崩溃 / 重启后会话接得回来（一行流程 Agent → tmux → 窗口，以及一句 Mac 睡眠、合盖时会怎样，依据 `app/src-tauri/src/power.rs`、`lid.rs`）；其余放进「还有这些」网格：每个 Agent 一个工作区、任务与进度、通知、额度、另一台 Mac 和手机、操作窗口和网页
+5. 快速开始：左边三步，右边新建任务弹窗
+6. 安装：两个页签（让 AI 装 / 自己装），内容由 `docs/INSTALL*.md` 生成。长代码块默认只显示前几行，「展开全部（共 N 行）」按钮带 `aria-expanded`，可用键盘操作；复制按钮始终复制全文。旁边是「装之前要知道」（权限一条来自文档）
+7. 兼容性：三档 Agent 支持——完整状态（hooks / 插件 / 扩展：Claude Code、Codex、CodeBuddy、Kimi Code、opencode，以及没有批准提示的 Antigravity、Pi）、只有终端（Gemini CLI：`hooks: None`，不能恢复）、需要额外设置（Qwen Code、StepFun：自备命令行或运行时和密钥）。依据 `src/agents_spec.rs` 和 `docs/AGENTS.md`；图标取自 app/src/vendoricons.ts 和 app/src/assets/antigravity.svg，单色内联 SVG
+8. 开源与隐私：四条事实
+9. FAQ（`<details>`，无需 JS）与页脚（含「报告问题 / 提需求」）
 
 ## 设计决定
 

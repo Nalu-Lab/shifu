@@ -25,7 +25,7 @@ When more agents are running, Shifu brings the conversations that need you toget
 
 **Each agent keeps its own terminal** · **Sessions keep running when the window closes** · **Tasks and layouts stay on your Mac**
 
-> **Early version.** Primarily used on Apple Silicon Macs, available as an Apple Silicon preview package or source build, and not notarized. Before the first conversation Shifu asks once how agents may act, with each agent's own settings preselected. Only if you choose no-confirmation mode do Claude, Codex, CodeBuddy, Kimi and Qwen Code edit files and run commands without individual approval (upgrades keep their existing setting). Read the [launch instructions](#quick-start) and [known issues](#known-issues) before installing.
+> **Early version.** Primarily used on Apple Silicon Macs, available as an Apple Silicon preview package or source build, and not notarized. Before the first conversation Shifu asks once how agents may act, with each agent's own settings preselected. Only if you choose no-confirmation mode do Claude, Codex, CodeBuddy, Kimi and Qwen Code edit files and run commands without individual approval (upgrades keep their existing setting; the 0.4.3 download does not ask yet and defaults to no-confirmation, see [permission mode](docs/INSTALL.en.md)). Read the [launch instructions](#quick-start) and [known issues](#known-issues) before installing.
 
 <p align="center"><img src="docs/images/shifu-workspace.png" width="960" alt="A simulated demonstration of the current Shifu interface, with conversation states in the sidebar and two agents' terminals side by side."></p>
 <p align="center"><sub>Simulated conversations in the current UI. Terminal content, conversation states and quotas are demo data. The interface is in Chinese.</sub></p>
@@ -74,15 +74,15 @@ Paste this into Claude Code or Codex:
 Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and docs/INSTALL.en.md first.
 1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
 2. Download the ZIP and SHA256SUMS from the same release linked in the README. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
-3. Follow the package instructions: put Shifu.app in ~/Applications and its matching bin/shifu in ~/.cargo/bin/shifu. Add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
-4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and that before the first conversation it asks once how agents may act: their own settings are preselected, and no-confirmation mode is my choice to make. Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
+3. Follow the package instructions: put Shifu.app in ~/Applications and install the package's bin/shifu to ~/.cargo/bin/shifu. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need this one (later versions carry a matching CLI inside the app, and this step is then only for using shifu in a terminal; follow the package instructions). Add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
+4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and that 0.4.3 starts agents in no-confirmation mode; to be asked before each change, set permissions to the agent's own settings in the new-task form (later versions ask once before the first conversation). Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
 5. Help me choose a project and start my first agent conversation. On the first Codex launch, let me review its hooks before deciding whether to trust them.
 ```
 
 ### Option B: install it yourself
 
 1. Download the ZIP and `SHA256SUMS` from the same release. Run `shasum -a 256 -c SHA256SUMS` in the download directory before extracting.
-2. For an existing installation, quit it and back up the old app and CLI first; use the app and CLI from the same package. In the extracted package directory, verify its contents before installing the CLI:
+2. For an existing installation, quit it and back up the old app and CLI first. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need the package's CLI; install it too (later versions carry a matching CLI inside the app, and this step is then only for using `shifu` in a terminal; follow the package instructions). In the extracted package directory, verify its contents, then install the CLI:
 
    ```bash
    shasum -a 256 -c SHA256SUMS

@@ -6,13 +6,19 @@ Shifu provides an [Apple Silicon preview package](https://github.com/Nalu-Lab/sh
 
 Use the download for ordinary sessions; source-build instructions are in the developer section below.
 
-Before the first conversation, Shifu asks once how agents may act. 按 Agent 自己的设置 (each agent's own settings) is preselected: no no-approval flags are added, and each agent's own configuration decides when it asks. If you choose 免确认（全权） (no confirmation), Claude, Codex, CodeBuddy, Kimi, Qwen Code and opencode start with flags such as `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox` and `--yolo` (opencode with `--auto`, which still honours rules you explicitly deny), and edit files and run commands without individual approval. You can change it any time under 权限 in the new-task popover; conversations started or resumed after that use the new setting. Upgrades from an earlier version are not asked and keep their setting (no confirmation unless you changed it). The terminal edition's `shifu new` works the same way: a fresh install starts agents with their own settings until a choice is saved. Pi has no approval prompts, so the setting does not affect it.
+<!-- permission-mode: the one place that describes the permission mode; the site's install notes are generated from it. -->
+**Permission mode:** before the first conversation, Shifu asks once how agents may act. 按 Agent 自己的设置 (each agent's own settings) is preselected and recommended: no no-approval flags are added, and each agent's own configuration decides when it asks. With 免确认（全权） (no confirmation), agents edit files and run commands without individual approval. You can change it any time under 权限 in the new-task popover. Upgrades from an earlier version are not asked and keep their setting. The 0.4.3 download does not ask yet and starts in no-confirmation mode; set 权限 to 用 Agent 自己的设置 to change it.
+<!-- /permission-mode -->
+
+With no confirmation, Claude, Codex, CodeBuddy, Kimi, Qwen Code and opencode start with flags such as `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox` and `--yolo` (opencode with `--auto`, which still honours rules you explicitly deny). After a change, conversations started or resumed use the new setting. Pi has no approval prompts, so the setting does not affect it.
 
 The app is signed with Shifu's own fixed certificate (not one issued by Apple) and is not notarized. If macOS blocks it the first time, confirm its source and follow the app-specific prompt in System Settings → Privacy & Security.
 
 ## Quick start
 
-[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately. The app's setup checklist (准备情况, shown on first open and later in the Shifu menu) lists anything missing, with the install command and instructions link. StepFun requires [Node/Pi and subscription-key setup](STEPFUN.md#english).
+[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately. From the version after 0.4.3, the app's setup checklist (准备情况, shown on first open and later in the Shifu menu) lists anything missing, with the install command and instructions link. StepFun requires [Node/Pi and subscription-key setup](STEPFUN.md#english).
+
+<!-- cli-step: required (the app in the linked release does not carry its CLI; scripts/release/check-docs.py checks this against the release tag) -->
 
 ### Option A: let your AI install it
 
@@ -22,15 +28,15 @@ Paste this into Claude Code or Codex:
 Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and docs/INSTALL.en.md first.
 1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
 2. Download the ZIP and SHA256SUMS from the same release linked in the README. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
-3. Follow the package instructions: put Shifu.app in ~/Applications. The app carries its matching CLI, so conversation status, notifications and the project manager work with the app alone. Only if I want shifu in my terminal, install the package's bin/shifu to ~/.cargo/bin/shifu, add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
-4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and that before the first conversation it asks once how agents may act: their own settings are preselected, and no-confirmation mode is my choice to make. Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
+3. Follow the package instructions: put Shifu.app in ~/Applications and install the package's bin/shifu to ~/.cargo/bin/shifu. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need this one (later versions carry a matching CLI inside the app, and this step is then only for using shifu in a terminal; follow the package instructions). Add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
+4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and that 0.4.3 starts agents in no-confirmation mode; to be asked before each change, set permissions to the agent's own settings in the new-task form (later versions ask once before the first conversation). Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
 5. Help me choose a project and start my first agent conversation. On the first Codex launch, let me review its hooks before deciding whether to trust them.
 ```
 
 ### Option B: install it yourself
 
 1. Download the ZIP and `SHA256SUMS` from the same release. Run `shasum -a 256 -c SHA256SUMS` in the download directory before extracting.
-2. For an existing installation, quit it and back up the old app and CLI first. The app carries its matching CLI, so conversation status, notifications and the project manager work with the app alone; install the package's CLI only to use `shifu` in your terminal (if a separately installed CLI does not match the app, the app keeps a notice at the bottom of the sidebar). In the extracted package directory, verify its contents, then install the CLI if you want it:
+2. For an existing installation, quit it and back up the old app and CLI first. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need the package's CLI; install it too (later versions carry a matching CLI inside the app, and this step is then only for using `shifu` in a terminal; follow the package instructions). In the extracted package directory, verify its contents, then install the CLI:
 
    ```bash
    shasum -a 256 -c SHA256SUMS
@@ -123,4 +129,4 @@ Set `SHIFU_APP_HOME` and `SHIFU_APP_SOCKET` while developing so test data stays 
 
 StepFun additionally requires Node/Pi and a subscription key: [setup](STEPFUN.md#english). Update the app and matching CLI together. The [autopilot script](AUTOPILOT.md#english) is not started by installation.
 
-Current source also provides the opencode and Pi agents (they appear in the new-conversation list once `opencode` / `pi` is installed; your own config and accounts are used and Shifu does not edit their config files, see [the agent table](AGENTS.md)), [Qwen Code / Token Plan](QWEN.md#english), [scheduled daily-analysis catch-up](DAILY-ANALYSIS.md#english), and [worktree handoffs / session recovery](WORKSPACES.md). These source additions are not in the release package linked above; build the app and CLI from the same revision when using them.
+The 0.4.3 download also provides the opencode and Pi agents (they appear in the new-conversation list once `opencode` / `pi` is installed; your own config and accounts are used and Shifu does not edit their config files, see [the agent table](AGENTS.md)), [Qwen Code / Token Plan](QWEN.md#english), [scheduled daily-analysis catch-up](DAILY-ANALYSIS.md#english), and [worktree handoffs / session recovery](WORKSPACES.md). These are all included in the release package linked above.
