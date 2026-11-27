@@ -9,7 +9,7 @@ const USAGE: &str = "shifu — 多 agent 终端工作台
                                开一个 agent：claude、codex 或任意命令名
                                --focus 建好后切到它
   shifu ls                     列出所有 agent
-  shifu jump                   跳到等你最久的 agent
+  shifu jump                   跳到最急的在等你的 agent（先批准，再提问，再做完的）
   shifu status [--json]        Shifu 应用里每个对话在干什么、等了多久、在等什么、最后一句
   shifu tell <对话> [--from 谁] <话>
                                往停着的对话发消息；加 --queue --id <ID> 可向原会话排队追加

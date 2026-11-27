@@ -44,7 +44,11 @@
 | Stop、StopFailure、Interrupt | 在问你（这一轮结束，等你回复） |
 | SessionEnd | 已退出 |
 
-子 agent 的 hook 事件在写入前就被丢掉，免得主 agent 的状态被它们来回改。tmux 里窗格没了但记录还在的 agent，界面按「已退出」显示，可以一键恢复原来的会话（`--resume`）。
+PermissionRequest 的工具是 AskUserQuestion 时（Claude 的提问也要走一次权限框）仍算「在问你」，不算批准。
+
+批准记着是谁、为哪一次调用要的（记录里的 `approval`：子 agent 的 id、工具、命令或文件）。只有这次调用的 PostToolUse、Kimi/opencode 的 PermissionResult，或要批准的那一方开始了别的调用（批准过的命令失败时 Claude 只发 PostToolUseFailure，Shifu 不挂它），才算批完；并行的另一个调用、另一个子 agent 的事件不会把它清掉。没有 `approval` 的旧记录按上表。
+
+子 agent 的事件只在两种时候算数：它要批准（会挡住整个对话），和它自己的批准有了结果；其余在写入前就被丢掉，免得主 agent 的状态被它们来回改，也不会改记录里的会话 id。tmux 里窗格没了但记录还在的 agent，界面按「已退出」显示，可以一键恢复原来的会话（`--resume`）。
 
 ## 代码在哪
 

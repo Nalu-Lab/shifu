@@ -134,6 +134,43 @@ export function waitingFor(agent: Pick<AgentView, "status" | "last_message" | "w
   return lines[lines.length - 1] ?? "";
 }
 
+/** Tools whose approval is about a command, a file change, a file read, a page or a search, by the names Claude
+ *  Code, Codex, Kimi, Qwen and opencode give them in `PermissionRequest` (see `tool_detail` in src/hook.rs). */
+const RUNS = new Set(["Bash", "bash", "shell", "Shell", "exec_command", "local_shell", "run_shell_command", "terminal"]);
+const EDITS = new Set(["Edit", "MultiEdit", "Write", "NotebookEdit", "apply_patch", "edit", "write", "write_file", "replace", "patch"]);
+const READS = new Set(["Read", "read", "read_file", "Glob", "glob", "Grep", "grep", "LS", "list", "list_directory"]);
+const FETCHES = new Set(["WebFetch", "web_fetch", "webfetch", "fetch"]);
+const SEARCHES = new Set(["WebSearch", "web_search", "websearch", "google_web_search"]);
+
+/** An approval in words: `src/hook.rs` records it as "<tool>：<what it touches>" ("Bash：git push"); this says
+ *  "要运行：git push". Text that is not in that form (Kimi's own wording, older records) is kept as it is. */
+export function approvalSummary(what: string): string {
+  const text = what.trim();
+  const split = text.match(/^([A-Za-z_][\w.:-]*)：([\s\S]*)$/);
+  const [tool, detail] = split ? [split[1], split[2].trim()] : /^[A-Za-z_][\w.:-]*$/.test(text) ? [text, ""] : ["", text];
+  if (!tool) return detail;
+  const command = detail.replace(/^(?:\S*\/)?(?:ba|z)?sh\s+-l?c\s+/, "");
+  const say = (verb: string, alone: string) => (detail ? `${verb}：${verb === "要运行" ? command : detail}` : alone);
+  if (RUNS.has(tool)) return say("要运行", "要运行命令");
+  if (EDITS.has(tool)) return say("要改", "要改文件");
+  if (READS.has(tool)) return say("要读", "要读文件");
+  if (FETCHES.has(tool)) return say("要访问", "要访问网页");
+  if (SEARCHES.has(tool)) return say("要搜索", "要上网搜索");
+  if (tool === "ExitPlanMode" || tool === "exit_plan_mode") return "计划写好了，等你批准";
+  const mcp = tool.match(/^mcp__(.+?)__(.+)$/);
+  const name = mcp ? `${mcp[1]} 的 ${mcp[2]}` : tool;
+  return detail ? `要用 ${name}：${detail}` : `要用 ${name}`;
+}
+
+/** One line of at most `max` characters, whitespace collapsed. A command or path is cut at its end; a sentence
+ *  keeps its end, where the question is ("…要我现在合并吗？"). */
+export function clip(text: string, max: number, keep: "start" | "end"): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  const chars = [...flat];
+  if (chars.length <= max) return flat;
+  return keep === "start" ? `${chars.slice(0, max - 1).join("").trimEnd()}…` : `…${chars.slice(chars.length - max + 1).join("").trimStart()}`;
+}
+
 /** Reading a follow-up is not answering it. Keep its icon until the reported status changes.
  *  A missing readiness callback is a reason to inspect the terminal, not proof of idle or an approval. */
 export function displayKey(agent: AgentView, nowSecs = Math.floor(Date.now() / 1000)): ViewKey {

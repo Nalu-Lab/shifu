@@ -71,7 +71,7 @@ npm run build:desktop -- --debug
 | Cmd+N | New task |
 | Cmd+T | Add an agent to the current task |
 | Cmd+W | Close the current panel (the agent keeps running) |
-| Cmd+J | Jump to the agent that has waited longest |
+| Cmd+J | Jump to the most urgent waiting agent (approvals, then questions, then finished results; longest wait first in each) |
 | Cmd+, | Appearance |
 | Double-click a tab | Rename the agent; leave it empty to go back to the topic name |
 | × on a tab | Choose to hide the tab while the agent keeps running, or end it; ending a running agent needs another confirmation |

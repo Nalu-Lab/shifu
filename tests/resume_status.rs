@@ -30,7 +30,7 @@ fn fixture(scenario: &str) {
         pane_id: Some("%old".into()), window_id: Some("@old".into()),
         session_id: if scenario == "fresh" { None } else { Some("saved-conversation".into()) },
         last_message: Some("Previous work finished".into()),
-        waiting_for: None,
+        waiting_for: None, approval: None,
         model: Some("test-model".into()), effort: Some("high".into()), label: Some("Keep my label".into()),
     };
     agent::save(&record).unwrap();
@@ -96,7 +96,7 @@ fn lost_server_fixture(scenario: &str) {
     let record = |name: &str, kind: Kind, pane: &str, status: Status, since: u64, session: Option<&str>| Agent {
         name: name.into(), kind, command: kind.as_str().into(), cwd: home.to_string_lossy().into(), created_at: 100,
         status, status_since: since, pane_id: Some(pane.into()), window_id: Some("@old".into()),
-        session_id: session.map(Into::into), last_message: Some("Previous work finished".into()), waiting_for: None,
+        session_id: session.map(Into::into), last_message: Some("Previous work finished".into()), waiting_for: None, approval: None,
         model: None, effort: None, label: None,
     };
     for agent in [

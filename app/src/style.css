@@ -604,6 +604,14 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   margin-bottom: 8px;
 }
 
+/* 在等你's urgency groups (等你批准, 待回复, 做完了): quieter than the section label above them. */
+.wait-group {
+  padding: 4px 10px 0;
+  font-size: 11px;
+  color: var(--text-3);
+  opacity: 0.8;
+}
+
 .wait-row {
   padding: 6px 10px;
   border-radius: var(--radius);

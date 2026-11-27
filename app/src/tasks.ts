@@ -1,5 +1,5 @@
 import { type WaitingSeen, type WaitingAgent, unseenWaitingAgent } from "./waitingseen";
-import { type AgentView, displayKey, needsYou, sortAgents, waitingFor, type ViewKey } from "./format";
+import { type AgentView, approvalSummary, clip, displayKey, needsYou, sortAgents, statusLabel, waitingFor, type ViewKey } from "./format";
 
 /** Mirrors `Task` / `TaskFile` in app/src-tauri/src/tasks.rs. */
 export interface Task {
@@ -142,7 +142,41 @@ export function waitingPresentation(agent: WaitingAgent, nowSecs?: number): { st
   return { status, text };
 }
 
-/** "在等你": approvals first, then unread replies and unanswered questions, longest wait first in each. */
+/** How urgent a waiting row is, most urgent first: blocked on an approval, asking the user something, finished
+ *  with a result to look at. `label` is the quiet heading the sidebar shows over each group. */
+export const WAITING_GROUPS = [
+  { key: "needs_approval", label: statusLabel("needs_approval") },
+  { key: "asked", label: statusLabel("asked") },
+  { key: "new", label: statusLabel("new") },
+] as const;
+export type WaitingGroup = (typeof WAITING_GROUPS)[number]["key"];
+
+/** A row's group. Approvals are told apart by the hooks (PermissionRequest); a question is an explicit question
+ *  tool or a turn that ended on a question mark (`displayKey`), the rest of the finished turns are results. */
+export function waitingGroup(agent: WaitingAgent): WaitingGroup {
+  const status = waitingPresentation(agent).status;
+  return status === "needs_approval" ? "needs_approval" : status === "asked" ? "asked" : "new";
+}
+
+/** Characters in a row's one line; the whole text is in its tooltip. */
+const SUMMARY_CHARS = 72;
+
+/** What a waiting row says under its name, from the record the hooks wrote (`waiting_for`, the same field
+ *  `shifu status` prints as 在等): the approval in words ("要运行：git push"), the question asked, or the closing
+ *  line of the reply. `line` is clipped to one short line per item; `full` is for the tooltip. Never fetched. */
+export function waitingSummary(agent: WaitingAgent, nowSecs?: number): { status: ViewKey; line: string; full: string } {
+  const { status, text } = waitingPresentation(agent, nowSecs);
+  const approval = agent.status === "needs_approval" && !agent.waiting_state_seen;
+  let items = text ? text.split("\n") : [];
+  if (approval) items = items.length ? [approvalSummary(items[0]), ...items.slice(1)] : ["要你批准一个操作"];
+  // An older record or a long reply leaves no closing line; its saved start still says what happened.
+  if (!items.length && agent.last_message?.trim()) items = [agent.last_message];
+  const line = items.map((item, i) => clip(item, SUMMARY_CHARS, approval && i === 0 ? "start" : "end")).join("\n");
+  return { status, line, full: items.join("\n") };
+}
+
+/** "在等你": approvals first, then questions, then finished replies; the longest wait first in each. The order
+ *  depends only on each record (state, `status_since`, name), so rows do not jump about between polls. */
 export function waitingList(tasks: readonly Task[], agents: readonly AgentView[], opened: WaitingSeen = {}): Waiting[] {
   const out: Waiting[] = [];
   for (const agent of agents) {
@@ -151,8 +185,8 @@ export function waitingList(tasks: readonly Task[], agents: readonly AgentView[]
     const unseen = unseenWaitingAgent(agent, opened);
     if (unseen) out.push({ agent: unseen, task });
   }
-  const approval = (w: Waiting) => (waitingPresentation(w.agent).status === "needs_approval" ? 0 : 1);
+  const rank = (w: Waiting) => WAITING_GROUPS.findIndex((g) => g.key === waitingGroup(w.agent));
   return out.sort(
-    (a, b) => approval(a) - approval(b) || a.agent.status_since - b.agent.status_since || a.agent.name.localeCompare(b.agent.name),
+    (a, b) => rank(a) - rank(b) || a.agent.status_since - b.agent.status_since || a.agent.name.localeCompare(b.agent.name),
   );
 }

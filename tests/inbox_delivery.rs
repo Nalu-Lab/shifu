@@ -62,7 +62,7 @@ elif a[0]=='send-keys':
         window_id: Some("@1".into()),
         pane_id: Some("%1".into()),
         session_id: Some("native-demo".into()),
-        last_message: None, waiting_for: None,
+        last_message: None, waiting_for: None, approval: None,
         model: None,
         effort: None,
         label: None,

@@ -26,6 +26,10 @@ pub struct HookInput {
     /// The event came from a sub-agent's tool (Claude marks those with `agent_id`), not from the agent itself.
     /// Kimi Code sends `agent_id: "main"` for the agent itself.
     pub from_sub_agent: bool,
+    /// That sub-agent's `agent_id`, to tell whose approval a later event answers.
+    pub sub_agent: Option<String>,
+    /// What the tool call touches, in full (command, path, URL or question): tells two calls of one tool apart.
+    pub call: Option<String>,
     /// Antigravity can emit Stop while its background tasks are still running.
     pub background_work: bool,
     /// The folder the thread works in.
@@ -45,6 +49,8 @@ pub fn parse_input(raw: &str) -> HookInput {
         prompt: field("prompt"),
         tool_detail: tool_detail(&v["tool_input"]),
         from_sub_agent: field("agent_id").is_some_and(|id| id != "main"),
+        sub_agent: field("agent_id").filter(|id| id != "main"),
+        call: call_detail(&v["tool_input"]),
         background_work: v.get("fullyIdle").and_then(Value::as_bool) == Some(false),
         cwd: field("cwd"),
     }
@@ -69,6 +75,60 @@ pub fn foreign_caller(kind: &str, agent: &Agent, input: &HookInput) -> bool {
     (OWN_RECORDS_ONLY.contains(&kind) && agent.kind.as_str() != kind) || (kind == "qwen" && input.from_sub_agent)
 }
 
+/// What a tool call touches, in full: its command, the file, URL or pattern, else the question it asks.
+fn call_detail(input: &Value) -> Option<String> {
+    let text = if let Some(words) = input["command"].as_array() {
+        words.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(" ")
+    } else {
+        ["command", "file_path", "notebook_path", "path", "url", "pattern", "query", "question"]
+            .iter()
+            .find_map(|key| input[*key].as_str())
+            .or_else(|| input["questions"][0]["question"].as_str())?
+            .trim()
+            .to_string()
+    };
+    (!text.is_empty()).then_some(text)
+}
+
+/// The pending approval, as `Agent::approval` keeps it: who asked (a sub-agent's id, empty for the agent itself),
+/// the tool, and what the call touches.
+pub fn approval_key(input: &HookInput) -> String {
+    let part = |value: Option<&str>| value.unwrap_or_default().replace('\u{1f}', " ");
+    [part(input.sub_agent.as_deref()), part(input.tool_name.as_deref()), part(input.call.as_deref())].join("\u{1f}")
+}
+
+/// How an event from the agent or one of its sub-agents relates to the approval it waits for (`key`).
+#[derive(Debug, PartialEq)]
+enum Answer {
+    /// That call went ahead (or was answered): the approval is over.
+    Answered,
+    /// Whoever asked started another call: the approval was settled without a result, e.g. the approved command failed.
+    MovedOn,
+    /// Someone else's call, or a parallel one: the approval still waits.
+    Unrelated,
+}
+
+fn answers(key: &str, event: &str, input: &HookInput) -> Answer {
+    let mut parts = key.splitn(3, '\u{1f}');
+    let (owner, tool, call) = (parts.next().unwrap_or_default(), parts.next().unwrap_or_default(), parts.next().unwrap_or_default());
+    let from = input.sub_agent.as_deref().unwrap_or_default();
+    let same_call = input.tool_name.as_deref().unwrap_or_default() == tool
+        && (call.is_empty() || input.call.as_deref().is_none_or(|c| c == call));
+    if from != owner {
+        // The agent getting a sub-agent's (Task/Agent tool) result back means that sub-agent has finished.
+        let sub_agent_done = !owner.is_empty() && from.is_empty() && event == "PostToolUse"
+            && matches!(input.tool_name.as_deref(), Some("Task" | "Agent"));
+        return if sub_agent_done { Answer::Answered } else { Answer::Unrelated };
+    }
+    match event {
+        // Kimi and opencode say so outright, without naming the call.
+        "PermissionResult" => Answer::Answered,
+        "PostToolUse" if same_call => Answer::Answered,
+        "PreToolUse" if !same_call => Answer::MovedOn,
+        _ => Answer::Unrelated,
+    }
+}
+
 fn tool_detail(input: &Value) -> Option<String> {
     let questions = input["questions"].as_array().map_or(0, Vec::len);
     let text = if let Some(question) = input["questions"][0]["question"].as_str().or_else(|| input["question"].as_str()) {
@@ -77,6 +137,8 @@ fn tool_detail(input: &Value) -> Option<String> {
         command.trim().lines().next().unwrap_or_default().trim().to_string()
     } else if let Some(words) = input["command"].as_array() {
         words.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(" ")
+    } else if let Some(url) = input["url"].as_str() {
+        url.trim().to_string()
     } else {
         let path = input["file_path"].as_str()?;
         std::path::Path::new(path).file_name()?.to_str()?.to_string()
@@ -133,15 +195,42 @@ pub fn apply_event(agent: &Agent, event: &str, input: &HookInput, now: u64) -> A
     if old_session_ended {
         return agent.clone();
     }
-    let status = if input.from_sub_agent { agent.status }
-        else if event == "Stop" && input.background_work { Status::Running }
-        else { next_status(agent.status, event, input.tool_name.as_deref()) };
+    let tool = input.tool_name.as_deref();
+    // The approval this record waits for, when the hook that asked said which call it was (older records did not).
+    let pending = agent.approval.as_deref().filter(|_| agent.status == Status::NeedsApproval);
+    let status = if event == "PermissionRequest" {
+        // Asked by the agent or by one of its sub-agents, the prompt blocks on the user all the same. Claude's
+        // question tool also goes through a permission prompt; it stays a question.
+        if asks_user(tool) { Status::NeedsReply } else { Status::NeedsApproval }
+    } else if let Some(key) = pending
+        && matches!(event, "PreToolUse" | "PostToolUse" | "PermissionResult")
+    {
+        match answers(key, event, input) {
+            Answer::Answered => Status::Running,
+            Answer::MovedOn => next_status(Status::Running, event, tool),
+            Answer::Unrelated => Status::NeedsApproval,
+        }
+    } else if input.from_sub_agent {
+        agent.status
+    } else if event == "Stop" && input.background_work {
+        Status::Running
+    } else {
+        next_status(agent.status, event, tool)
+    };
     let mut next = agent.clone();
     if status != agent.status {
         next.status = status;
         next.status_since = now;
     }
-    if input.session_id.is_some() {
+    next.approval = if status != Status::NeedsApproval {
+        None
+    } else if event == "PermissionRequest" {
+        Some(approval_key(input))
+    } else {
+        agent.approval.clone()
+    };
+    // A sub-agent's events never name the conversation (a Codex sub-agent runs as a thread of its own).
+    if input.session_id.is_some() && !input.from_sub_agent {
         next.session_id = input.session_id.clone();
     }
     if event == "Stop"
@@ -149,17 +238,9 @@ pub fn apply_event(agent: &Agent, event: &str, input: &HookInput, now: u64) -> A
     {
         next.last_message = Some(msg.chars().take(LAST_MESSAGE_CHARS).collect());
     }
-    let tool = input.tool_name.as_deref();
-    next.waiting_for = if input.from_sub_agent {
-        agent.waiting_for.clone()
-    } else if !status.is_waiting() {
+    next.waiting_for = if !status.is_waiting() {
         None
-    } else if event == "PermissionRequest" {
-        match (tool, &input.tool_detail) {
-            (Some(tool), Some(detail)) => Some(format!("{tool}：{detail}")),
-            (tool, detail) => tool.map(str::to_string).or_else(|| detail.clone()),
-        }
-    } else if event == "PreToolUse" && asks_user(tool) {
+    } else if asks_user(tool) && matches!(event, "PreToolUse" | "PermissionRequest") {
         // An explicit question tool can itself quote the question. Preserve its
         // request context when only this one-line detail reaches the sidebar.
         input.tool_detail.as_ref().map(|detail| {
@@ -171,7 +252,12 @@ pub fn apply_event(agent: &Agent, event: &str, input: &HookInput, now: u64) -> A
                 detail.clone()
             }
         })
-    } else if event == "Stop" {
+    } else if event == "PermissionRequest" {
+        match (tool, &input.tool_detail) {
+            (Some(tool), Some(detail)) => Some(format!("{tool}：{detail}")),
+            (tool, detail) => tool.map(str::to_string).or_else(|| detail.clone()),
+        }
+    } else if event == "Stop" && !input.from_sub_agent {
         input.last_message.as_deref().and_then(closing_line)
     } else if status != agent.status {
         None
@@ -398,7 +484,7 @@ mod tests {
             pane_id: Some("%1".to_string()),
             session_id: None,
             last_message: None,
-            waiting_for: None,
+            waiting_for: None, approval: None,
             model: None,
             effort: None,
             label: None,
@@ -628,6 +714,112 @@ mod tests {
         assert!(!foreign_thread("codex", "/tmp", &parse_input(r#"{"session_id":"chat"}"#)));
         // Claude's hook cwd follows `cd` inside the conversation, so it says nothing about which thread it is.
         assert!(!foreign_thread("claude", "/tmp", &memories));
+    }
+
+    /// Walk one conversation through hook payloads, as `shifu hook` would apply them one after another.
+    fn walk(start: &Agent, steps: &[(&str, &str)]) -> Agent {
+        steps.iter().enumerate().fold(start.clone(), |a, (i, (event, raw))| apply_event(&a, event, &parse_input(raw), 200 + i as u64))
+    }
+
+    #[test]
+    fn a_sub_agents_approval_request_puts_the_conversation_in_the_waiting_list() {
+        // Claude Code and Codex mark a sub-agent's hooks with agent_id, PermissionRequest included (Claude's common
+        // hook fields carry `agent_id`; Codex's permission-request schema lists it). The prompt still blocks on the
+        // user: before, Shifu dropped the event and kept showing 运行中.
+        for (kind, raw) in [
+            (Kind::Claude, r#"{"session_id":"s","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"git push"},"agent_id":"a7f","agent_type":"general-purpose"}"#),
+            (Kind::Codex, r#"{"session_id":"s","turn_id":"t","hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"git push"},"agent_id":"a7f","agent_type":"worker"}"#),
+        ] {
+            let mut a = agent(Status::Running);
+            a.kind = kind;
+            a.session_id = Some("s".into());
+            let asked = apply_event(&a, "PermissionRequest", &parse_input(raw), 5);
+            assert_eq!((asked.status, asked.waiting_for.as_deref()), (Status::NeedsApproval, Some("Bash：git push")), "{kind:?}");
+            // Another sub-agent's or the agent's own other tools finishing do not answer it.
+            let other_sub = apply_event(&asked, "PostToolUse", &parse_input(r#"{"tool_name":"Read","tool_input":{"file_path":"/r/a"},"agent_id":"b22"}"#), 6);
+            assert_eq!(other_sub.status, Status::NeedsApproval, "{kind:?}");
+            // The approved command finishing in that sub-agent does.
+            let done = apply_event(&other_sub, "PostToolUse", &parse_input(r#"{"tool_name":"Bash","tool_input":{"command":"git push"},"agent_id":"a7f"}"#), 7);
+            assert_eq!((done.status, done.waiting_for.as_deref()), (Status::Running, None), "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn claudes_question_tool_also_asks_for_permission_and_stays_a_question() {
+        // Claude Code's AskUserQuestion answers checkPermissions with `ask`, so PermissionRequest follows its
+        // PreToolUse. It was shown as 等你批准「AskUserQuestion：…」, sorted with approvals.
+        let question = r#"{"tool_name":"AskUserQuestion","tool_input":{"questions":[{"question":"用哪个数据库？","options":[]}]}}"#;
+        let asked = walk(&agent(Status::Running), &[("PreToolUse", question), ("PermissionRequest", question)]);
+        assert_eq!((asked.status, asked.waiting_for.as_deref()), (Status::NeedsReply, Some("用哪个数据库？")));
+        assert_eq!(walk(&asked, &[("PostToolUse", question)]).status, Status::Running);
+    }
+
+    #[test]
+    fn a_parallel_tool_finishing_does_not_clear_another_calls_approval() {
+        // Claude runs read-only tools side by side; a Read outside the project asks while another one finishes.
+        let a = walk(&agent(Status::Running), &[
+            ("PreToolUse", r#"{"tool_name":"Read","tool_input":{"file_path":"/repo/a.rs"}}"#),
+            ("PreToolUse", r#"{"tool_name":"Read","tool_input":{"file_path":"/etc/hosts"}}"#),
+            ("PermissionRequest", r#"{"tool_name":"Read","tool_input":{"file_path":"/etc/hosts"}}"#),
+            ("PostToolUse", r#"{"tool_name":"Read","tool_input":{"file_path":"/repo/a.rs"}}"#),
+        ]);
+        assert_eq!((a.status, a.waiting_for.as_deref()), (Status::NeedsApproval, Some("Read：hosts")));
+        let approved = walk(&a, &[("PostToolUse", r#"{"tool_name":"Read","tool_input":{"file_path":"/etc/hosts"}}"#)]);
+        assert_eq!(approved.status, Status::Running);
+        // Codex reports no PreToolUse; a parallel command finishing after the request is the same story.
+        let codex = walk(&agent(Status::Running), &[
+            ("PermissionRequest", r#"{"tool_name":"shell","tool_input":{"command":["bash","-lc","git push"]}}"#),
+            ("PostToolUse", r#"{"tool_name":"shell","tool_input":{"command":["bash","-lc","ls"]}}"#),
+        ]);
+        assert_eq!(codex.status, Status::NeedsApproval);
+        assert_eq!(walk(&codex, &[("PostToolUse", r#"{"tool_name":"shell","tool_input":{"command":["bash","-lc","git push"]}}"#)]).status, Status::Running);
+    }
+
+    #[test]
+    fn an_approval_ends_when_its_owner_moves_on_even_without_a_result() {
+        // Claude reports a failed call with PostToolUseFailure, which Shifu does not hook: the approved command
+        // failed and the agent started its next tool. That next start ends the approval.
+        let asked = walk(&agent(Status::Running), &[("PermissionRequest", r#"{"tool_name":"Bash","tool_input":{"command":"npm test"}}"#)]);
+        let next = walk(&asked, &[("PreToolUse", r#"{"tool_name":"Edit","tool_input":{"file_path":"/r/a.rs"}}"#)]);
+        assert_eq!((next.status, next.approval.as_deref(), next.waiting_for.as_deref()), (Status::Running, None, None));
+        // The same call starting again (a duplicate report) changes nothing; a sub-agent starting one neither.
+        assert_eq!(walk(&asked, &[("PreToolUse", r#"{"tool_name":"Bash","tool_input":{"command":"npm test"}}"#)]).status, Status::NeedsApproval);
+        assert_eq!(walk(&asked, &[("PreToolUse", r#"{"tool_name":"Bash","tool_input":{"command":"ls"},"agent_id":"s1"}"#)]).status, Status::NeedsApproval);
+        // Moving on to a question is a question.
+        let ask = walk(&asked, &[("PreToolUse", r#"{"tool_name":"AskUserQuestion","tool_input":{"questions":[{"question":"继续吗？"}]}}"#)]);
+        assert_eq!((ask.status, ask.waiting_for.as_deref()), (Status::NeedsReply, Some("继续吗？")));
+    }
+
+    #[test]
+    fn a_sub_agents_approval_ends_with_that_sub_agent_or_the_turn() {
+        let sub = r#"{"tool_name":"WebFetch","tool_input":{"url":"https://example.com"},"agent_id":"a7f"}"#;
+        let asked = walk(&agent(Status::Running), &[("PermissionRequest", sub)]);
+        assert_eq!((asked.status, asked.waiting_for.as_deref()), (Status::NeedsApproval, Some("WebFetch：https://example.com")));
+        // Denied: the sub-agent carries on with something else.
+        assert_eq!(walk(&asked, &[("PreToolUse", r#"{"tool_name":"Grep","tool_input":{"pattern":"x"},"agent_id":"a7f"}"#)]).status, Status::Running);
+        // The agent's own tools do not answer a sub-agent's prompt, but the sub-agent's result coming back does.
+        assert_eq!(walk(&asked, &[("PostToolUse", r#"{"tool_name":"Bash","tool_input":{"command":"ls"}}"#)]).status, Status::NeedsApproval);
+        assert_eq!(walk(&asked, &[("PostToolUse", r#"{"tool_name":"Task","tool_input":{"prompt":"look"}}"#)]).status, Status::Running);
+        // The turn ending or the user typing ends it too.
+        assert_eq!(walk(&asked, &[("Stop", "{}")]).status, Status::NeedsReply);
+        assert_eq!(walk(&asked, &[("UserPromptSubmit", "{}")]).status, Status::Running);
+        // A sub-agent's own session (a Codex sub-agent thread) never replaces the conversation's.
+        let mut named = agent(Status::Running);
+        named.session_id = Some("main-session".into());
+        let after = walk(&named, &[("PermissionRequest", r#"{"session_id":"sub-thread","tool_name":"Bash","agent_id":"a7f"}"#)]);
+        assert_eq!(after.session_id.as_deref(), Some("main-session"));
+    }
+
+    #[test]
+    fn a_record_from_an_older_shifu_keeps_the_plain_rules() {
+        // Written before `approval` existed: any tool result ends the approval, as it used to.
+        let mut old = agent(Status::NeedsApproval);
+        old.waiting_for = Some("Bash：git push".into());
+        assert_eq!(walk(&old, &[("PostToolUse", r#"{"tool_name":"Read"}"#)]).status, Status::Running);
+        assert_eq!(walk(&old, &[("PreToolUse", r#"{"tool_name":"Read"}"#)]).status, Status::NeedsApproval);
+        let raw = serde_json::to_string(&walk(&agent(Status::Running), &[("PermissionRequest", r#"{"tool_name":"Bash","tool_input":{"command":"git push"}}"#)])).unwrap();
+        assert!(raw.contains(r#""approval":"\u001fBash\u001fgit push""#), "{raw}");
+        assert!(!serde_json::to_string(&walk(&agent(Status::Running), &[("Stop", "{}")])).unwrap().contains("approval"));
     }
 
     #[test]

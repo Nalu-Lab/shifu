@@ -1,0 +1,6 @@
+- 「在等你」按急的程度分组：先是等你批准的，再是在问你的，最后是做完了等你看的；每组上面有一行小字标明，同一组里等得最久的在上。⌘J 和 `shifu jump` 都先跳到最急的那个。行的顺序只看各自的状态和开始等的时间，刷新时不会来回跳。
+- 每一行下面用一句话说它要什么，不用点开：批准写成「要运行：git push」「要改：config.toml」「要访问：网址」，提问写问题，做完的写回复的最后一句；太长的截成一行，鼠标停上去看全文。
+- 子 agent 要批准时不再漏掉：Claude Code、Codex 的子 agent 弹出批准，以前侧栏一直显示运行中，现在进「在等你」。几个工具同时跑时，别的工具先跑完也不会把还没批的批准清掉。Claude 的提问工具也会走一次权限框，以前被当成「等你批准」，现在算「在问你」。需要同时更新 App 和 `shifu` 命令行。
+- 在等你 is grouped by urgency: approvals first, then questions, then finished results waiting for a look, each under a quiet heading and the longest wait first. ⌘J and `shifu jump` go to the most urgent one. Rows are ordered only by their own state and wait time, so they do not jump about as the list refreshes.
+- Each row says in one line what the agent needs: an approval reads "要运行：git push" or "要改：config.toml", a question shows the question, a finished turn its closing line. Long text is clipped to one line; hover for the whole of it.
+- Approvals asked by a sub-agent are no longer missed: a Claude Code or Codex sub-agent's approval prompt used to leave the conversation showing 运行中; it now enters 在等你. With several tools running at once, another tool finishing no longer clears an approval still waiting. Claude's question tool, which also goes through a permission prompt, now counts as a question rather than an approval. Needs both the app and the `shifu` CLI updated.
