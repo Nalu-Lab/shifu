@@ -11,7 +11,7 @@ site/
 ├── src/index.html    双语源文件：两种语言都写在这里（data-l="zh" / data-l="en"）
 ├── tools/build.py    从源文件生成两张页面；版本号等发布信息只在这里改
 ├── styles.css        全部样式（无预处理）
-├── main.js           语言偏好记忆、安装页签、长代码折叠、复制按钮、滚动淡入；不加载也能正常阅读
+├── main.js           语言偏好记忆、复制安装指令、长代码折叠、复制按钮、滚动淡入；不加载也能正常阅读（安装指令默认展开）
 ├── README.md         本文件
 └── assets/           图片与图标（每张截图都有 -zh / -en 两版，尺寸相同）
     ├── main-*.webp       首屏：主窗口（桌面）
@@ -29,11 +29,11 @@ site/
 ### 改内容、发新版
 
 1. 改 `src/index.html`（文字、结构）或 `tools/build.py` 顶部的 `RELEASE`（版本号、Release 标签）和 `DEMO`（视频、截图是哪个版本录的）。
-2. **安装步骤不在这里改。**「让 AI 帮你装」的提示词、「自己装」的步骤和「装之前要知道」里的权限说明，都由 `build.py` 从 `docs/INSTALL.md` / `docs/INSTALL.en.md` 读出来生成（方式 A 的 `text` 代码块、方式 B 的编号列表、`<!-- permission-mode -->` 标记之间的一段）。改安装说明就改这两份文档，再重新生成。
+2. **安装步骤不在这里改。**「让 Agent 帮你装」的安装指令、「手动安装」的步骤和「装之前要知道」里的权限说明，都由 `build.py` 从 `docs/INSTALL.md` / `docs/INSTALL.en.md` 读出来生成（方式 A 的 `text` 代码块、方式 B 的编号列表、`<!-- permission-mode -->` 标记之间的一段）。改安装说明就改这两份文档，再重新生成。安装指令里写明了 Release 标签和网址，必须等于 `RELEASE["tag"]`，否则构建和 `check-docs.py` 都失败；发新版时一起改文档和 README 里的这一句。
 3. 运行 `python3 site/tools/build.py`（只用 Python 标准库），重新生成 `index.html` 和 `en/index.html`。
 4. 运行 `python3 scripts/release/check-docs.py`，确认版本、下载链接、安装步骤、生成页面和演示说明一致。两张生成的页面一起提交。托管时不需要构建步骤。
 
-`DEMO["version"]` 和 `RELEASE["version"]` 不同时，演示脚注写「录制于 0.4.2 …；当前下载是 0.4.3」；重录后把 `DEMO["version"]` 改成发布版本，脚注自动变成「来自当前版本」。源文件里 `<!--if:demo_current-->…<!--/if:demo_current-->` / `<!--ifnot:…-->` 就是这个开关。
+演示脚注由 `build.py` 的 `DEMO_NOTE` 生成：`DEMO["version"]` 和 `RELEASE["version"]` 不同时写「录制于 0.4.2 …；当前下载是 0.4.3」；重录后把 `DEMO["version"]` 改成发布版本，自动换成「用 Shifu {版本} 在演示项目里录制。是否出现批准请求，取决于各 Agent 的权限设置。」。`DEMO["overlays"]` 为真时再加一句「通知横幅和按键提示是后期叠加的示意」。
 
 ### 发布前的一致性检查
 
@@ -81,20 +81,22 @@ site/
 
 ## 页面结构
 
-1. 顶栏：Logo、锚点导航（功能、兼容性、安装、隐私、FAQ）、「反馈」、语言切换、GitHub、下载（跳到 #install）。760px 以下锚点导航收进一个 `<details>` 菜单（不需要 JS）；480px 以下隐藏 GitHub 图标（菜单里有），「下载」二字保留
-2. 首屏：「多开 Agent，少操心。」/ "Run more agents. Manage less."（宽屏一行）、点明品类的一句说明、「免费开源 · 沿用你已有的 Agent 账号」、下载主按钮（跳到 #install，和顶栏一致；真正的 Release 链接在安装区，旁边就是注意事项）、GitHub 次按钮、「仅支持 Apple Silicon · 早期预览版 · 未经 Apple 公证」（英文页加「窗口目前是中文」），以及一行**随版本变化的权限说明**（见下）
-3. 演示：状态图例（手机上也显示，紧凑）→ 演示视频（右下角暂停 / 播放按钮；`prefers-reduced-motion` 时停在 poster，按钮变成居中的「播放演示」）→ 版本脚注 → 一行 Agent 名单，链接到兼容性。1440×900 下视频在首屏内可见
-4. 问题：「不用再挨个检查终端。」一句场景
-5. 功能：01「知道哪个 Agent 在等你」是整宽的主展示；02 真终端、03「关掉窗口，Agent 照样干活。」（退出 / 崩溃不影响；重启 Mac 会结束进程，支持恢复的 Agent 点开后接回会话；睡眠、合盖、电量、过热的细节收在 `<details>` 里，依据 `power.rs`、`lid.rs`）是两张较小的卡片；其余放进「还有这些」网格
-6. 快速开始：三步 + 新建任务弹窗
-7. 兼容性：能力矩阵 Agent | 实时状态 | 安装要求。完整：Claude Code、Codex、CodeBuddy、Kimi Code、opencode、Qwen Code；部分（不会出现「等你批准」）：Antigravity（hooks 里没有批准事件）、Pi（没有批准提示）、StepFun（跑在 Pi 上）；只有终端：Gemini CLI（`hooks: None`，不能恢复）。需额外设置：Qwen Code、StepFun。手机上每个 Agent 一行紧凑条目。依据 `src/agents_spec.rs`、`src/launch.rs`（`antigravity_config`）和 `docs/AGENTS.md`
-8. 安装：先是简介、安装要求、下载按钮和「装之前要知道」（权限放第一条，任何宽度都在命令之前），再是两个页签（让 AI 装 / 自己装，内容由 `docs/INSTALL*.md` 生成），最后一句完成标准
-9. 开源与隐私：一句「状态留在本机，Agent 照旧连各自的服务商」+ 四条事实
-10. FAQ（`<details>`）→ 结尾一个下载按钮 + GitHub 链接 → 页脚
+顺序按访客的判断过程：看懂 → 支持我的工具 → 可信 → 安装 → 会用。
+
+1. 顶栏：Logo、锚点导航（功能、兼容性、隐私、安装、FAQ）、「反馈」、语言切换、GitHub、下载（跳到 #install）。760px 以下锚点导航收进一个 `<details>` 菜单（不需要 JS）；英文链接更长，960px 以下就收进菜单（761–960px 之间实测会挤到按钮、横向溢出）。480px 以下隐藏 GitHub 图标（菜单里有）
+2. 首屏：标题、品类说明、「免费开源 · 沿用你已有的 Agent 账号」、下载主按钮（跳到 #install）、GitHub 次按钮（480px 以下变成文字链接）、「仅支持 Apple Silicon …」，以及一行**随版本变化的权限说明**。480px 以下隐藏顶部小标签（开源和版本号紧接着就会出现）并收紧间距，390×844 首屏内能看到演示视频的顶部
+3. 演示：状态图例 → 视频 → 版本脚注（`DEMO_NOTE`）→ Agent 名单
+4. 问题：「不用再挨个检查终端。」
+5. 功能：「为多个 Agent 并行工作而设计」，三块核心卖点（在等你、真终端、关掉窗口照样干活）
+6. 兼容性：能力矩阵（依据 `src/agents_spec.rs`、`src/launch.rs`、`docs/AGENTS.md`）
+7. 开源与隐私：四条事实。只有 Kimi Code（`~/.kimi-code/config.toml`）和 Antigravity（`~/.gemini/config/hooks.json`）要改全局配置，文件已存在时首次改动前备份成 `*.before-shifu`（`src/commands.rs` 的 `install_kimi_hooks` / `install_antigravity_hooks`）；其余靠启动参数或 Shifu 自己目录里的文件
+8. 安装 + 快速开始：标题、版本 · Apple Silicon · 免费、安装要求、「装之前要知道」（在两种装法之上），然后两张并列的卡片：「让 Agent 帮你装」（主按钮复制安装指令，`<details>` 里是完整指令；没有 JS 时指令直接展开）和「手动安装」（按钮在新标签打开 Release，同时展开安装步骤），完成标准；之后是快速开始两步 + 新建任务弹窗
+9. 还有这些：六格功能网格
+10. FAQ → 结尾下载按钮 → 页脚
 
 ### 首屏的权限说明
 
-`tools/build.py` 的 `RELEASE["permission"]` 决定首屏和「装之前要知道」第一条怎么写：`"no-confirmation"`（0.4.3：默认免确认，告诉用户在「权限」里改成 `RELEASE["own_label"]`）或 `"asks"`（之后的版本：第一次开对话前问一次）。文案模板在 `PERMISSION_LINE`。生成时会和 `docs/INSTALL*.md` 的 permission-mode 段对照：`"no-confirmation"` 要求那段写着「{版本} 下载包还不会询问…免确认」/ "The {版本} download does not ask…no-confirmation" 并出现 `own_label`；`"asks"` 要求那段没有这句。对不上时构建失败，`check-docs.py` 也会列出来。发新版时改 `RELEASE` 的同时改这两个字段。
+`tools/build.py` 的 `RELEASE["permission"]` 决定首屏、「装之前要知道」第一条和安装指令第 4 步怎么写：`"no-confirmation"`（0.4.3：默认免确认，告诉用户在「权限」里改成 `RELEASE["own_label"]`）或 `"asks"`（之后的版本：第一次开对话前问一次）。文案模板在 `PERMISSION_LINE`。生成时会和 `docs/INSTALL*.md` 对照：`"no-confirmation"` 要求 permission-mode 段和方式 A 安装指令都逐字包含这句（中文「{版本} 默认以免确认模式启动支持该模式的 Agent。…」，英文 "In {版本}, agents that support it skip individual approvals by default. …"）；`"asks"` 要求两处都没有这句。网站的「装之前要知道」里这句单独加粗放在第一条，所以生成时从 permission-mode 段里去掉，不重复。对不上时构建失败，`check-docs.py` 也会列出来。发新版时改 `RELEASE` 的同时改这两个字段。
 
 ## 设计决定
 

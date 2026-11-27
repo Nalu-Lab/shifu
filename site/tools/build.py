@@ -27,6 +27,7 @@ RELEASE = {
     # check-docs.py fails when docs/INSTALL*.md's permission-mode block says otherwise for this version.
     "permission": "no-confirmation",
     "own_label": "用 Agent 自己的设置",
+    "own_label_en": "use the agent's own settings",   # the English gloss shown after own_label on the English page
 }
 # The build the hero video and screenshots were recorded with. When it differs from RELEASE["version"] the demo
 # note says so; after re-recording (site/tools/video/), set it to the release version and the note says "current".
@@ -34,6 +35,28 @@ DEMO = {
     "version": "0.4.2",
     "extra_zh": "外加当时源码中的 Gemini CLI",
     "extra_en": "plus Gemini CLI from source at the time",
+    # The notification banner and key hints are composited afterwards (the demo instance cannot notify); set to False
+    # only if a re-recording shows them for real.
+    "overlays": True,
+}
+# The note under the demo (#demo-note). "current" is used automatically once DEMO["version"] == RELEASE["version"];
+# until then "older" says which build was recorded. {version} is DEMO["version"], {release} RELEASE["version"].
+DEMO_NOTE = {
+    "current": {
+        "zh": "* 用 Shifu {version} 在演示项目里录制。是否出现批准请求，取决于各 Agent 的权限设置。",
+        "en": "* Recorded with Shifu {version} in a demo project. Whether approval requests appear depends on each "
+              "agent's permission setting.",
+    },
+    "older": {
+        "zh": "* 视频和截图录制于 {version} 预览版（{extra}）；当前下载是 {release}，部分界面细节可能不同。"
+              "画面来自独立的演示环境，项目、任务、终端内容和时间都是演示数据。",
+        "en": "* The video and screenshots were recorded with the {version} preview ({extra}); the current download is "
+              "{release}, and some interface details may differ. They come from an isolated demo: projects, tasks, "
+              "terminal output and times are demo data.",
+    },
+    "overlays": {"zh": "视频里的通知横幅和按键提示是后期叠加的示意。",
+                 "en": " The notification banner and key hints in the video are added overlays."},
+    "tail": {"zh": "", "en": " The app's own labels are in Chinese for now."},
 }
 # Canonical, hreflang and og:image are absolute under this address.
 SITE_URL = "https://shifu.yutailin.com"
@@ -131,10 +154,13 @@ def url(path):
 
 
 # The hero's one-line permission summary for each RELEASE["permission"]; {v} is the version, {own} own_label.
+# For "no-confirmation" the same sentence must appear word for word in docs/INSTALL*.md's permission-mode block and
+# in the Option A prompt, so the site, the guide and what the installing agent tells the user cannot differ.
 PERMISSION_LINE = {
     "no-confirmation": {
-        "zh": "{v} 默认用免确认模式启动 Agent；要逐项确认，在新建任务的「权限」里改成「{own}」。",
-        "en": "{v} starts agents in no-confirmation mode. To keep approvals, set 权限 to {own} in the new-task form.",
+        "zh": "{v} 默认以免确认模式启动支持该模式的 Agent。要保留 Agent 自己的权限规则，开始前在新建任务的「权限」里选「{own}」。",
+        "en": "In {v}, agents that support it skip individual approvals by default. To keep your agent's own permission "
+              "rules, set 权限 to {own} ({own_en}) in the new-task form before starting.",
     },
     "asks": {
         "zh": "第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「{own}」；以后在新建任务的「权限」里随时能改。",
@@ -142,34 +168,59 @@ PERMISSION_LINE = {
               "preselected; change it any time under 权限 in the new-task form.",
     },
 }
-# What the release-specific sentence of the docs' permission-mode block says when the release does not ask yet.
-NO_ASK_SENTENCE = {
-    "zh": lambda v: rf"{re.escape(v)} 下载包还不会询问[^。]*免确认",
-    "en": lambda v: rf"The {re.escape(v)} download does not ask[^.]*?no-confirmation",
-}
 
 
-def permission_problems(lang, block):
-    """Where docs/INSTALL*.md's permission-mode block disagrees with RELEASE["permission"]; empty when they agree."""
-    v, mode, own = RELEASE["version"], RELEASE["permission"], RELEASE["own_label"]
-    doc = LANGS[lang]["install"]
+def permission_text(lang, mode=None):
+    """The one-line permission summary for this release, as plain text."""
+    return PERMISSION_LINE[mode or RELEASE["permission"]][lang].format(
+        v=RELEASE["version"], own=RELEASE["own_label"], own_en=RELEASE["own_label_en"])
+
+
+def _flat(text):
+    return re.sub(r"\s+", " ", text)
+
+
+def permission_problems(lang, block, where=None, what="permission-mode block"):
+    """Where a text (docs/INSTALL*.md's permission-mode block, or the Option A prompt) disagrees with
+    RELEASE["permission"]; empty when they agree. "no-confirmation" requires the exact PERMISSION_LINE sentence,
+    "asks" forbids it."""
+    v, mode = RELEASE["version"], RELEASE["permission"]
+    where = where or LANGS[lang]["install"]
     if mode not in PERMISSION_LINE:
         return [f'RELEASE["permission"] is {mode!r}; expected one of {sorted(PERMISSION_LINE)}']
-    says_no_ask = re.search(NO_ASK_SENTENCE[lang](v), block) is not None
-    problems = []
+    says_no_ask = _flat(permission_text(lang, "no-confirmation")) in _flat(block)
     if mode == "no-confirmation" and not says_no_ask:
-        problems.append(f"{doc}: the permission-mode block does not say the {v} download starts in no-confirmation mode, "
-                        f'but RELEASE["permission"] is "no-confirmation"')
+        return [f'{where}: the {what} does not contain the {v} permission sentence from PERMISSION_LINE '
+                f'("{permission_text(lang)}")']
     if mode == "asks" and says_no_ask:
-        problems.append(f'{doc}: the permission-mode block says the {v} download does not ask, but RELEASE["permission"] is "asks"')
-    if mode == "no-confirmation" and own not in block:
-        problems.append(f'{doc}: the permission-mode block does not name RELEASE["own_label"] {own!r}')
-    return problems
+        return [f'{where}: the {what} still says {v} starts in no-confirmation mode, but RELEASE["permission"] is "asks"']
+    return []
+
+
+def prompt_problems(lang, prompt, where=None):
+    """The Option A prompt must name this release's tag and URL, no other tag, and this release's permission line."""
+    tag = RELEASE["tag"]
+    where = where or LANGS[lang]["install"]
+    problems = []
+    if f"{REPO}/releases/tag/{tag}" not in prompt:
+        problems.append(f"{where}: the Option A prompt does not give the release URL {REPO}/releases/tag/{tag}")
+    for other in sorted(set(re.findall(r"remote-v[\w.\-]*\w", prompt)) - {tag}):
+        problems.append(f"{where}: the Option A prompt names release {other}, release is {tag}")
+    return problems + permission_problems(lang, prompt, where, "Option A prompt")
 
 
 def hero_permission(lang):
-    return html.escape(PERMISSION_LINE[RELEASE["permission"]][lang].format(v=RELEASE["version"], own=RELEASE["own_label"]),
-                       quote=False)
+    return html.escape(permission_text(lang), quote=False)
+
+
+def demo_note(lang):
+    """The caption under the demo: the post-re-recording one once DEMO["version"] is the release's."""
+    current = DEMO["version"] == RELEASE["version"]
+    note = DEMO_NOTE["current" if current else "older"][lang].format(
+        version=DEMO["version"], release=RELEASE["version"], extra=DEMO["extra_" + lang])
+    if DEMO.get("overlays"):
+        note += DEMO_NOTE["overlays"][lang]
+    return html.escape(note + DEMO_NOTE["tail"][lang], quote=False)
 
 
 # ---- Install steps from docs/INSTALL*.md --------------------------------------------------------------------
@@ -196,8 +247,12 @@ def _md_spans(text, doc_dir):
     return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
 
 
-def code_block(body, lang, wrap=False):
+def code_block(body, lang, wrap=False, pre_id=None):
+    """A code block with a Copy button that main.js collapses when long. With pre_id: a plain block (the install
+    prompt, which has its own copy button and sits in a <details>)."""
     cls = ' class="wrap-text"' if wrap else ""
+    if pre_id:
+        return f'<div class="code"><pre id="{pre_id}"{cls}>{html.escape(body, quote=False)}</pre></div>'
     return (f'<div class="code" data-collapse><pre{cls}>{html.escape(body, quote=False)}</pre>'
             f'<button class="copy" type="button">{LANGS[lang]["copy"]}</button></div>')
 
@@ -211,7 +266,7 @@ def install_doc(lang):
     a, b = doc.index(c["option_a"]), doc.index(c["option_b"])
     prompt = re.search(r"```text\n(.*?)\n```", doc[a:b], re.S)
     assert perm and step and prompt, f"{c['install']}: permission-mode block, cli-step marker or Option A prompt missing"
-    mismatch = permission_problems(lang, perm.group(1))
+    mismatch = permission_problems(lang, perm.group(1)) + prompt_problems(lang, prompt.group(1))
     assert not mismatch, "; ".join(mismatch)
     # Option B: the numbered list right under its heading; items may hold an indented fenced code block.
     lines = doc[doc.index("\n", b) + 1:].split("\n")
@@ -239,9 +294,10 @@ def install_doc(lang):
         parts = [f"<p>{md_inline(v)}</p>" if k == "text" else code_block(v, lang) for k, v in item]
         steps.append("<li>" + "".join(parts) + "</li>")
     return dict(
-        prompt=code_block(prompt.group(1), lang, wrap=True),
+        prompt=code_block(prompt.group(1), lang, wrap=True, pre_id="install-prompt"),
         steps="<ol class=\"install-steps\">" + "".join(steps) + "</ol>",
-        permission=md_inline(perm.group(1).strip()),
+        # The site shows the release sentence on its own just above, so it is left out of the block here.
+        permission=md_inline(_flat(perm.group(1).strip()).replace(_flat(permission_text(lang)), "").strip()),
         cli_step=step.group(1),
     )
 
@@ -262,7 +318,7 @@ def render(lang):
     """Returns the finished page for one language."""
     c = LANGS[lang]
     src = open(os.path.join(SITE, "src", "index.html"), encoding="utf-8").read()
-    src = conditionals(src, {"demo_current": DEMO["version"] == RELEASE["version"]})
+    src = conditionals(src, {})
     f = Filter(lang)
     f.feed(src)
     f.close()
@@ -278,7 +334,7 @@ def render(lang):
         "ZH_URL": zh_url if lang == "en" else (url("") if SITE_URL else "./"),
         "EN_URL": en_url,
         "VERSION": RELEASE["version"],
-        "DEMO_VERSION": DEMO["version"], "DEMO_EXTRA": DEMO["extra_" + lang],
+        "DEMO_NOTE": demo_note(lang), "RELEASE_TAG": RELEASE["tag"],
         "OG_IMAGE": url("assets/og.png") if SITE_URL else c["root"] + "assets/og.png",
         "RELEASE_URL": f"{REPO}/releases/tag/{RELEASE['tag']}",
         "ISSUES_URL": f"{REPO}/issues",

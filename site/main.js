@@ -1,5 +1,5 @@
 // Shifu site — small progressive enhancements. The page works without this file
-// (install tabs fall back to the first panel; long code blocks stay expanded).
+// (the install prompt stays open to select by hand; long code blocks stay expanded).
 (function () {
   'use strict';
 
@@ -52,28 +52,41 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  // Install tabs (WAI-ARIA tabs pattern, manual activation with arrow keys).
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
-  function select(tab, focus) {
-    tabs.forEach(function (t) {
-      var on = t === tab;
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
-      t.tabIndex = on ? 0 : -1;
-      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
-    });
-    if (focus) tab.focus();
+  // Install: "Copy installation prompt" copies the generated prompt (#install-prompt). Without this script the
+  // button stays hidden and the prompt's <details> stays open, so it can be selected by hand.
+  function copyText(text, ok, bad) {
+    if (!navigator.clipboard) { bad(); return; }
+    navigator.clipboard.writeText(text).then(ok, bad);
   }
-  tabs.forEach(function (t, i) {
-    t.addEventListener('click', function () { select(t, false); });
-    t.addEventListener('keydown', function (e) {
-      var n = null;
-      if (e.key === 'ArrowRight') n = tabs[(i + 1) % tabs.length];
-      else if (e.key === 'ArrowLeft') n = tabs[(i - 1 + tabs.length) % tabs.length];
-      else if (e.key === 'Home') n = tabs[0];
-      else if (e.key === 'End') n = tabs[tabs.length - 1];
-      if (n) { e.preventDefault(); select(n, true); }
+  document.querySelectorAll('.copy-prompt').forEach(function (btn) {
+    var pre = document.getElementById(btn.getAttribute('data-copy-target'));
+    if (!pre) return;
+    var label = btn.querySelector('.copy-label'), done = btn.querySelector('.copy-done'), fail = btn.querySelector('.copy-fail');
+    var timer = null;
+    function show(which) {
+      label.hidden = which !== label; done.hidden = which !== done; fail.hidden = which !== fail;
+      clearTimeout(timer);
+      if (which !== label) timer = setTimeout(function () { show(label); }, 2400);
+    }
+    btn.hidden = false;
+    btn.addEventListener('click', function () {
+      copyText(pre.textContent.replace(/\n$/, ''),
+        function () { show(done); },
+        function () {
+          show(fail);
+          var d = pre.closest('details');
+          if (d) d.open = true;
+        });
     });
   });
+  // "Download ZIP and view instructions" opens the release in a new tab and the steps here.
+  var manual = document.getElementById('manual-download');
+  if (manual) {
+    manual.addEventListener('click', function () {
+      var d = document.getElementById(manual.getAttribute('aria-controls'));
+      if (d) d.open = true;
+    });
+  }
 
   // Copy buttons.
   document.querySelectorAll('.code .copy').forEach(function (btn) {
@@ -85,11 +98,7 @@
         btn.textContent = label;
         setTimeout(function () { btn.innerHTML = original; }, 1600);
       }
-      if (!navigator.clipboard) { done(m.failed); return; }
-      navigator.clipboard.writeText(pre.textContent.replace(/\n$/, '')).then(
-        function () { done(m.copied); },
-        function () { done(m.failed); }
-      );
+      copyText(pre.textContent.replace(/\n$/, ''), function () { done(m.copied); }, function () { done(m.failed); });
     });
   });
 
