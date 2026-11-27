@@ -19,15 +19,30 @@
     });
   }
 
-  // Hero video: with reduced motion it stays on its poster until the play button is pressed.
+  // Demo video: a visible pause / play control. With reduced motion it starts paused on its poster.
   var video = document.getElementById('hero-video');
-  var playBtn = document.querySelector('.video-play');
-  if (video && playBtn && root.classList.contains('rm-video')) {
-    playBtn.hidden = false;
-    playBtn.addEventListener('click', function () {
-      playBtn.hidden = true;
-      video.controls = true;
-      video.play();
+  var vToggle = document.querySelector('.video-toggle');
+  if (video && vToggle) {
+    var sync = function () { vToggle.classList.toggle('is-paused', video.paused); };
+    vToggle.hidden = false;
+    sync();
+    video.addEventListener('play', sync);
+    video.addEventListener('pause', sync);
+    vToggle.addEventListener('click', function () {
+      if (video.paused) {
+        var p = video.play();
+        if (p && p.catch) p.catch(function () {});
+      } else {
+        video.pause();
+      }
+    });
+  }
+
+  // Phone menu (a <details>, works without JS): close it after a link is chosen.
+  var menu = document.querySelector('.nav-menu');
+  if (menu) {
+    menu.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('a')) menu.open = false;
     });
   }
 

@@ -140,6 +140,22 @@ def check_cli_step(bundles, version):
                  f"but this tree {'bundles' if tree_bundles else 'does not bundle'} it")
 
 
+def check_permission(build, version):
+    """The hero's permission line (RELEASE["permission"]) must say what docs/INSTALL*.md says about this release."""
+    for lang, c in build.LANGS.items():
+        m = re.search(r"<!-- permission-mode[^>]*-->\n(.+?)\n<!-- /permission-mode -->", read(c["install"]), re.S)
+        if not m:
+            fail(f"{c['install']}: permission-mode block not found")
+            continue
+        for p in build.permission_problems(lang, m.group(1)):
+            fail(p)
+    if build.RELEASE["permission"] == "no-confirmation":
+        for rel in ["site/index.html", "site/en/index.html"]:
+            line = re.search(r'<p[^>]*id="hero-permission"[^>]*>(.*?)</p>', read(rel), re.S)
+            if not line or version not in line.group(1):
+                fail(f"{rel}: the hero permission line does not name {version}'s no-confirmation default; rebuild the site")
+
+
 def check_site(build, version, tag):
     if build.RELEASE["version"] != version or build.RELEASE["tag"] != tag:
         fail(f"site/tools/build.py RELEASE is {build.RELEASE['version']} / {build.RELEASE['tag']}, release is {version} / {tag}")
@@ -187,6 +203,7 @@ def main():
     check_install_texts()
     bundles = app_bundles_cli(tag, use_tree=bool(args.tag))
     check_cli_step(bundles, version)
+    check_permission(build, version)
     check_site(build, version, tag)
     if build.DEMO["version"] != version and not problems:
         print(f"note: the demo video and screenshots are from {build.DEMO['version']}; the note says so (see site/README.md to re-record)")

@@ -46,8 +46,8 @@
     </a>
     <nav class="nav-links" aria-label="Primary">
       <a href="#features"><span>功能</span></a>
-      <a href="#install"><span>安装</span></a>
       <a href="#agents"><span>兼容性</span></a>
+      <a href="#install"><span>安装</span></a>
       <a href="#privacy"><span>隐私</span></a>
       <a href="#faq">FAQ</a>
       <a href="https://github.com/Nalu-Lab/shifu/issues"><span>反馈</span></a>
@@ -61,8 +61,24 @@
       </a>
       <a class="btn btn-primary btn-sm" href="#install">
         <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
-        <span class="dl-label"><span>下载</span></span>
+        <span>下载</span>
       </a>
+      <!-- Phones: the section links in a menu that needs no JavaScript. -->
+      <details class="nav-menu">
+        <summary>
+          <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3.5 6h13M3.5 10h13M3.5 14h13"/></svg>
+          <span class="sr-only"><span>菜单</span></span>
+        </summary>
+        <nav aria-label="Sections">
+          <a href="#features"><span>功能</span></a>
+          <a href="#agents"><span>兼容性</span></a>
+          <a href="#install"><span>安装</span></a>
+          <a href="#privacy"><span>隐私</span></a>
+          <a href="#faq">FAQ</a>
+          <a href="https://github.com/Nalu-Lab/shifu/issues"><span>反馈</span></a>
+          <a href="https://github.com/Nalu-Lab/shifu">GitHub</a>
+        </nav>
+      </details>
     </div>
   </div>
 </header>
@@ -80,15 +96,19 @@
       <span>0.4.3 预览版</span>
     </p>
     <h1>
-      <span>多开 Agent，<br>少操心。</span>
+      <span>多开 Agent，少操心。</span>
       
     </h1>
     <p class="hero-sub">
-      <span>让 Claude Code、Codex 等编程 Agent 并排工作。谁在等你，一眼看到，一步跳过去。</span>
+      <span>给 Claude Code、Codex 等编程 Agent 用的 macOS 工作台。各家终端原样并排，谁在等你一眼看到，一步跳过去。</span>
+      
+    </p>
+    <p class="hero-meta">
+      <span>免费开源 · 沿用你已有的 Agent 账号</span>
       
     </p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1">
+      <a class="btn btn-primary" href="#install">
         <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
         <span>下载 macOS 预览版</span>
       </a>
@@ -98,30 +118,18 @@
       </a>
     </div>
     <p class="hero-note">
-      <span>Apple Silicon 预览包，自签名、未经 Apple 公证。安装前请看<a href="#install">安装说明</a>。</span>
+      <span>仅支持 Apple Silicon · 早期预览版 · 未经 Apple 公证</span>
       
     </p>
+    <!-- Release-specific: generated from RELEASE["permission"] in tools/build.py, checked against docs/INSTALL*.md. -->
+    <p class="hero-note hero-perm" id="hero-permission"><span class="dot dot-amber" aria-hidden="true"></span><span>0.4.3 默认用免确认模式启动 Agent；要逐项确认，在新建任务的「权限」里改成「用 Agent 自己的设置」。</span></p>
   </div>
 </section>
 
-<!-- ============ Problem, then the demo ============ -->
-<section class="section problem" id="demo" aria-labelledby="problem-title">
+<!-- ============ Demo, right after the hero ============ -->
+<section class="demo" id="demo" aria-label="演示">
   <div class="wrap">
-    <p class="kicker"><span>问题</span></p>
-    <h2 id="problem-title">
-      <span>Agent 开得越多，越容易漏掉等你的那个</span>
-      
-    </h2>
-    <p class="lead">
-      <span>同时跑三四个 Agent 时，时间都花在来回翻终端上：一个早就停下来等你批准，一个做完了还没人看，还有一个在问你问题。缺的不是 Agent，而是你的注意力。</span>
-      
-    </p>
-    <p class="lead">
-      <span>Shifu 把它们放进一个窗口，只把需要你的会话排到前面。下面是一段真实录屏：</span>
-      
-    </p>
-
-    <ul class="legend" aria-label="Session states">
+    <ul class="legend" aria-label="会话状态">
       <li><span class="dot dot-green-ring spin" aria-hidden="true"></span><span>运行中</span></li>
       <li><span class="dot dot-amber pulse" aria-hidden="true"></span><span>等你批准</span></li>
       <li><span class="dot dot-blue" aria-hidden="true"></span><span>在问你</span></li>
@@ -138,7 +146,7 @@
           <source media="(max-width: 600px)" src="assets/video/hero-m-zh.mp4" type="video/mp4">
         </video>
         <script>
-          // Before autoplay can start: phones get the cropped poster; reduced motion gets the poster and a play button.
+          // Before autoplay can start: phones get the cropped poster; reduced motion stays on the poster until Play.
           (function () {
             var v = document.getElementById('hero-video');
             if (window.matchMedia('(max-width: 600px)').matches) v.poster = v.getAttribute('data-mobile-poster');
@@ -148,9 +156,10 @@
             }
           })();
         </script>
-        <button class="video-play" type="button" hidden>
-          <svg viewbox="0 0 20 20" aria-hidden="true"><path d="M7 4.5v11l9-5.5z" fill="currentColor"/></svg>
-          <span>播放演示</span>
+        <!-- Pause / play, shown by main.js. -->
+        <button class="video-toggle" type="button" aria-controls="hero-video" hidden>
+          <span class="vt-pause"><svg viewbox="0 0 20 20" aria-hidden="true"><path d="M6 4.5h3v11H6zM11 4.5h3v11h-3z" fill="currentColor"/></svg><span>暂停演示</span></span>
+          <span class="vt-play"><svg viewbox="0 0 20 20" aria-hidden="true"><path d="M7 4.5v11l9-5.5z" fill="currentColor"/></svg><span>播放演示</span></span>
         </button>
       </div>
       <figcaption id="demo-note">
@@ -158,10 +167,30 @@
         
       </figcaption>
     </figure>
+
+    <p class="agent-strip">
+      <span class="agent-strip-label"><span>支持</span></span>
+      <span class="agent-strip-names">Claude Code · Codex · CodeBuddy · Kimi Code · opencode · Antigravity · Pi · Qwen Code · StepFun · Gemini CLI</span>
+      <a href="#agents"><span>各自支持到什么程度</span> →</a>
+    </p>
   </div>
 </section>
 
-<!-- ============ Features: three core benefits ============ -->
+<!-- ============ The problem, short ============ -->
+<section class="section problem" aria-labelledby="problem-title">
+  <div class="wrap">
+    <h2 id="problem-title">
+      <span>不用再挨个检查终端。</span>
+      
+    </h2>
+    <p class="lead">
+      <span>一个 Agent 早就停下来等你批准，一个做完了还没人看，还有一个在问你问题，而你只有挨个点开终端才会发现。Shifu 把它们放进一个窗口，需要你的排在最前面。</span>
+      
+    </p>
+  </div>
+</section>
+
+<!-- ============ Features: one primary benefit, two supporting ============ -->
 <section class="section" id="features" aria-labelledby="features-title">
   <div class="wrap">
     <p class="kicker"><span>功能</span></p>
@@ -170,11 +199,11 @@
       
     </h2>
 
-    <!-- 1. Waiting for you -->
-    <div class="feature reveal">
+    <!-- 1. Waiting for you: the primary showcase -->
+    <div class="feature feature-primary reveal">
       <div class="feature-text">
         <p class="feature-n">01</p>
-        <h3><span>「在等你」：谁需要你，一眼看到</span></h3>
+        <h3><span>知道哪个 Agent 在等你</span></h3>
         <p>
           <span>侧栏按项目和任务分组，标出谁在运行、谁在等批准、谁在等你回复。需要你的会话集中在顶部「在等你」。</span>
           
@@ -196,49 +225,47 @@
       </div>
     </div>
 
-    <!-- 2. Real terminals -->
-    <div class="feature reveal">
-      <div class="feature-text">
+    <div class="feature-pair">
+      <!-- 2. Real terminals -->
+      <article class="feature-card reveal">
         <p class="feature-n">02</p>
         <h3><span>真终端，不是聊天仿制品</span></h3>
         <p>
           <span>每个 Agent 跑在自己的终端里，界面、快捷键和确认框都是它本来的样子。同一个任务可以开好几个 Agent，拖动标签就能左右或上下分屏。</span>
           
         </p>
-        <ul>
-          <li><span>终端里的文件路径可以点开：在 Shifu、默认程序或 Finder 中打开</span></li>
-          <li><span>同一个仓库里，每个 Agent 可以各用一个 Git worktree（<code>shifu workspace</code>），互不覆盖</span></li>
-          <li><span>终端字号 10–24 可调，支持 <kbd>⌘=</kbd> <kbd>⌘-</kbd> <kbd>⌘0</kbd></span></li>
-        </ul>
-      </div>
-      <div class="feature-media">
-        <div class="shot">
+        <div class="shot card-shot">
           <img class="scaled" style="--w:476" src="assets/pane-zh.webp" width="476" height="500" loading="lazy" decoding="async" alt="Claude Code 的终端：读取中间件、改出限流代码的 diff、跑通 18 个测试。">
         </div>
-      </div>
-    </div>
+      </article>
 
-    <!-- 3. Persistent sessions -->
-    <div class="feature feature-textonly reveal">
-      <div class="feature-text">
+      <!-- 3. Persistence: what survives what -->
+      <article class="feature-card reveal">
         <p class="feature-n">03</p>
-        <h3><span>退出、崩溃、重启，会话都接得回来</span></h3>
+        <h3><span>关掉窗口，Agent 照样干活。</span></h3>
         <p>
-          <span>会话由 Shifu 专用的 tmux 服务管理，桌面窗口只负责显示和操作。退出、重开甚至崩溃都不会结束 Agent；回来时任务和分屏布局恢复，重启电脑后点开哪个对话就接回哪个。</span>
+          <span>Agent 跑在 Shifu 专用的 tmux 服务里，不在窗口里。退出、重开 Shifu，甚至 Shifu 崩溃，都不会让它们停下；回来时任务和分屏布局都在。</span>
           
         </p>
-      </div>
-      <p class="flow" role="img" aria-label="Agent 运行在 Shifu 专用的 tmux 服务里，窗口只是连上去显示，可以随时关掉。">
-        <span aria-hidden="true"><code>claude · codex · kimi …</code></span>
-        <span class="flow-arrow" aria-hidden="true">→</span>
-        <span aria-hidden="true"><code>tmux -L shifu-app</code></span>
-        <span class="flow-arrow" aria-hidden="true">→</span>
-        <span aria-hidden="true"><span>Shifu 窗口（可随时关掉）</span></span>
-      </p>
-      <p class="sleep-note">
-        <span><b>Mac 睡着时，Agent 也会停。</b>Shifu 运行时默认不让 Mac 因闲置而睡眠（屏幕仍可关闭）；合上盖子照样会睡，除非在窗口右下角的杯子菜单里授权一次「合盖时也保持运行」。这个模式在用电池且电量降到 10% 或 macOS 报告过热时会自动暂停。<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/STEAMCUP.md">说明</a></span>
-        
-      </p>
+        <p>
+          <span>重启 Mac 会结束 Agent 进程；之后点开对话，<a href="#agents">支持恢复的 Agent</a> 会接回保存的会话。</span>
+          
+        </p>
+        <p class="flow" role="img" aria-label="Agent 运行在 Shifu 专用的 tmux 服务里，窗口只是连上去显示，可以随时关掉。">
+          <span aria-hidden="true"><code>claude · codex · kimi …</code></span>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <span aria-hidden="true"><code>tmux -L shifu-app</code></span>
+          <span class="flow-arrow" aria-hidden="true">→</span>
+          <span aria-hidden="true"><span>Shifu 窗口（可随时关掉）</span></span>
+        </p>
+        <details class="sleep-note">
+          <summary><span>Mac 睡眠和合盖时会怎样</span></summary>
+          <p>
+            <span><b>Mac 睡着时，Agent 也会停。</b>Shifu 运行时默认不让 Mac 因闲置而睡眠（屏幕仍可关闭）；合上盖子照样会睡，除非在窗口右下角的杯子菜单里授权一次「合盖时也保持运行」。这个模式在用电池且电量降到 10% 或 macOS 报告过热时会自动暂停。<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/STEAMCUP.md">说明</a></span>
+            
+          </p>
+        </details>
+      </article>
     </div>
 
     <!-- More -->
@@ -321,114 +348,139 @@
   </div>
 </section>
 
+<!-- ============ Compatibility: capability matrix (from src/agents_spec.rs, src/launch.rs and docs/AGENTS.md) ============ -->
+<section class="section" id="agents" aria-labelledby="agents-title">
+  <div class="wrap">
+    <p class="kicker"><span>兼容性</span></p>
+    <h2 id="agents-title"><span>支持哪些 Agent，支持到什么程度</span></h2>
+    <p class="lead">
+      <span>Shifu 启动的是各家自己的命令行，用你自己的账号。侧栏能显示多少状态，取决于这个 Agent 能不能把事件告诉 Shifu。</span>
+      
+    </p>
+    <table class="matrix">
+      <caption class="sr-only"><span>每个 Agent 的实时状态和安装要求（0.4.3 预览版）</span></caption>
+      <thead>
+        <tr>
+          <th scope="col">Agent</th>
+          <th scope="col"><span>实时状态</span></th>
+          <th scope="col"><span>安装要求</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row"><span class="agent"><svg class="mark" viewbox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/></svg>Claude Code</span></th><td><span class="status status-full"><span>完整</span></span></td><td><span class="setup"><span>用你已装的命令行</span></span></td></tr>
+        <tr><th scope="row"><span class="agent"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.75 6.0L11.75 6.5L11.75 7.01L11.6 7.5L11.46 7.99L11.23 8.44L10.85 8.8L10.38 9.07L9.94 9.3L9.47 9.47L9.33 9.97L9.02 10.31L8.72 10.71L8.31 10.96L7.9 11.21L7.4 11.21L6.96 11.46L6.48 11.46L6.0 11.2L5.54 11.2L5.13 10.96L4.74 10.7L4.29 10.71L3.81 10.7L3.28 10.71L2.88 10.45L2.48 10.2L2.04 9.96L1.59 9.7L1.27 9.31L1.11 8.82L0.96 8.35L0.97 7.83L0.95 7.35L0.77 6.92L0.52 6.48L0.21 6.0L0.21 5.49L0.21 4.98L0.34 4.48L0.52 4.0L0.94 3.64L1.11 3.18L1.56 2.89L2.18 2.79L2.48 2.48L2.63 1.98L2.94 1.63L3.32 1.37L3.72 1.11L4.13 0.87L4.63 0.87L5.05 0.61L5.53 0.61L6.0 0.86L6.45 0.86L6.86 1.12L7.24 1.38L7.69 1.37L8.15 1.38L8.68 1.37L9.07 1.62L9.48 1.85L9.92 2.08L10.31 2.38L10.69 2.71L10.85 3.2L10.98 3.68L10.99 4.18L10.99 4.66L11.15 5.09L11.46 5.52Z"/><path d="M3.6 4.8L5 6L3.6 7.2M6.3 7.3H8.4" fill="none" style="stroke:var(--chip)" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"/></svg>Codex</span></th><td><span class="status status-full"><span>完整</span></span></td><td><span class="setup"><span>用你已装的命令行</span></span></td></tr>
+        <tr><th scope="row"><span class="agent"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M0.0001 5.9182L0.0001 6.0001L0.0001 6.0821C0 8.8444 0 10.2426 0.8788 11.1214C1.0848 11.3274 1.3193 11.4851 1.5932 11.6058C1.5625 11.2148 1.6512 10.8775 1.855 10.6444C1.9344 10.5539 1.9369 10.5501 1.9196 10.398C1.8909 10.149 1.878 9.7805 1.891 9.5427L1.9014 9.3205L1.5679 8.7305C1.0513 7.8115 0.7233 7.0398 0.5967 6.4501C0.5299 6.1268 0.534 5.9834 0.6161 5.8773C0.6661 5.8132 0.8298 5.7469 1.0273 5.7104C1.5245 5.6231 2.6087 5.7021 3.815 5.9151L3.9403 5.9367L4.2156 5.6931C4.6728 5.2883 4.9764 5.0612 5.5363 4.7122C6.1198 4.3471 6.7783 4.0468 7.5198 3.809L7.7578 3.7327L7.8885 3.3893C8.3568 2.1531 8.8364 1.2418 9.1784 0.9386C9.296 0.8331 9.3031 0.829 9.3894 0.8238C9.5292 0.8136 9.6572 0.8807 9.8752 1.0791C10.3844 1.5418 11.0934 2.4931 11.5342 3.3054L11.7045 3.6207L11.9451 3.7403C11.955 3.7453 11.9652 3.7505 11.9756 3.756C11.9193 2.3548 11.7335 1.4908 11.1214 0.8788C10.2426 0 8.8444 0 6.0821 0.0001L6.0001 0.0001L5.9182 0.0001C3.1558 0 1.7576 0 0.8788 0.8788C0 1.7576 0 3.1558 0.0001 5.9182ZM12.0001 5.5869C11.3059 4.9017 10.2729 4.6581 9.3399 4.9737C9.0955 5.0564 8.8304 5.2094 8.3004 5.5154L5.2558 7.2732C4.7258 7.5792 4.4608 7.7322 4.2669 7.9026C3.481 8.5933 3.1852 9.6974 3.5204 10.6886C3.6031 10.9331 3.7561 11.1981 4.0621 11.7281C4.1171 11.8234 4.1672 11.9101 4.2133 11.9894C4.7159 12.0002 5.2807 12.0001 5.9182 12.0001L6.0001 12.0001L6.0821 12.0001C8.8444 12.0002 10.2426 12.0003 11.1214 11.1214C12.0003 10.2426 12.0002 8.8444 12.0001 6.0821L12.0001 6.0001L12.0001 5.9182C12.0001 5.8055 12.0001 5.6951 12.0001 5.5869ZM9.3152 7.2263Q9.5309 7.1018 9.7715 7.1662Q10.0122 7.2307 10.1367 7.4464L10.7843 8.5681Q10.9089 8.7838 10.8444 9.0245Q10.7799 9.2651 10.5642 9.3896Q10.4606 9.4494 10.342 9.465Q10.2234 9.4806 10.1079 9.4497Q9.9923 9.4187 9.8974 9.3459Q9.8025 9.2731 9.7427 9.1695L9.0951 8.0478Q9.0353 7.9442 9.0197 7.8256Q9.0041 7.707 9.035 7.5915Q9.066 7.4759 9.1388 7.381Q9.2116 7.2861 9.3152 7.2263ZM6.5262 9.0398Q6.4107 9.0088 6.2921 9.0244Q6.1735 9.0401 6.0699 9.0999Q5.9663 9.1597 5.8935 9.2546Q5.8207 9.3495 5.7897 9.465Q5.7588 9.5806 5.7744 9.6992Q5.79 9.8177 5.8498 9.9213L6.4974 11.043Q6.6219 11.2588 6.8625 11.3232Q7.1031 11.3877 7.3189 11.2632Q7.4225 11.2033 7.4953 11.1084Q7.5681 11.0135 7.5991 10.898Q7.63 10.7825 7.6144 10.6639Q7.5988 10.5453 7.539 10.4417L6.8914 9.32Q6.8316 9.2164 6.7367 9.1436Q6.6418 9.0708 6.5262 9.0398Z"/></svg>CodeBuddy</span></th><td><span class="status status-full"><span>完整</span></span></td><td><span class="setup"><span>用你已装的命令行</span></span></td></tr>
+        <tr><th scope="row"><span class="agent"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2.6 0h6.8A2.6 2.6 0 0 1 12 2.6v6.8A2.6 2.6 0 0 1 9.4 12H2.6A2.6 2.6 0 0 1 0 9.4V2.6A2.6 2.6 0 0 1 2.6 0z"/><path style="fill:var(--chip)" d="M3.3 3.2h1.35v2.5L7 3.2h1.75L6.1 6l2.85 2.8H7.1L5.15 6.85l-.5.52V8.8H3.3z"/><circle cx="9.25" cy="2.85" r="0.8" style="fill:var(--chip)"/></svg>Kimi Code</span></th><td><span class="status status-full"><span>完整</span></span></td><td><span class="setup"><span>用你已装的命令行</span></span></td></tr>
+        <tr><th scope="row"><span class="agent"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2 1h8v10H2zM4 3v6h4V3z"/></svg>opencode</span></th><td><span class="status status-full"><span>完整</span></span></td><td><span class="setup"><span>用你已装的命令行</span></span></td></tr>
+        <tr><th scope="row"><span class="agent"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5.5 1a4.5 4.5 0 1 0 2.65 8.14L10 11l1-1-1.86-1.85A4.5 4.5 0 0 0 5.5 1zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>Qwen Code</span></th><td><span class="status status-full"><span>完整</span></span></td>
+          <td><span class="setup setup-extra"><span>需额外设置</span></span><span class="cell-note"><span>自己的 Qwen Code 命令行和百炼 Token Plan 密钥（<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/QWEN.md">设置</a>）</span></span></td></tr>
+        <tr><th scope="row"><span class="agent"><svg class="mark" viewbox="0 0 180 180" aria-hidden="true" focusable="false"><path fill="currentColor" d="M144.248 149.062C151.748 154.688 162.998 150.938 152.685 140.625C121.748 110.625 128.31 28.125 89.8727 28.125C51.4352 28.125 57.9977 110.625 27.0602 140.625C15.8102 151.875 27.9977 154.688 35.4977 149.062C64.5602 129.375 62.6852 94.6875 89.8727 94.6875C117.06 94.6875 115.185 129.375 144.248 149.062Z"/></svg>Antigravity</span></th>
+          <td><span class="status status-partial"><span>部分</span></span><span class="cell-note"><span>不回报批准请求，不会显示「等你批准」</span></span></td><td><span class="setup"><span>用你已装的命令行</span></span></td></tr>
+        <tr><th scope="row"><span class="agent"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M1.5 2.5h9V4h-9zM3.5 4H5v6.5H3.5zM7 4h1.5v5c0 .4.2.6.6.6h.9V11H8.8C7.6 11 7 10.4 7 9.2z"/></svg>Pi</span></th>
+          <td><span class="status status-partial"><span>部分</span></span><span class="cell-note"><span>Pi 本身没有批准提示</span></span></td><td><span class="setup"><span>用你已装的命令行</span></span></td></tr>
+        <tr><th scope="row"><span class="agent"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9.5 2H4a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H2.5V8.5H8a.5.5 0 0 0 0-1H4a3.5 3.5 0 0 1 0-7h5.5z"/></svg>StepFun</span></th>
+          <td><span class="status status-partial"><span>部分</span></span><span class="cell-note"><span>跑在 Pi 上，同样没有批准提示</span></span></td>
+          <td><span class="setup setup-extra"><span>需额外设置</span></span><span class="cell-note"><span>Node.js 20.6+、单独装的 Pi 0.73.1 和 Step Plan 密钥（<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/STEPFUN.md">设置</a>）</span></span></td></tr>
+        <tr><th scope="row"><span class="agent"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 0C6.45 3.35 8.65 5.55 12 6C8.65 6.45 6.45 8.65 6 12C5.55 8.65 3.35 6.45 0 6C3.35 5.55 5.55 3.35 6 0Z"/></svg>Gemini CLI</span></th>
+          <td><span class="status status-terminal"><span>只有终端</span></span><span class="cell-note"><span>只知道它在运行；重新打开是新会话</span></span></td><td><span class="setup"><span>用你已装的命令行</span></span></td></tr>
+      </tbody>
+    </table>
+    <p class="matrix-note">
+      <span>「完整」指侧栏能显示运行中、等你批准、在问你和做完了，并据此进入「在等你」、发通知；「部分」的 Agent 不会出现「等你批准」，「只有终端」的 Agent 停下来等你时 Shifu 看不出来。</span>
+      
+    </p>
+    <p class="agents-note">
+      <span>每个 Agent 怎么接入，见 <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/AGENTS.md">Agent 描述表</a>。opencode 和 Pi 用的是中性字母标记；其余图标为各家标记（单色），归各自公司所有。</span>
+      
+    </p>
+  </div>
+</section>
+
 <!-- ============ Install (steps and permission note generated from docs/INSTALL*.md) ============ -->
 <section class="section" id="install" aria-labelledby="install-title" data-cli-step="required">
   <div class="wrap">
     <p class="kicker"><span>安装</span></p>
     <h2 id="install-title"><span>下载 Apple Silicon 预览版</span></h2>
-    <p class="lead">
-      <span>从 <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1">0.4.3 预览版 Release</a> 下载，包内有 App、配套的 <code>shifu</code> 命令行和安装说明。下面两种装法与仓库里的<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/INSTALL.md">安装指南</a>同一份内容。早期版本，请先读完「装之前要知道」。</span>
-      
-    </p>
 
-    <div class="install-grid">
-      <div>
-        <div class="tabs" role="tablist" aria-label="Install method">
-          <button class="tab" role="tab" type="button" id="tab-ai" aria-controls="panel-ai" aria-selected="true">
-            <span>让你的 AI 帮你装</span>
-          </button>
-          <button class="tab" role="tab" type="button" id="tab-manual" aria-controls="panel-manual" aria-selected="false" tabindex="-1">
-            <span>自己装</span>
-          </button>
-        </div>
-
-        <div class="tabpanel" role="tabpanel" id="panel-ai" aria-labelledby="tab-ai" tabindex="0">
-          <p>
-            <span>把下面这段贴进 Claude Code 或 Codex：</span>
-            
-          </p>
-          <div class="code" data-collapse><pre class="wrap-text">帮我安装 Shifu（https://github.com/Nalu-Lab/shifu）。先读 README 和 docs/INSTALL.md。
-1. 确认当前 Mac 使用 Apple Silicon，检查 tmux 和我要使用的 Agent 是否已安装、登录；缺什么先告诉我。
-2. 下载 README 指向的同一 Release 中的 ZIP 和 SHA256SUMS，核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
-3. 按包内说明，将 Shifu.app 放到 ~/Applications，将同包 bin/shifu 装到 ~/.cargo/bin/shifu：0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用它（之后的版本 App 自带同版命令行，这一步只在终端里用 shifu 时才需要，以包内说明为准）。将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
-4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；0.4.3 默认用免确认模式启动 Agent，要逐项询问就在新建任务的「权限」里改成「用 Agent 自己的设置」（之后的版本第一次开对话前会先问一次）。系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
-5. 打开后带我选一个项目、创建第一条 Agent 对话；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。</pre><button class="copy" type="button">复制</button></div>
-        </div>
-
-        <div class="tabpanel" role="tabpanel" id="panel-manual" aria-labelledby="tab-manual" tabindex="0" hidden>
-          <ol class="install-steps"><li><p>下载同一 Release 的 ZIP 和 <code>SHA256SUMS</code>，先在下载目录执行 <code>shasum -a 256 -c SHA256SUMS</code>，再解压。</p></li><li><p>已有 Shifu 时，先退出并备份旧 App 与 CLI。0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用同包的 CLI，请一起装好（之后的版本 App 自带同版命令行，这一步只在终端里用 <code>shifu</code> 时才需要，以包内说明为准）。先在解压后的包目录校验内容，再安装 CLI：</p><div class="code" data-collapse><pre>shasum -a 256 -c SHA256SUMS
-mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
-install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"
-rm -rf "$HOME/.cargo/bin/web" &amp;&amp; ditto bin/web "$HOME/.cargo/bin/web"   # shifu web 的运行文件
-export PATH="$HOME/.cargo/bin:$PATH"
-brew install tmux   # 已有 tmux 时跳过</pre><button class="copy" type="button">复制</button></div></li><li><p>校验通过后，将 <code>Shifu.app</code> 移到 <code>~/Applications</code>，再打开 Shifu，选择项目和已登录的 Agent，创建第一条对话。完整说明见<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/INSTALL.md">安装指南</a>；连接另一台 Mac 时再看<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.md">远程安装与配对</a>。</p></li></ol>
-          <p class="after-install">
-            <span>PATH 设置只对当前终端生效；新终端可用 <code>"$HOME/.cargo/bin/shifu"</code>，或把该目录加进 shell 配置。</span>
-            
-          </p>
+    <div class="install-top">
+      <div class="install-intro">
+        <p class="lead">
+          <span>已经在 Mac 上用 Claude Code 或 Codex？Shifu 和它们装在一起，不替换任何东西。<a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1">0.4.3 预览版 Release</a> 里有 App、配套的 <code>shifu</code> 命令行和安装说明。</span>
+          
+        </p>
+        <p class="requirements">
+          <b><span>安装要求</span></b>
+          <span>Apple Silicon Mac · tmux · 至少一个已安装并登录的编程 Agent</span>
+          
+        </p>
+        <div class="install-cta">
+          <a class="btn btn-primary" href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1">
+            <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
+            <span>下载 0.4.3 预览版</span>
+          </a>
+          <span class="install-cta-note"><span>GitHub Release · Apple Silicon</span></span>
         </div>
       </div>
 
       <aside class="notice" aria-labelledby="notice-title">
         <h3 id="notice-title"><span class="dot dot-amber" aria-hidden="true"></span><span>装之前要知道</span></h3>
         <ul>
-          <li><span><b>只支持 Apple Silicon。</b>Intel、Linux、Windows 都没试过，没有对应的包。</span></li>
-          <li><span><b>未经 Apple 公证。</b>App 用 Shifu 自己的固定证书签名。若被 macOS 拦下，确认来源后在「系统设置 → 隐私与安全性」里按提示放行。</span></li>
+          <li class="permission-release"><b>0.4.3 默认用免确认模式启动 Agent；要逐项确认，在新建任务的「权限」里改成「用 Agent 自己的设置」。</b></li>
           <li class="permission-note"><b>权限模式：</b>第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」：不加免确认参数，按各家自己的配置决定何时询问；选「免确认（全权）」时，改文件、跑命令不再逐项请求批准。以后在新建任务窗口的「权限」里随时能改。从旧版升级的不会被问，保持原来的设置。0.4.3 下载包还不会询问，默认就是免确认，可在「权限」里改成「用 Agent 自己的设置」。</li>
-          <li><span><b>需要 tmux 和已登录的 Agent。</b>Shifu 不附带任何 Agent 或账号。</span></li>
+          <li><span><b>未经 Apple 公证。</b>App 用 Shifu 自己的固定证书签名。若被 macOS 拦下，确认来源后在「系统设置 → 隐私与安全性」里按提示放行。</span></li>
+          <li><span><b>只支持 Apple Silicon。</b>Intel、Linux、Windows 都没试过，没有对应的包。</span></li>
           <li><span><b>Codex 首次启动</b>会让你检查 Shifu 传入的 hooks，读过再决定是否信任。</span></li>
           <li><span><b>窗口界面目前是中文。</b>菜单栏跟随系统语言。</span></li>
         </ul>
       </aside>
     </div>
-  </div>
-</section>
 
-<!-- ============ Compatibility: agent support tiers (from src/agents_spec.rs and docs/AGENTS.md) ============ -->
-<section class="section" id="agents" aria-labelledby="agents-title">
-  <div class="wrap">
-    <p class="kicker"><span>兼容性</span></p>
-    <h2 id="agents-title"><span>支持哪些 Agent，支持到什么程度</span></h2>
-    <p class="lead">
-      <span>Shifu 启动的是各家自己的命令行。侧栏能显示多少状态，取决于这个 Agent 能不能把事件告诉 Shifu。</span>
-      
-    </p>
-    <div class="tiers">
-      <div class="tier reveal">
-        <h3><span>完整状态</span></h3>
-        <p><span>通过 hooks、插件或扩展回报运行中、等你批准、在问你、做完了，进入「在等你」和通知。</span></p>
-        <ul class="tools">
-          <li class="tool"><svg class="mark" viewbox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z"/></svg><span class="tool-name">Claude Code</span></li>
-          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M11.75 6.0L11.75 6.5L11.75 7.01L11.6 7.5L11.46 7.99L11.23 8.44L10.85 8.8L10.38 9.07L9.94 9.3L9.47 9.47L9.33 9.97L9.02 10.31L8.72 10.71L8.31 10.96L7.9 11.21L7.4 11.21L6.96 11.46L6.48 11.46L6.0 11.2L5.54 11.2L5.13 10.96L4.74 10.7L4.29 10.71L3.81 10.7L3.28 10.71L2.88 10.45L2.48 10.2L2.04 9.96L1.59 9.7L1.27 9.31L1.11 8.82L0.96 8.35L0.97 7.83L0.95 7.35L0.77 6.92L0.52 6.48L0.21 6.0L0.21 5.49L0.21 4.98L0.34 4.48L0.52 4.0L0.94 3.64L1.11 3.18L1.56 2.89L2.18 2.79L2.48 2.48L2.63 1.98L2.94 1.63L3.32 1.37L3.72 1.11L4.13 0.87L4.63 0.87L5.05 0.61L5.53 0.61L6.0 0.86L6.45 0.86L6.86 1.12L7.24 1.38L7.69 1.37L8.15 1.38L8.68 1.37L9.07 1.62L9.48 1.85L9.92 2.08L10.31 2.38L10.69 2.71L10.85 3.2L10.98 3.68L10.99 4.18L10.99 4.66L11.15 5.09L11.46 5.52Z"/><path d="M3.6 4.8L5 6L3.6 7.2M6.3 7.3H8.4" fill="none" style="stroke:var(--chip)" stroke-width="0.95" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="tool-name">Codex</span></li>
-          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M0.0001 5.9182L0.0001 6.0001L0.0001 6.0821C0 8.8444 0 10.2426 0.8788 11.1214C1.0848 11.3274 1.3193 11.4851 1.5932 11.6058C1.5625 11.2148 1.6512 10.8775 1.855 10.6444C1.9344 10.5539 1.9369 10.5501 1.9196 10.398C1.8909 10.149 1.878 9.7805 1.891 9.5427L1.9014 9.3205L1.5679 8.7305C1.0513 7.8115 0.7233 7.0398 0.5967 6.4501C0.5299 6.1268 0.534 5.9834 0.6161 5.8773C0.6661 5.8132 0.8298 5.7469 1.0273 5.7104C1.5245 5.6231 2.6087 5.7021 3.815 5.9151L3.9403 5.9367L4.2156 5.6931C4.6728 5.2883 4.9764 5.0612 5.5363 4.7122C6.1198 4.3471 6.7783 4.0468 7.5198 3.809L7.7578 3.7327L7.8885 3.3893C8.3568 2.1531 8.8364 1.2418 9.1784 0.9386C9.296 0.8331 9.3031 0.829 9.3894 0.8238C9.5292 0.8136 9.6572 0.8807 9.8752 1.0791C10.3844 1.5418 11.0934 2.4931 11.5342 3.3054L11.7045 3.6207L11.9451 3.7403C11.955 3.7453 11.9652 3.7505 11.9756 3.756C11.9193 2.3548 11.7335 1.4908 11.1214 0.8788C10.2426 0 8.8444 0 6.0821 0.0001L6.0001 0.0001L5.9182 0.0001C3.1558 0 1.7576 0 0.8788 0.8788C0 1.7576 0 3.1558 0.0001 5.9182ZM12.0001 5.5869C11.3059 4.9017 10.2729 4.6581 9.3399 4.9737C9.0955 5.0564 8.8304 5.2094 8.3004 5.5154L5.2558 7.2732C4.7258 7.5792 4.4608 7.7322 4.2669 7.9026C3.481 8.5933 3.1852 9.6974 3.5204 10.6886C3.6031 10.9331 3.7561 11.1981 4.0621 11.7281C4.1171 11.8234 4.1672 11.9101 4.2133 11.9894C4.7159 12.0002 5.2807 12.0001 5.9182 12.0001L6.0001 12.0001L6.0821 12.0001C8.8444 12.0002 10.2426 12.0003 11.1214 11.1214C12.0003 10.2426 12.0002 8.8444 12.0001 6.0821L12.0001 6.0001L12.0001 5.9182C12.0001 5.8055 12.0001 5.6951 12.0001 5.5869ZM9.3152 7.2263Q9.5309 7.1018 9.7715 7.1662Q10.0122 7.2307 10.1367 7.4464L10.7843 8.5681Q10.9089 8.7838 10.8444 9.0245Q10.7799 9.2651 10.5642 9.3896Q10.4606 9.4494 10.342 9.465Q10.2234 9.4806 10.1079 9.4497Q9.9923 9.4187 9.8974 9.3459Q9.8025 9.2731 9.7427 9.1695L9.0951 8.0478Q9.0353 7.9442 9.0197 7.8256Q9.0041 7.707 9.035 7.5915Q9.066 7.4759 9.1388 7.381Q9.2116 7.2861 9.3152 7.2263ZM6.5262 9.0398Q6.4107 9.0088 6.2921 9.0244Q6.1735 9.0401 6.0699 9.0999Q5.9663 9.1597 5.8935 9.2546Q5.8207 9.3495 5.7897 9.465Q5.7588 9.5806 5.7744 9.6992Q5.79 9.8177 5.8498 9.9213L6.4974 11.043Q6.6219 11.2588 6.8625 11.3232Q7.1031 11.3877 7.3189 11.2632Q7.4225 11.2033 7.4953 11.1084Q7.5681 11.0135 7.5991 10.898Q7.63 10.7825 7.6144 10.6639Q7.5988 10.5453 7.539 10.4417L6.8914 9.32Q6.8316 9.2164 6.7367 9.1436Q6.6418 9.0708 6.5262 9.0398Z"/></svg><span class="tool-name">CodeBuddy</span></li>
-          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2.6 0h6.8A2.6 2.6 0 0 1 12 2.6v6.8A2.6 2.6 0 0 1 9.4 12H2.6A2.6 2.6 0 0 1 0 9.4V2.6A2.6 2.6 0 0 1 2.6 0z"/><path style="fill:var(--chip)" d="M3.3 3.2h1.35v2.5L7 3.2h1.75L6.1 6l2.85 2.8H7.1L5.15 6.85l-.5.52V8.8H3.3z"/><circle cx="9.25" cy="2.85" r="0.8" style="fill:var(--chip)"/></svg><span class="tool-name">Kimi Code</span></li>
-          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M2 1h8v10H2zM4 3v6h4V3z"/></svg><span class="tool-name">opencode</span></li>
-          <li class="tool"><svg class="mark" viewbox="0 0 180 180" aria-hidden="true" focusable="false"><path fill="currentColor" d="M144.248 149.062C151.748 154.688 162.998 150.938 152.685 140.625C121.748 110.625 128.31 28.125 89.8727 28.125C51.4352 28.125 57.9977 110.625 27.0602 140.625C15.8102 151.875 27.9977 154.688 35.4977 149.062C64.5602 129.375 62.6852 94.6875 89.8727 94.6875C117.06 94.6875 115.185 129.375 144.248 149.062Z"/></svg><span class="tool-name">Antigravity</span></li>
-          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M1.5 2.5h9V4h-9zM3.5 4H5v6.5H3.5zM7 4h1.5v5c0 .4.2.6.6.6h.9V11H8.8C7.6 11 7 10.4 7 9.2z"/></svg><span class="tool-name">Pi</span></li>
-        </ul>
-        <p class="tier-note"><span>Antigravity 和 Pi 不会出现「等你批准」：Pi 本身没有批准提示，Antigravity 只回报运行和回复。</span></p>
+    <div class="install-methods">
+      <p class="install-methods-intro">
+        <span>两种装法，与仓库里的<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/INSTALL.md">安装指南</a>是同一份内容：</span>
+        
+      </p>
+      <div class="tabs" role="tablist" aria-label="安装方式">
+        <button class="tab" role="tab" type="button" id="tab-ai" aria-controls="panel-ai" aria-selected="true">
+          <span>让你的 AI 帮你装</span>
+        </button>
+        <button class="tab" role="tab" type="button" id="tab-manual" aria-controls="panel-manual" aria-selected="false" tabindex="-1">
+          <span>自己装</span>
+        </button>
       </div>
-      <div class="tier reveal">
-        <h3><span>只有终端</span></h3>
-        <p><span>能找到、能启动，但侧栏只知道它还在运行：它停下来等你时 Shifu 看不出来，退出后重新打开是新会话。</span></p>
-        <ul class="tools">
-          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 0C6.45 3.35 8.65 5.55 12 6C8.65 6.45 6.45 8.65 6 12C5.55 8.65 3.35 6.45 0 6C3.35 5.55 5.55 3.35 6 0Z"/></svg><span class="tool-name">Gemini CLI</span></li>
-        </ul>
+
+      <div class="tabpanel" role="tabpanel" id="panel-ai" aria-labelledby="tab-ai" tabindex="0">
+        <p>
+          <span>把下面这段贴进 Claude Code 或 Codex。它会检查环境、校验安装包并一步步装好；它跑的命令和系统安全提示请你自己过目。</span>
+          
+        </p>
+        <div class="code" data-collapse><pre class="wrap-text">帮我安装 Shifu（https://github.com/Nalu-Lab/shifu）。先读 README 和 docs/INSTALL.md。
+1. 确认当前 Mac 使用 Apple Silicon，检查 tmux 和我要使用的 Agent 是否已安装、登录；缺什么先告诉我。
+2. 下载 README 指向的同一 Release 中的 ZIP 和 SHA256SUMS，核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
+3. 按包内说明，将 Shifu.app 放到 ~/Applications，将同包 bin/shifu 装到 ~/.cargo/bin/shifu：0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用它（之后的版本 App 自带同版命令行，这一步只在终端里用 shifu 时才需要，以包内说明为准）。将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
+4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；0.4.3 默认用免确认模式启动 Agent，要逐项询问就在新建任务的「权限」里改成「用 Agent 自己的设置」（之后的版本第一次开对话前会先问一次）。系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
+5. 打开后带我选一个项目、创建第一条 Agent 对话；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。</pre><button class="copy" type="button">复制</button></div>
       </div>
-      <div class="tier reveal">
-        <h3><span>需要额外设置</span></h3>
-        <p><span>状态可用，但要先自备命令行或运行时和自己的密钥，Shifu 都不附带。</span></p>
-        <ul class="tools">
-          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5.5 1a4.5 4.5 0 1 0 2.65 8.14L10 11l1-1-1.86-1.85A4.5 4.5 0 0 0 5.5 1zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg><span class="tool-name">Qwen Code</span></li>
-          <li class="tool"><svg class="mark" viewbox="0 0 12 12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9.5 2H4a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H2.5V8.5H8a.5.5 0 0 0 0-1H4a3.5 3.5 0 0 1 0-7h5.5z"/></svg><span class="tool-name">StepFun</span></li>
-        </ul>
-        <p class="tier-note"><span>Qwen Code：自己的 Qwen Code 命令行和百炼 Token Plan 密钥（<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/QWEN.md">设置</a>）。StepFun：Node.js 20.6+、单独装的 Pi 0.73.1 和 Step Plan 密钥（<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/STEPFUN.md">设置</a>）。</span></p>
+
+      <div class="tabpanel" role="tabpanel" id="panel-manual" aria-labelledby="tab-manual" tabindex="0" hidden>
+        <ol class="install-steps"><li><p>下载同一 Release 的 ZIP 和 <code>SHA256SUMS</code>，先在下载目录执行 <code>shasum -a 256 -c SHA256SUMS</code>，再解压。</p></li><li><p>已有 Shifu 时，先退出并备份旧 App 与 CLI。0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用同包的 CLI，请一起装好（之后的版本 App 自带同版命令行，这一步只在终端里用 <code>shifu</code> 时才需要，以包内说明为准）。先在解压后的包目录校验内容，再安装 CLI：</p><div class="code" data-collapse><pre>shasum -a 256 -c SHA256SUMS
+mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
+install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"
+rm -rf "$HOME/.cargo/bin/web" &amp;&amp; ditto bin/web "$HOME/.cargo/bin/web"   # shifu web 的运行文件
+export PATH="$HOME/.cargo/bin:$PATH"
+brew install tmux   # 已有 tmux 时跳过</pre><button class="copy" type="button">复制</button></div></li><li><p>校验通过后，将 <code>Shifu.app</code> 移到 <code>~/Applications</code>，再打开 Shifu，选择项目和已登录的 Agent，创建第一条对话。完整说明见<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/INSTALL.md">安装指南</a>；连接另一台 Mac 时再看<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.md">远程安装与配对</a>。</p></li></ol>
+        <p class="after-install">
+          <span>PATH 设置只对当前终端生效；新终端可用 <code>"$HOME/.cargo/bin/shifu"</code>，或把该目录加进 shell 配置。</span>
+          
+        </p>
       </div>
+
+      <p class="install-done">
+        <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4.5 10.5 3.5 3.5 7.5-8"/></svg>
+        <span>第一个 Agent 出现在 Shifu 里、你能在它的终端里打字，就装好了。</span>
+        
+      </p>
     </div>
-    <p class="agents-note">
-      <span>每个 Agent 怎么接入，见 <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/AGENTS.md">Agent 描述表</a>。opencode 和 Pi 用的是中性字母标记；其余图标为各家标记（单色），归各自公司所有。</span>
-      
-    </p>
   </div>
 </section>
 
@@ -439,6 +491,10 @@ brew install tmux   # 已有 tmux 时跳过</pre><button class="copy" type="butt
     <h2 id="privacy-title"><span>本机优先，代码公开</span></h2>
     <p class="lead">
       <span>Shifu 以 MIT 许可证开源。下载包由 GitHub Actions 从公开源码构建，构建来源记录在包内的 <code>BUILD-INFO.json</code>。</span>
+      
+    </p>
+    <p class="lead">
+      <span>Shifu 把工作区状态留在这台 Mac 上；你的 Agent 照旧连各自的 AI 服务商，适用这些服务商自己的政策。</span>
       
     </p>
     <div class="facts">
@@ -497,7 +553,7 @@ brew install tmux   # 已有 tmux 时跳过</pre><button class="copy" type="butt
       <details>
         <summary><span>关掉窗口或退出 Shifu 后会怎样？</span></summary>
         <div class="a">
-          <span>Agent 继续在 Shifu 专用的 tmux 服务里运行。重新打开时任务和分屏布局恢复。重启电脑后，点开哪个对话就接回哪个原来的会话。标签上的 × 可以选择「收起，继续运行」或「结束」。</span>
+          <span>Agent 继续在 Shifu 专用的 tmux 服务里运行，Shifu 崩溃也一样。重新打开时任务和分屏布局恢复。重启 Mac 会结束 Agent 进程；之后点开对话，支持恢复的 Agent 会接回保存的会话（Gemini CLI 会重新开始）。标签上的 × 可以选择「收起，继续运行」或「结束」。</span>
           
         </div>
       </details>
@@ -526,7 +582,23 @@ brew install tmux   # 已有 tmux 时跳过</pre><button class="copy" type="butt
   </div>
 </section>
 
+<!-- ============ Final call to action ============ -->
+<section class="cta-band" aria-labelledby="cta-title">
+  <div class="wrap">
+    <h2 id="cta-title"><span>多开 Agent，少操心。</span></h2>
+    <p class="cta-sub"><span>0.4.3 预览版 · Apple Silicon · 免费开源</span></p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#install">
+        <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
+        <span>下载 macOS 预览版</span>
+      </a>
+    </div>
+    <p class="cta-link"><a href="https://github.com/Nalu-Lab/shifu"><span>在 GitHub 查看源码</span> →</a></p>
+  </div>
+</section>
+
 </main>
+
 
 <footer class="footer">
   <div class="wrap footer-inner">
