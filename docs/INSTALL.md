@@ -7,7 +7,7 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 普通会话优先使用下载包；源码构建方式收在下方开发者说明。
 
 <!-- permission-mode: the one place that describes the permission mode; the site's install notes are generated from it. -->
-**权限模式：**第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」：不加免确认参数，按各家自己的配置决定何时询问；选「免确认（全权）」时，改文件、跑命令不再逐项请求批准。以后在新建任务窗口的「权限」里随时能改。从旧版升级的不会被问，保持原来的设置。0.4.3 下载包还不会询问。0.4.3 默认以免确认模式启动支持该模式的 Agent。要保留 Agent 自己的权限规则，开始前在新建任务的「权限」里选「用 Agent 自己的设置」。
+**权限模式：**0.4.3 默认以免确认模式启动支持该模式的 Agent。要保留 Agent 自己的权限规则，开始前在新建任务的「权限」里选「用 Agent 自己的设置」。选它时 Shifu 不加免确认参数，什么时候请求批准由 Agent 自己的配置决定；以后在「权限」里随时能改。之后的版本会在第一次开对话前先问一次，默认选「按 Agent 自己的设置」；从旧版升级的保持原来的设置。
 <!-- /permission-mode -->
 
 选「免确认（全权）」时，Claude、Codex、CodeBuddy、Kimi、Qwen Code 和 opencode 用免确认参数启动（opencode 加 `--auto`，你明确 deny 的规则仍然有效；如 `--dangerously-skip-permissions`、`--dangerously-bypass-approvals-and-sandbox`、`--yolo`）。改了设置后，新开或恢复的对话按新的设置启动。Pi 本身不弹批准，这个开关对它不起作用。
@@ -30,7 +30,7 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 2. 从 Release remote-v0.4.3-preview.1（https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1）下载 ZIP 和 SHA256SUMS，不要用别的 Release；核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
 3. 按包内说明，将 Shifu.app 放到 ~/Applications，将同包 bin/shifu 装到 ~/.cargo/bin/shifu：0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用它（之后的版本 App 自带同版命令行，这一步只在终端里用 shifu 时才需要，以包内说明为准）。将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
 4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；还要告诉我：0.4.3 默认以免确认模式启动支持该模式的 Agent。要保留 Agent 自己的权限规则，开始前在新建任务的「权限」里选「用 Agent 自己的设置」。（之后的版本第一次开对话前会先问一次。）系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
-5. 打开后带我选一个项目、创建第一条 Agent 对话；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。
+5. 打开后带我选一个项目；创建第一条 Agent 对话之前，先问我要「免确认（全权）」还是「用 Agent 自己的设置」，按我的选择设好「权限」再创建；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。
 ```
 
 ### 方式 B：自己装
@@ -38,11 +38,22 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 1. 下载同一 Release 的 ZIP 和 `SHA256SUMS`，先在下载目录执行 `shasum -a 256 -c SHA256SUMS`，再解压。
 2. 已有 Shifu 时，先退出并备份旧 App 与 CLI。0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用同包的 CLI，请一起装好（之后的版本 App 自带同版命令行，这一步只在终端里用 `shifu` 时才需要，以包内说明为准）。先在解压后的包目录校验内容，再安装 CLI：
 
+   先单独校验，看到每一行都是 `OK` 再继续：
+
    ```bash
    shasum -a 256 -c SHA256SUMS
-   mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
-   install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"
-   rm -rf "$HOME/.cargo/bin/web" && ditto bin/web "$HOME/.cargo/bin/web"   # shifu web 的运行文件
+   ```
+
+   再安装命令行。这一段会先重新校验，校验不过就什么都不改；已有的 `web` 目录先改名备份，不直接删除：
+
+   ```bash
+   shasum -a 256 -c SHA256SUMS && (
+     set -e
+     mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
+     install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"
+     if [ -e "$HOME/.cargo/bin/web" ]; then mv "$HOME/.cargo/bin/web" "$HOME/.cargo/bin/web.before-$(date +%Y%m%d%H%M%S)"; fi
+     ditto bin/web "$HOME/.cargo/bin/web"   # shifu web 的运行文件
+   )
    export PATH="$HOME/.cargo/bin:$PATH"
    brew install tmux   # 已有 tmux 时跳过
    ```

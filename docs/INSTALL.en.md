@@ -7,7 +7,7 @@ Shifu provides an [Apple Silicon preview package](https://github.com/Nalu-Lab/sh
 Use the download for ordinary sessions; source-build instructions are in the developer section below.
 
 <!-- permission-mode: the one place that describes the permission mode; the site's install notes are generated from it. -->
-**Permission mode:** before the first conversation, Shifu asks once how agents may act. 按 Agent 自己的设置 (each agent's own settings) is preselected and recommended: no no-approval flags are added, and each agent's own configuration decides when it asks. With 免确认（全权） (no confirmation), agents edit files and run commands without individual approval. You can change it any time under 权限 in the new-task popover. Upgrades from an earlier version are not asked and keep their setting. The 0.4.3 download does not ask yet. In 0.4.3, agents that support it skip individual approvals by default. To keep your agent's own permission rules, set 权限 to 用 Agent 自己的设置 (use the agent's own settings) in the new-task form before starting.
+**Permission mode:** In 0.4.3, agents that support it skip individual approvals by default. To keep your agent's own permission rules, set 权限 to 用 Agent 自己的设置 (use the agent's own settings) in the new-task form before starting. With that setting Shifu adds no approval-bypass flags, and your agent's own configuration decides when it asks; you can change it any time under 权限. Later versions ask once before the first conversation, with 按 Agent 自己的设置 preselected; upgrades keep their setting.
 <!-- /permission-mode -->
 
 With no confirmation, Claude, Codex, CodeBuddy, Kimi, Qwen Code and opencode start with flags such as `--dangerously-skip-permissions`, `--dangerously-bypass-approvals-and-sandbox` and `--yolo` (opencode with `--auto`, which still honours rules you explicitly deny). After a change, conversations started or resumed use the new setting. Pi has no approval prompts, so the setting does not affect it.
@@ -30,7 +30,7 @@ Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and 
 2. Download the ZIP and SHA256SUMS from release remote-v0.4.3-preview.1 (https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1), not any other release. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
 3. Follow the package instructions: put Shifu.app in ~/Applications and install the package's bin/shifu to ~/.cargo/bin/shifu. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need this one (later versions carry a matching CLI inside the app, and this step is then only for using shifu in a terminal; follow the package instructions). Add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
 4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and tell me: In 0.4.3, agents that support it skip individual approvals by default. To keep your agent's own permission rules, set 权限 to 用 Agent 自己的设置 (use the agent's own settings) in the new-task form before starting. (Later versions ask once before the first conversation.) Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
-5. Help me choose a project and start my first agent conversation. On the first Codex launch, let me review its hooks before deciding whether to trust them.
+5. Help me choose a project. Before starting my first agent conversation, ask me whether I want 免确认（全权） (no confirmation) or 用 Agent 自己的设置 (the agent's own settings), set 权限 accordingly, then start it. On the first Codex launch, let me review its hooks before deciding whether to trust them.
 ```
 
 ### Option B: install it yourself
@@ -38,11 +38,22 @@ Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and 
 1. Download the ZIP and `SHA256SUMS` from the same release. Run `shasum -a 256 -c SHA256SUMS` in the download directory before extracting.
 2. For an existing installation, quit it and back up the old app and CLI first. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need the package's CLI; install it too (later versions carry a matching CLI inside the app, and this step is then only for using `shifu` in a terminal; follow the package instructions). In the extracted package directory, verify its contents, then install the CLI:
 
+   Verify on its own first, and continue only when every line says `OK`:
+
    ```bash
    shasum -a 256 -c SHA256SUMS
-   mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
-   install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"
-   rm -rf "$HOME/.cargo/bin/web" && ditto bin/web "$HOME/.cargo/bin/web"   # runtime for shifu web
+   ```
+
+   Then install the CLI. This block verifies again and changes nothing if verification fails; an existing `web` folder is renamed as a backup, not deleted:
+
+   ```bash
+   shasum -a 256 -c SHA256SUMS && (
+     set -e
+     mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
+     install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"
+     if [ -e "$HOME/.cargo/bin/web" ]; then mv "$HOME/.cargo/bin/web" "$HOME/.cargo/bin/web.before-$(date +%Y%m%d%H%M%S)"; fi
+     ditto bin/web "$HOME/.cargo/bin/web"   # runtime for shifu web
+   )
    export PATH="$HOME/.cargo/bin:$PATH"
    brew install tmux   # Skip if tmux is already installed
    ```
