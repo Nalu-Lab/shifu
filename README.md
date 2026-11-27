@@ -25,7 +25,7 @@ Agent 多起来以后，不用逐个翻终端：Shifu 把需要你接手的会�
 
 **各家终端原样保留** · **关掉窗口继续运行** · **任务与布局保存在本机**
 
-> **早期版本。** 目前主要在 Apple Silicon Mac 上使用，可下载 Apple Silicon 预发布包或从源码编译，应用尚未公证。第一次开对话前 Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」；只有你选「免确认（全权）」时，Claude、Codex、CodeBuddy、Kimi 和 Qwen Code 修改文件、执行命令才不再逐项询问（从旧版升级的保持原来的设置）；安装前请读[启动说明](#快速开始)和[已知问题](#已知问题)。
+> **早期版本。** 目前主要在 Apple Silicon Mac 上使用，可下载 Apple Silicon 预发布包或从源码编译，应用尚未公证。第一次开对话前 Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」；只有你选「免确认（全权）」时，Claude、Codex、CodeBuddy、Kimi 和 Qwen Code 修改文件、执行命令才不再逐项询问（从旧版升级的保持原来的设置；0.4.3 下载包还不会询问，默认免确认，见[权限模式](docs/INSTALL.md)）；安装前请读[启动说明](#快速开始)和[已知问题](#已知问题)。
 
 <p align="center"><img src="docs/images/shifu-workspace.png" width="960" alt="Shifu 当前界面的模拟演示：侧栏显示会话状态，两个 Agent 的终端左右并排。"></p>
 <p align="center"><sub>这是模拟会话演示：界面来自当前版本，终端内容、会话状态与额度为演示数据。</sub></p>
@@ -74,15 +74,15 @@ Shifu 把 Claude Code、Codex、Kimi、CodeBuddy、Antigravity、opencode、Pi�
 帮我安装 Shifu（https://github.com/Nalu-Lab/shifu）。先读 README 和 docs/INSTALL.md。
 1. 确认当前 Mac 使用 Apple Silicon，检查 tmux 和我要使用的 Agent 是否已安装、登录；缺什么先告诉我。
 2. 下载 README 指向的同一 Release 中的 ZIP 和 SHA256SUMS，核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
-3. 按包内说明，将 Shifu.app 放到 ~/Applications，将同包 bin/shifu 装到 ~/.cargo/bin/shifu。将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
-4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；第一次开对话前它会问一次 Agent 的权限，默认「按 Agent 自己的设置」，「免确认（全权）」由我自己决定。系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
+3. 按包内说明，将 Shifu.app 放到 ~/Applications，将同包 bin/shifu 装到 ~/.cargo/bin/shifu：0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用它（之后的版本 App 自带同版命令行，这一步只在终端里用 shifu 时才需要，以包内说明为准）。将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
+4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；0.4.3 默认用免确认模式启动 Agent，要逐项询问就在新建任务的「权限」里改成「用 Agent 自己的设置」（之后的版本第一次开对话前会先问一次）。系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
 5. 打开后带我选一个项目、创建第一条 Agent 对话；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。
 ```
 
 ### 方式 B：自己装
 
 1. 下载同一 Release 的 ZIP 和 `SHA256SUMS`，先在下载目录执行 `shasum -a 256 -c SHA256SUMS`，再解压。
-2. 已有 Shifu 时，先退出并备份旧 App 与 CLI；App 和 CLI 使用同一包的版本。先在解压后的包目录校验内容，再安装 CLI：
+2. 已有 Shifu 时，先退出并备份旧 App 与 CLI。0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用同包的 CLI，请一起装好（之后的版本 App 自带同版命令行，这一步只在终端里用 `shifu` 时才需要，以包内说明为准）。先在解压后的包目录校验内容，再安装 CLI：
 
    ```bash
    shasum -a 256 -c SHA256SUMS
