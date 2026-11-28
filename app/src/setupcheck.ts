@@ -6,6 +6,7 @@ import { type CliFound, type CliReport, clipboardWrite, pathOpen } from "./api";
 import { getClis, onClisChange, refreshClis, splitAgents } from "./models";
 import { missingLine } from "./newpopover";
 import { reportError } from "./store";
+import { tr } from "./i18n";
 
 export type CheckState = "ok" | "missing" | "note";
 
@@ -33,7 +34,7 @@ function agentItem(agent: CliFound): CheckItem {
     return {
       label: agent.name,
       state: "missing",
-      detail: agent.install_command ? "没装。在终端里运行这一行，或看安装说明：" : "没装。按安装说明装好：",
+      detail: agent.install_command ? tr("没装。在终端里运行：", "Not installed. Run in Terminal:") : tr("没装。", "Not installed."),
       command: agent.install_command ?? undefined,
       url: agent.install_url,
     };
@@ -42,13 +43,11 @@ function agentItem(agent: CliFound): CheckItem {
     return {
       label: agent.name,
       state: "note",
-      detail: agent.login_command
-        ? "已装，没找到登录信息。第一次开对话时按它的提示登录，或先运行："
-        : "已装，没找到登录信息。第一次开对话时按它的提示登录。",
+      detail: tr("需登录", "Sign-in needed"),
       command: agent.login_command ?? undefined,
     };
   }
-  return { label: agent.name, state: "ok", detail: agent.signed_in ? "已装，已登录" : "已装" };
+  return { label: agent.name, state: "ok", detail: agent.signed_in ? tr("已装，已登录", "Installed, signed in") : tr("已装", "Installed") };
 }
 
 /** The rows: tmux, then the installed agents (with sign-in where it can be told), then, only when none is
@@ -57,11 +56,11 @@ function agentItem(agent: CliFound): CheckItem {
 export function setupChecks(report: CliReport): CheckItem[] {
   const items: CheckItem[] = [
     report.tmux
-      ? { label: "tmux", state: "ok", detail: "已装" }
+      ? { label: "tmux", state: "ok", detail: tr("已装", "Installed") }
       : {
           label: "tmux",
           state: "missing",
-          detail: "没装。Shifu 的每个对话都在 tmux 里运行。装了 Homebrew 的话运行：",
+          detail: tr("必需。在终端里运行：", "Required. Run in Terminal:"),
           command: "brew install tmux",
           url: TMUX_URL,
         },
@@ -69,7 +68,7 @@ export function setupChecks(report: CliReport): CheckItem[] {
   const agents = agentsOf(report);
   const installed = agents.filter((a) => a.path !== null);
   if (installed.length > 0) return [...items, ...installed.map(agentItem)];
-  items.push({ label: "Agent", state: "missing", detail: "还没找到 Agent 命令行工具，装好下面任意一个就行：" });
+  items.push({ label: "Agent", state: "missing", detail: tr("没找到，装一个：", "None found. Install one:") });
   // Extra plain agents and the user's own are offered once found, not suggested for installing.
   return [...items, ...agents.filter((a) => !a.extra).map(agentItem)];
 }
@@ -94,7 +93,7 @@ function row(item: CheckItem): HTMLElement {
   );
   if (item.url) {
     const url = item.url;
-    const link = button("安装说明", "link-btn", () => pathOpen(url).catch(reportError));
+    const link = button(tr("安装说明", "Install guide"), "link-btn", () => pathOpen(url).catch(reportError));
     link.title = url;
     head.append(link);
   }
@@ -103,8 +102,8 @@ function row(item: CheckItem): HTMLElement {
     const command = item.command;
     const line = document.createElement("div");
     line.className = "setup-command";
-    const copy = button("复制", "btn", () => {
-      clipboardWrite(command).then(() => (copy.textContent = "已复制")).catch(reportError);
+    const copy = button(tr("复制", "Copy"), "btn", () => {
+      clipboardWrite(command).then(() => (copy.textContent = tr("已复制", "Copied"))).catch(reportError);
     });
     line.append(Object.assign(document.createElement("code"), { textContent: command }), copy);
     li.append(line);
@@ -133,7 +132,7 @@ export function setupNotes(report: CliReport | null): HTMLElement[] {
   if (!setupReady(report)) return [checklistElement(report)];
   const note = document.createElement("div");
   note.className = "empty-note";
-  note.textContent = `这台 Mac 上找到：${agentsOf(report).filter((a) => a.path !== null).map((a) => a.name).join("、")}`;
+  note.textContent = `${tr("找到：", "Found: ")}${agentsOf(report).filter((a) => a.path !== null).map((a) => a.name).join(tr("、", ", "))}`;
   const notes: HTMLElement[] = [note];
   const line = missingLine(splitAgents(report).missing);
   if (line) notes.push(line);
@@ -151,15 +150,15 @@ export function showSetupChecklist(): void {
   const card = document.createElement("div");
   card.className = "guide-card";
   card.setAttribute("role", "dialog");
-  card.setAttribute("aria-label", "准备情况");
+  card.setAttribute("aria-label", tr("准备情况", "Setup Checklist"));
   const body = document.createElement("div");
   body.className = "guide-body";
   const lead = Object.assign(document.createElement("p"), { className: "guide-lead" });
   const paint = () => {
     const report = getClis();
     lead.textContent = setupReady(report)
-      ? "都准备好了，可以开始第一个对话。"
-      : "Shifu 需要 tmux 和至少一个 Agent 命令行工具。装好后点「重新检查」，回到这个窗口时也会自动检查。";
+      ? tr("都准备好了。", "All set.")
+      : tr("需要 tmux 和一个 Agent。装好后回到这里会自动检查。", "Shifu needs tmux and one agent CLI. It checks again when you come back.");
     body.replaceChildren(...(report ? [checklistElement(report)] : []));
   };
   const stop = onClisChange(paint);
@@ -172,12 +171,12 @@ export function showSetupChecklist(): void {
     overlay.remove();
     openClose = null;
   };
-  const recheck = button("重新检查", "btn", () => void refreshClis().catch(reportError));
-  const done = button("关闭", "btn primary", close);
+  const recheck = button(tr("重新检查", "Check Again"), "btn", () => void refreshClis().catch(reportError));
+  const done = button(tr("关闭", "Close"), "btn primary", close);
   const foot = document.createElement("div");
   foot.className = "guide-foot";
   foot.append(recheck, done);
-  card.append(Object.assign(document.createElement("h1"), { className: "guide-title", textContent: "准备情况" }), lead, body, foot);
+  card.append(Object.assign(document.createElement("h1"), { className: "guide-title", textContent: tr("准备情况", "Setup Checklist") }), lead, body, foot);
   overlay.append(card);
   window.addEventListener("keydown", onKey, true);
   paint();

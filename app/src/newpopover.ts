@@ -18,7 +18,8 @@ import {
   splitAgents,
 } from "./models";
 import { markFor, vendorIcon } from "./vendoricons";
-import { PERMISSION_OPTIONS, hintOf } from "./permissions";
+import { permissionOptions, hintOf } from "./permissions";
+import { tr } from "./i18n";
 
 /** The agent a new task starts with: the one last picked here or in the first-run guide, kept across restarts. */
 const KIND_KEY = "shifu.defaultKind";
@@ -70,7 +71,7 @@ function agentLabel(spec: AgentSpec): Element[] {
 function select(options: { id: string; label: string }[], value: string, onChange: (v: string) => void): HTMLSelectElement {
   const sel = document.createElement("select");
   sel.className = "pick-select";
-  for (const o of [{ id: "", label: "默认" }, ...options]) sel.append(new Option(o.label, o.id, false, o.id === value));
+  for (const o of [{ id: "", label: tr("默认", "Default") }, ...options]) sel.append(new Option(o.label, o.id, false, o.id === value));
   sel.addEventListener("change", () => onChange(sel.value));
   return sel;
 }
@@ -80,12 +81,12 @@ export function missingLine(missing: readonly AgentSpec[]): HTMLElement | null {
   if (missing.length === 0) return null;
   const line = document.createElement("div");
   line.className = "missing-agents";
-  line.append("未安装：");
+  line.append(tr("未安装：", "Not installed: "));
   missing.forEach((spec, i) => {
     if (i > 0) line.append(" · ");
     const link = button(spec.name, "link-btn");
     const url = installUrl(getClis(), spec.kind);
-    link.title = url ? `安装说明：${url}` : "";
+    link.title = url ? `${tr("安装说明：", "Install guide: ")}${url}` : "";
     link.disabled = !url;
     link.addEventListener("click", () => {
       if (url) pathOpen(url).catch(reportError);
@@ -191,11 +192,11 @@ function agentPicker(): HTMLElement {
     const pick = pickFor(spec.kind);
     const efforts = effortsFor(models, pick.model).map((id) => ({ id, label: effortLabel(id) }));
     picks.replaceChildren(
-      field("模型", select(models, pick.model, (model) => {
+      field(tr("模型", "Model"), select(models, pick.model, (model) => {
         savePick(spec.kind, { ...pickFor(spec.kind), model });
         paint(); // the levels on offer depend on the model
       })),
-      field("思考", select(efforts, pick.effort, (effort) => savePick(spec.kind, { ...pickFor(spec.kind), effort }))),
+      field(tr("思考", "Effort"), select(efforts, pick.effort, (effort) => savePick(spec.kind, { ...pickFor(spec.kind), effort }))),
     );
   };
   paint();
@@ -266,7 +267,7 @@ export function permissionPicker(): HTMLElement {
   const sel = document.createElement("select");
   sel.className = "pick-select";
   sel.disabled = true;
-  for (const o of PERMISSION_OPTIONS) sel.append(new Option(o.label, o.id));
+  for (const o of permissionOptions()) sel.append(new Option(o.label, o.id));
   const wrap = document.createElement("span");
   wrap.className = "select-wrap";
   wrap.append(sel);
@@ -300,7 +301,7 @@ export function showAddAgentPopover(anchor: HTMLElement, add: AddAgent, options:
   for (const spec of installed) {
     if (options.agentsOnly && spec.kind === "terminal") continue;
     const item = button("", "popup-item agent-item");
-    const model = modelsOf(spec.kind).find((m) => m.id === pickFor(spec.kind).model)?.label ?? "默认模型";
+    const model = modelsOf(spec.kind).find((m) => m.id === pickFor(spec.kind).model)?.label ?? tr("默认模型", "Default model");
     const hint = document.createElement("span");
     hint.className = "agent-hint";
     hint.textContent = spec.kind === "terminal" ? "" : model;
@@ -326,6 +327,15 @@ export interface NewTaskOptions {
   create: CreateTask;
 }
 
+/** How the 项目 field asks for a folder: with nothing to list (a fresh install, no recent folders) a plain
+ *  「选择文件夹…」 button, since a dropdown whose only entry is already selected never fires `change` and so never
+ *  opens the dialog (the first-run dead end, 11-28). */
+export const projectControl = (folders: readonly string[]): "dropdown" | "button" =>
+  folders.length > 0 ? "dropdown" : "button";
+
+/** 建立 without a folder opens the folder dialog instead of refusing. */
+export const submitAction = (selected: string | null): "create" | "choose" => (selected ? "create" : "choose");
+
 /** Project, task name (may stay empty), the supported agent CLIs. Enter or "建立" creates. */
 export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptions): Promise<void> {
   const guard = { suspended: false };
@@ -338,10 +348,21 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
   if (selected !== null && !folders.includes(selected)) folders.unshift(selected);
   // A dropdown, not a list: the list of recent folders pushed the rest of the form down (Eddie 11-23).
   const CHOOSE = "\u0000choose";
+  const chooseText = tr("选择文件夹…", "Choose Folder…");
   const list = document.createElement("select");
   list.className = "pick-select";
-  list.setAttribute("aria-label", "项目");
+  list.setAttribute("aria-label", tr("项目", "Project"));
+  const listWrap = document.createElement("span");
+  listWrap.className = "select-wrap dir-select";
+  listWrap.append(list);
+  const chooseButton = button(chooseText, "btn dir-choose");
+  chooseButton.type = "button";
+  const projectBox = document.createElement("div");
   const paintList = () => {
+    if (projectControl(folders) === "button") {
+      projectBox.replaceChildren(chooseButton);
+      return;
+    }
     const names = folders.map(projectName);
     list.replaceChildren(
       ...folders.map((dir, i) => {
@@ -351,24 +372,25 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
         option.title = dir;
         return option;
       }),
-      new Option("选择文件夹…", CHOOSE),
+      new Option(chooseText, CHOOSE),
     );
-    list.value = selected ?? CHOOSE;
-    list.title = selected ?? "";
+    selected ??= folders[0];
+    list.value = selected;
+    list.title = selected;
+    projectBox.replaceChildren(listWrap);
   };
-  const listWrap = document.createElement("span");
-  listWrap.className = "select-wrap dir-select";
-  listWrap.append(list);
 
-  const chooseFolder = async () => {
+  const chooseFolder = async (thenCreate = false) => {
     // The system dialog takes focus, which would close the popover through the blur handler.
     guard.suspended = true;
+    let picked = false;
     try {
-      const dir = await open({ directory: true, multiple: false, title: "选择文件夹" });
+      const dir = await open({ directory: true, multiple: false, title: chooseText });
       if (typeof dir === "string") {
         // The picked folder becomes the task's folder, first in the list, and shows in the sidebar from now on.
         ({ folders, selected } = pickFolder(folders, dir));
         addPickedFolder(dir);
+        picked = true;
       }
     } catch (e) {
       reportError(e);
@@ -377,9 +399,11 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
       paintList();
       input.focus();
     }
+    if (picked && thenCreate) create();
   };
+  chooseButton.addEventListener("click", () => void chooseFolder());
   list.addEventListener("change", () => {
-    if (list.value === CHOOSE) chooseFolder();
+    if (list.value === CHOOSE) void chooseFolder();
     else {
       selected = list.value;
       list.title = selected;
@@ -388,18 +412,18 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
 
   const input = document.createElement("input");
   input.className = "text-input";
-  input.placeholder = "不填就叫「任务 N」";
-  input.setAttribute("aria-label", "任务名");
+  input.placeholder = tr("不填就叫「任务 N」", "Optional: “Task N” if empty");
+  input.setAttribute("aria-label", tr("任务名", "Task name"));
 
   const submit = document.createElement("button");
   submit.className = "btn primary";
-  submit.textContent = "建立";
-  const create = () => {
-    if (!selected) return reportError("先选一个项目文件夹");
+  submit.textContent = tr("建立", "Create");
+  function create(): void {
+    if (submitAction(selected) === "choose" || !selected) return void chooseFolder(true);
     const [project, name] = [selected, input.value];
     closeNewPopover();
     opts.create(project, name, kind).catch(reportError);
-  };
+  }
   submit.addEventListener("click", create);
   // Enter in the name field submits this form; WebKit does not submit for the Enter that picks a Pinyin candidate.
   const nameForm = document.createElement("form");
@@ -414,13 +438,13 @@ export async function showNewTaskPopover(anchor: HTMLElement, opts: NewTaskOptio
   foot.className = "pop-foot";
   foot.append(submit);
   pop.append(
-    label("项目"),
-    listWrap,
-    label("任务名"),
+    label(tr("项目", "Project")),
+    projectBox,
+    label(tr("任务名", "Task name")),
     nameForm,
-    label("类型"),
+    label(tr("类型", "Agent")),
     agentPicker(),
-    label("权限（所有对话）"),
+    label(tr("权限（所有对话）", "Permissions (all conversations)")),
     permissionPicker(),
     foot,
   );

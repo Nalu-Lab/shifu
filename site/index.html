@@ -446,7 +446,7 @@
   ditto bin/web "$HOME/.cargo/bin/web"   # shifu web 的运行文件
 )
 export PATH="$HOME/.cargo/bin:$PATH"
-brew install tmux   # 已有 tmux 时跳过</pre><button class="copy" type="button">复制</button></div></li><li><p>校验通过后，将 <code>Shifu.app</code> 移到 <code>~/Applications</code>，再打开 Shifu，选择项目和已登录的 Agent，创建第一条对话。完整说明见<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/INSTALL.md">安装指南</a>；连接另一台 Mac 时再看<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.md">远程安装与配对</a>。</p></li></ol>
+brew install tmux   # 已有 tmux 时跳过</pre><button class="copy" type="button">复制</button></div></li><li><p>校验通过后，将 <code>Shifu.app</code> 移到 <code>~/Applications</code>，再打开 Shifu，选择项目和已登录的 Agent，创建第一条对话（0.4.3 之后的版本打开时有简短引导，会自动找出两者）。连接另一台 Mac 时才需要<a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.md">远程安装与配对</a>。</p></li></ol>
           <p class="after-install">
             <span>PATH 设置只对当前终端生效；新终端可用 <code>"$HOME/.cargo/bin/shifu"</code>，或把该目录加进 shell 配置。</span>
             

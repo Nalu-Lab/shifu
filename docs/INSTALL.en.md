@@ -2,7 +2,7 @@
 
 [Back to Shifu](../README.en.md)　[中文](INSTALL.md)
 
-Shifu provides an [Apple Silicon preview package](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1) containing the app, matching CLI and setup instructions. Rust is not needed for ordinary sessions; StepFun additionally needs Node/Pi. Install tmux and your agent separately and sign into the agent. Follow [remote setup and pairing](REMOTE-RELAY.en.md) for first installation.
+Shifu provides an [Apple Silicon preview package](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1) containing the app, matching CLI and setup instructions. Rust is not needed for ordinary sessions; StepFun additionally needs Node/Pi. Install tmux and your agent separately and sign into the agent. [Remote setup and pairing](REMOTE-RELAY.en.md) is only for connecting another Mac; a first install does not need it.
 
 Use the download for ordinary sessions; source-build instructions are in the developer section below.
 
@@ -16,7 +16,7 @@ The app is signed with Shifu's own fixed certificate (not one issued by Apple) a
 
 ## Quick start
 
-[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately. From the version after 0.4.3, the app's setup checklist (准备情况, shown on first open and later in the Shifu menu) lists anything missing, with the install command and instructions link. StepFun requires [Node/Pi and subscription-key setup](STEPFUN.md#english).
+[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately. From the version after 0.4.3, the first open shows one short screen (in English on an English Mac) that finds your agents and project folders: tick the projects and press Start. Anything missing (tmux, an agent) is listed there with its install command; Setup Checklist in the Shifu menu shows it again later. StepFun requires [Node/Pi and subscription-key setup](STEPFUN.md#english).
 
 <!-- cli-step: required (the app in the linked release does not carry its CLI; scripts/release/check-docs.py checks this against the release tag) -->
 
@@ -58,12 +58,12 @@ Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and 
    brew install tmux   # Skip if tmux is already installed
    ```
 
-3. After successful verification, move `Shifu.app` to `~/Applications`. Open it, choose a project and a signed-in agent, and start your first conversation. See the [installation guide](INSTALL.en.md) for details; use [remote setup and pairing](REMOTE-RELAY.en.md) when connecting another Mac.
+3. After successful verification, move `Shifu.app` to `~/Applications`. Open it, choose a project and a signed-in agent, and start your first conversation (versions after 0.4.3 open with a short guide that finds both). Use [remote setup and pairing](REMOTE-RELAY.en.md) only when connecting another Mac.
 
 - The app is signed with Shifu's own fixed certificate and not notarized. If macOS blocks it, confirm the source and follow the app-specific prompt in System Settings → Privacy & Security.
 - Codex asks you to review its hooks on first launch; read them before deciding whether to trust them. Keeping the CLI installation path avoids repeating setup.
 - The PATH command applies to the current terminal. In a new terminal without that PATH setting, use `"$HOME/.cargo/bin/shifu"` or add that directory to your shell configuration.
-- CLI only: `shifu` opens the workbench, `shifu new claude ~/proj` starts an agent, `shifu ls` lists sessions, and `shifu jump` opens a waiting conversation.
+- CLI only: `shifu` opens the workbench, `shifu new claude ~/proj` starts an agent, `shifu ls` lists sessions, `shifu agents` shows which agent CLIs this Mac has (add your own CLI in `~/.shifu/app/agents.json`, see [docs/AGENTS.md](AGENTS.md)), and `shifu jump` opens a waiting conversation.
 
 <details>
 <summary>Build from source (developers)</summary>
@@ -116,7 +116,7 @@ npm run build:desktop -- --debug
 
 | If you like… | You could |
 |---|---|
-| Rust and concurrency | Move the branch-name git call out of the lock and give it a timeout, fixing the window freeze above |
+| Rust and concurrency | Move the branch-name git call out of the lock and give it a timeout, so a slow git call can never freeze the window |
 | Terminals and xterm.js | Fix clicking long wrapped paths; add search inside a terminal |
 | Wiring up agents | Gemini CLI, Cursor CLI and others: adapt their hooks so their state shows in the sidebar |
 | Cross-platform work | Notifications, drag and drop and packaging on Linux |

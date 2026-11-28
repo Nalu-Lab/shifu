@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Permissions } from "./api";
-import { PERMISSION_OPTIONS, RECOMMENDED, permissionGate } from "./permissions";
+import { permissionOptions, RECOMMENDED, permissionGate } from "./permissions";
 
 function fakes(chosen: boolean | Error, answer: Permissions = "own") {
   const calls = { chosen: 0, ask: 0, saved: [] as Permissions[] };
@@ -27,8 +27,8 @@ function fakes(chosen: boolean | Error, answer: Permissions = "own") {
 describe("first-run permission question", () => {
   it("recommends and preselects the agent's own settings, with a risk line on bypass", () => {
     expect(RECOMMENDED).toBe("own");
-    expect(PERMISSION_OPTIONS[0].id).toBe("own");
-    expect(PERMISSION_OPTIONS.find((o) => o.id === "bypass")?.hint).toMatch(/^风险/);
+    expect(permissionOptions()[0].id).toBe("own");
+    expect(permissionOptions().find((o) => o.id === "bypass")?.hint).toMatch(/^风险/);
   });
 
   it("does not ask a user who already has a choice, and stops checking after that", async () => {

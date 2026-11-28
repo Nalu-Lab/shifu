@@ -14,6 +14,7 @@ import { AgentTab, FileTab } from "./tab";
 import { getClis, onClisChange, splitAgents } from "./models";
 import { missingLine } from "./newpopover";
 import { setupNotes } from "./setupcheck";
+import { tr } from "./i18n";
 import { markFor, vendorIcon } from "./vendoricons";
 import { TerminalPanel } from "./terminal";
 import { FILE_PREFIX, FilePanel, isFilePanel, setFileOpener } from "./preview";
@@ -39,6 +40,8 @@ export interface WorkspaceHooks {
   /** The empty state's buttons. */
   addAgent(kind: string): void;
   requestNewTask(anchor: HTMLElement): void;
+  /** 添加项目: the folder dialog, then a task there with the default agent. */
+  addProject(): void;
   activeChanged(name: string | null): void;
   selectTask(id: string): Promise<void>;
   endAgent(name: string): void;
@@ -117,12 +120,25 @@ class EmptyState implements IWatermarkRenderer {
   private paint(): void {
     this.element.replaceChildren();
     if (!getCurrentTask()) {
-      this.element.append(this.button("新建任务", (b) => this.hooks.requestNewTask(b)), ...setupNotes(getClis()));
+      // No task: one line and 添加项目, which goes straight to the folder dialog (after 跳过 in the guide too).
+      const none = getTasks().length === 0;
+      const line = document.createElement("div");
+      line.className = "empty-label";
+      line.textContent = none ? tr("还没有项目", "No projects yet") : tr("选一个任务，或添加项目", "Pick a task, or add a project");
+      const buttons = document.createElement("div");
+      buttons.className = "empty-buttons";
+      buttons.append(this.button(tr("添加项目", "Add Project"), () => this.hooks.addProject()));
+      if (!none) {
+        const more = this.button(tr("新建任务", "New Task"), (b) => this.hooks.requestNewTask(b));
+        more.className = "btn";
+        buttons.append(more);
+      }
+      this.element.append(line, buttons, ...setupNotes(getClis()));
       return;
     }
     const label = document.createElement("div");
     label.className = "empty-label";
-    label.textContent = "在这个任务里打开";
+    label.textContent = tr("在这个任务里打开", "Open in this task");
     const buttons = document.createElement("div");
     buttons.className = "empty-buttons";
     buttons.append(

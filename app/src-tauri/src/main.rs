@@ -18,6 +18,7 @@ mod notify;
 mod daily;
 mod pm;
 mod power;
+mod projectscan;
 mod lid;
 mod pty;
 mod resources;
@@ -667,9 +668,15 @@ fn preferred_language() -> Option<String> {
 }
 
 /// The menu bar follows the system language, as macOS's own items (About, Hide, Quit) do: Chinese for a Chinese
-/// system, English for anything else. The page itself is Chinese either way for now.
+/// system, English for anything else. The page follows it only on the first-run screens (`ui_chinese`).
 fn menu_in_chinese(preferred: Option<&str>) -> bool {
     preferred.is_some_and(|l| l.starts_with("zh"))
+}
+
+/// The first-run guide, the new-task form and the empty page follow the same rule as the menu (i18n.ts).
+#[tauri::command]
+fn ui_chinese() -> bool {
+    menu_in_chinese(preferred_language().as_deref())
 }
 
 /// Cmd+N / Cmd+T / Cmd+W / Cmd+J / Cmd+O (and Cmd+K, Cmd+B, Cmd+D, Shift+Cmd+D) live in the native menu: macOS handles menu shortcuts before the page sees the key,
@@ -832,6 +839,8 @@ fn main() {
             guide_done_get,
             guide_done_set,
             clis::clis_detect,
+            projectscan::projects_scan,
+            ui_chinese,
             agent_new,
             agent_kill,
             seen_load,

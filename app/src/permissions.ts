@@ -2,6 +2,7 @@
  *  install is asked once, before its first agent starts, with 「按 Agent 自己的设置」 preselected; a user of an
  *  earlier version already has a saved choice and is never asked (see `settle_permissions_in` in src/launch.rs). */
 import { type Permissions, permissionsChosen, permissionsSet } from "./api";
+import { tr } from "./i18n";
 
 export interface PermissionOption {
   id: Permissions;
@@ -9,19 +10,26 @@ export interface PermissionOption {
   hint: string;
 }
 
-/** Recommended first: it is also what an unanswered fresh install gets. */
-export const PERMISSION_OPTIONS: readonly PermissionOption[] = [
-  { id: "own", label: "按 Agent 自己的设置", hint: "推荐。不加免确认参数，按各家自己的配置决定何时问你。" },
+/** Recommended first: it is also what an unanswered fresh install gets. In the system language (i18n.ts). */
+export const permissionOptions = (): readonly PermissionOption[] => [
+  {
+    id: "own",
+    label: tr("按 Agent 自己的设置", "Agent's own settings"),
+    hint: tr("推荐。不加免确认参数，按各家自己的配置决定何时问你。", "Recommended. No bypass flags: each agent's own settings decide when it asks you."),
+  },
   {
     id: "bypass",
-    label: "免确认（全权）",
-    hint: "风险：改文件、跑命令（包括删除和推送）都不再逐项问你。只在信任的项目里用。",
+    label: tr("免确认（全权）", "No confirmation (full access)"),
+    hint: tr(
+      "风险：改文件、跑命令（包括删除和推送）都不再逐项问你。只在信任的项目里用。",
+      "Risk: editing files and running commands (including deletes and pushes) no longer ask you. Use only in projects you trust.",
+    ),
   },
 ];
 
 export const RECOMMENDED: Permissions = "own";
 
-export const hintOf = (id: string): string => PERMISSION_OPTIONS.find((o) => o.id === id)?.hint ?? "";
+export const hintOf = (id: string): string => permissionOptions().find((o) => o.id === id)?.hint ?? "";
 
 export interface GateDeps {
   chosen: () => Promise<boolean>;
@@ -54,7 +62,7 @@ export function permissionChoice(initial: Permissions, onPick: (mode: Permission
   const box = document.createElement("div");
   box.className = "perm-choice";
   box.setAttribute("role", "radiogroup");
-  for (const o of PERMISSION_OPTIONS) {
+  for (const o of permissionOptions()) {
     const row = document.createElement("label");
     row.className = "perm-option";
     const radio = Object.assign(document.createElement("input"), {
@@ -86,8 +94,8 @@ export function askPermissions(): Promise<Permissions> {
     card.className = "guide-card";
     card.setAttribute("role", "dialog");
     card.setAttribute("aria-modal", "true");
-    card.setAttribute("aria-label", "Agent 的权限");
-    const go = Object.assign(document.createElement("button"), { type: "button", className: "btn primary", textContent: "继续" });
+    card.setAttribute("aria-label", tr("Agent 的权限", "Agent permissions"));
+    const go = Object.assign(document.createElement("button"), { type: "button", className: "btn primary", textContent: tr("继续", "Continue") });
     go.addEventListener("click", () => {
       overlay.remove();
       resolve(picked);
@@ -96,10 +104,10 @@ export function askPermissions(): Promise<Permissions> {
     foot.className = "guide-foot";
     foot.append(go);
     card.append(
-      Object.assign(document.createElement("h1"), { className: "guide-title", textContent: "Agent 改文件、跑命令前要问你吗？" }),
+      Object.assign(document.createElement("h1"), { className: "guide-title", textContent: tr("Agent 改文件、跑命令前要问你吗？", "Should agents ask before editing files or running commands?") }),
       Object.assign(document.createElement("p"), {
         className: "guide-lead",
-        textContent: "第一个对话开始前选一次，对之后新开和恢复的对话都有效；以后在新建任务窗口的「权限」里随时能改。",
+        textContent: tr("对之后所有对话有效，随时可在新建任务的「权限」里改。", "Applies to every conversation from now on. Change it any time under Permissions in New Task."),
       }),
       permissionChoice(picked, (mode) => (picked = mode)),
       foot,

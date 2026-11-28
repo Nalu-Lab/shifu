@@ -2824,6 +2824,7 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
 }
 
 .guide-row {
+  display: flex;
   flex-direction: row;
   align-items: center;
   gap: 10px;
@@ -2865,6 +2866,122 @@ body.fullscreen.side-hidden .under-lights .dv-tabs-and-actions-container {
   justify-content: flex-end;
   gap: 8px;
   padding-top: 4px;
+}
+
+.guide-scan .guide-step-title {
+  margin-bottom: -6px;
+}
+
+.guide-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.guide-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 0.5px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.guide-chip[aria-checked="true"] {
+  border-color: var(--text-2);
+  background: var(--bg-active);
+}
+
+.guide-tag {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guide-more,
+.guide-links {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.guide-more summary {
+  cursor: pointer;
+}
+
+.guide-projects {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.guide-project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 4px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.guide-project:hover {
+  background: var(--bg-hover);
+}
+
+.guide-project input {
+  margin: 0;
+}
+
+.guide-project-name {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guide-perm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.guide-perm input {
+  margin: 0;
+}
+
+.guide-tmux {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.guide-tmux code {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--bg);
+  font-family: "Maple Mono NF CN", Menlo, monospace;
+  user-select: text;
+}
+
+.guide-warn {
+  color: var(--amber);
+  font-size: 12px;
+}
+
+.dir-choose {
+  width: 100%;
+  text-align: left;
 }
 
 /* ---------- first-run permission question (permissions.ts) ---------- */
