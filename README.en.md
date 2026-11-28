@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="README.md">中文</a> ·
-  <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1">Download preview</a> ·
+  <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1">Download preview</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#things-to-try">Things to try</a> ·
   <a href="#build-with-us">Build with us</a> ·
@@ -25,7 +25,7 @@ When more agents are running, Shifu brings the conversations that need you toget
 
 **Each agent keeps its own terminal** · **Sessions keep running when the window closes** · **Tasks and layouts stay on your Mac**
 
-> **Early version.** Primarily used on Apple Silicon Macs, available as an Apple Silicon preview package or source build, and not notarized. Before the first conversation Shifu asks once how agents may act, with each agent's own settings preselected. Only if you choose no-confirmation mode do Claude, Codex, CodeBuddy, Kimi and Qwen Code edit files and run commands without individual approval (upgrades keep their existing setting; the 0.4.3 download does not ask yet and defaults to no-confirmation, see [permission mode](docs/INSTALL.en.md)). Read the [launch instructions](#quick-start) and [known issues](#known-issues) before installing.
+> **Early version.** Primarily used on Apple Silicon Macs, available as an Apple Silicon preview package or source build, and not notarized. Before the first conversation Shifu asks once how agents may act, with each agent's own settings preselected. Only if you choose no-confirmation mode do Claude, Codex, CodeBuddy, Kimi, Qwen Code and opencode edit files and run commands without individual approval (upgrades keep their existing setting, see [permission mode](docs/INSTALL.en.md)). Read the [launch instructions](#quick-start) and [known issues](#known-issues) before installing.
 
 <p align="center"><img src="docs/images/shifu-workspace.png" width="960" alt="A simulated demonstration of the current Shifu interface, with conversation states in the sidebar and two agents' terminals side by side."></p>
 <p align="center"><sub>Simulated conversations in the current UI. Terminal content, conversation states and quotas are demo data. The interface is in Chinese.</sub></p>
@@ -64,7 +64,7 @@ You can also drive the remote Mac without opening a window: the `shifu remote` C
 
 ## Quick start
 
-[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately. StepFun requires [Node/Pi and subscription-key setup](docs/STEPFUN.md#english).
+[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately. The app carries its matching CLI, and on first open one short screen finds the agents and projects on this Mac: tick them and press Start. StepFun requires [Node/Pi and subscription-key setup](docs/STEPFUN.md#english).
 
 ### Option A: let your AI install it
 
@@ -73,16 +73,16 @@ Paste this into Claude Code or Codex:
 ```text
 Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and docs/INSTALL.en.md first.
 1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
-2. Download the ZIP and SHA256SUMS from release remote-v0.4.3-preview.1 (https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1), not any other release. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
-3. Follow the package instructions: put Shifu.app in ~/Applications and install the package's bin/shifu to ~/.cargo/bin/shifu. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need this one (later versions carry a matching CLI inside the app, and this step is then only for using shifu in a terminal; follow the package instructions). Add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
-4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and tell me: In 0.4.3, agents that support it skip individual approvals by default. To keep your agent's own permission rules, set 权限 to 用 Agent 自己的设置 (use the agent's own settings) in the new-task form before starting. (Later versions ask once before the first conversation.) Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
-5. Help me choose a project. Before starting my first agent conversation, ask me whether I want 免确认（全权） (no confirmation) or 用 Agent 自己的设置 (the agent's own settings), set 权限 accordingly, then start it. On the first Codex launch, let me review its hooks before deciding whether to trust them.
+2. Download the ZIP and SHA256SUMS from release remote-v0.4.4-preview.1 (https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1), not any other release. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
+3. Follow the package instructions: put Shifu.app in ~/Applications. The app carries its matching CLI for conversation status, notifications and the project manager, so nothing else is needed. Ask me whether I want shifu in a terminal; if so, install the package's bin/shifu to ~/.cargo/bin/shifu, add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
+4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and tell me: Before your first conversation, Shifu asks once how agents may act, with Agent's own settings preselected; change it any time under Permissions in the new-task form. Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
+5. When it opens, the first screen finds agents and projects: let me tick the projects and decide on the No confirmation switch (off by default, which is Agent's own settings) before pressing Start. On the first Codex launch, let me review its hooks before deciding whether to trust them.
 ```
 
 ### Option B: install it yourself
 
 1. Download the ZIP and `SHA256SUMS` from the same release. Run `shasum -a 256 -c SHA256SUMS` in the download directory before extracting.
-2. For an existing installation, quit it and back up the old app and CLI first. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need the package's CLI; install it too (later versions carry a matching CLI inside the app, and this step is then only for using `shifu` in a terminal; follow the package instructions). In the extracted package directory, verify its contents, then install the CLI:
+2. For an existing installation, quit it and back up the old app and CLI first. The app carries its matching CLI (`Shifu.app/Contents/Resources/bin/shifu`) for conversation status, notifications and the project manager; the CLI install commands below are only for using `shifu` in a terminal (tmux is still needed). In the extracted package directory, verify its contents, then install the CLI:
 
    Verify on its own first, and continue only when every line says `OK`:
 
@@ -104,7 +104,7 @@ Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and 
    brew install tmux   # Skip if tmux is already installed
    ```
 
-3. After successful verification, move `Shifu.app` to `~/Applications`. Open it, choose a project and a signed-in agent, and start your first conversation (versions after 0.4.3 open with a short guide that finds both). Use [remote setup and pairing](docs/REMOTE-RELAY.en.md) only when connecting another Mac.
+3. After successful verification, move `Shifu.app` to `~/Applications`. Open it: the first screen finds your installed agents and projects; tick the projects and press Start to open your first conversation (or press Skip and use Add Project on the empty page later). Use [remote setup and pairing](docs/REMOTE-RELAY.en.md) only when connecting another Mac.
 
 - The app is signed with Shifu's own fixed certificate and not notarized. If macOS blocks it, confirm the source and follow the app-specific prompt in System Settings → Privacy & Security.
 - Codex asks you to review its hooks on first launch; read them before deciding whether to trust them. Keeping the CLI installation path avoids repeating setup.
@@ -129,7 +129,7 @@ npm run build:desktop -- --debug
 
 ### Upgrading
 
-Versions after 0.4.3 update themselves: Shifu → Check for Updates…, plus a quiet check once a day after opening; Update and Restart does the rest while agent conversations keep running in tmux. The CLI inside the app and an installed Computer Use helper come along. 0.4.3 and earlier need one last manual download (Option B above). See [Upgrading in the install guide](docs/INSTALL.en.md#upgrading).
+From 0.4.4 on, Shifu updates itself: Shifu → Check for Updates…, plus a quiet check once a day after opening; Update and Restart does the rest while agent conversations keep running in tmux. The CLI inside the app and an installed Computer Use helper come along. 0.4.3 and earlier need one last manual download (Option B above), then update in the app from then on. See [Upgrading in the install guide](docs/INSTALL.en.md#upgrading).
 
 ## Shortcuts
 
@@ -147,8 +147,8 @@ Versions after 0.4.3 update themselves: Shifu → Check for Updates…, plus a q
 
 | What you want to do | Where to start |
 |---|---|
-| Use Bailian Token Plan with Qwen Code | [Qwen setup](docs/QWEN.md#english), requiring your own Qwen CLI and key; available in current source |
-| Record Git worktree handoffs or restore an exited session | [`workspace` / `resume`](docs/WORKSPACES.md), available in current source |
+| Use Bailian Token Plan with Qwen Code | [Qwen setup](docs/QWEN.md#english), requiring your own Qwen CLI and key |
+| Record Git worktree handoffs or restore an exited session | [`workspace` / `resume`](docs/WORKSPACES.md) |
 | Use a Step Plan subscription with StepFun | [StepFun setup](docs/STEPFUN.md#english), with Node/Pi and your own key |
 | View daily analysis | “每日分析” in the sidebar, with your own data sources; [scheduling and missed-report catch-up](docs/DAILY-ANALYSIS.md#english) |
 | Let agents inspect and operate local windows | [`shifu computer`](docs/COMPUTER-USE.md), an independent macOS helper |
@@ -159,9 +159,9 @@ Versions after 0.4.3 update themselves: Shifu → Check for Updates…, plus a q
 | Return to a running session from your phone | [Phone access](docs/REMOTE.md), with a separately installed local service and private network |
 | Keep long tasks running | [The cup menu](docs/STEAMCUP.md), with display modes, timers and closed-lid operation |
 | See the overall state or relay a message | The project manager in the sidebar; relaying still requires your explicit instruction |
-| Add an animal companion | In the current source, click “＋” next to “我的 Bot” in the sidebar. Choose a companion or use “随机动物” (Random Animal) before deciding whether to join. |
+| Add an animal companion | Click “＋” next to “我的 Bot” in the sidebar. Choose a companion or use “随机动物” (Random Animal) before deciding whether to join. |
 | Follow up on existing Codex sessions while away | [Bounded background follow-up](docs/AUTOPILOT.md#english), a script requiring reviewed goals, authorization and a deadline; also included in the preview package |
-| Add input to a working conversation and track actual batch outcomes | Current source adds a durable input queue and receipt-based task progress, with stalled outcomes reported to the original controller. [Setup and limits](docs/AUTOPILOT.md#queued-input-and-outcome-progress-current-source); matching updated app/CLI required, not yet in existing downloads |
+| Add input to a working conversation and track actual batch outcomes | A durable input queue and receipt-based task progress, with stalled outcomes reported to the original controller. [Setup and limits](docs/AUTOPILOT.md#queued-input-and-outcome-progress-current-source); needs the matching app and CLI |
 
 Conversation search, quotas and process usage live in the same window.
 

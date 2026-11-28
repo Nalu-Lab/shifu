@@ -18,16 +18,19 @@ from html.parser import HTMLParser
 
 # ---- The one place to edit for a new release ---------------------------------------------------------------
 RELEASE = {
-    "version": "0.4.3",                      # shown as "0.4.3 预览版" / "0.4.3 preview"
-    "tag": "remote-v0.4.3-preview.1",        # GitHub release tag the download buttons point to
+    "version": "0.4.4",                      # shown as "0.4.4 预览版" / "0.4.4 preview"
+    "tag": "remote-v0.4.4-preview.1",        # GitHub release tag the download buttons point to
     # How this release starts agents, shown under the hero's download button (see PERMISSION_LINE below):
-    #   "no-confirmation": it does not ask and starts agents without approvals (0.4.3);
-    #   "asks": it asks once before the first conversation (the releases after 0.4.3).
-    # own_label is that release's label for "each agent's own settings" in the new-task form's 权限 menu.
+    #   "no-confirmation": it does not ask and starts agents without approvals (0.4.3 and earlier);
+    #   "asks": a fresh install asks once (the first-run screen's toggle, or a question before the first agent
+    #   starts), with each agent's own settings preselected; upgrades keep their setting (0.4.4 on).
+    # own_label is that release's label for "each agent's own settings" in the new-task form's 权限 menu;
+    # own_label_en is the same option's English label (the first-run screens and new-task form follow the system
+    # language, app/src/permissions.ts).
     # check-docs.py fails when docs/INSTALL*.md's permission-mode block says otherwise for this version.
-    "permission": "no-confirmation",
-    "own_label": "用 Agent 自己的设置",
-    "own_label_en": "use the agent's own settings",   # the English gloss shown after own_label on the English page
+    "permission": "asks",
+    "own_label": "按 Agent 自己的设置",
+    "own_label_en": "Agent's own settings",
 }
 # The build the hero video and screenshots were recorded with. When it differs from RELEASE["version"] the demo
 # note says so; after re-recording (site/tools/video/), set it to the release version and the note says "current".
@@ -56,7 +59,8 @@ DEMO_NOTE = {
     },
     "overlays": {"zh": "视频里的通知横幅和按键提示是后期叠加的示意。",
                  "en": " The notification banner and key hints in the video are added overlays."},
-    "tail": {"zh": "", "en": " The app's own labels are in Chinese for now."},
+    "tail": {"zh": "", "en": " Apart from the menus, the first-run screen and the new-task form, the app's labels "
+                             "are in Chinese for now."},
 }
 # Canonical, hreflang and og:image are absolute under this address.
 SITE_URL = "https://shifu.yutailin.com"
@@ -164,8 +168,8 @@ PERMISSION_LINE = {
     },
     "asks": {
         "zh": "第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「{own}」；以后在新建任务的「权限」里随时能改。",
-        "en": "Before your first conversation, Shifu asks once how agents may act, with {own} (each agent's own settings) "
-              "preselected; change it any time under 权限 in the new-task form.",
+        "en": "Before your first conversation, Shifu asks once how agents may act, with {own_en} preselected; change "
+              "it any time under Permissions in the new-task form.",
     },
 }
 

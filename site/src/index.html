@@ -401,7 +401,7 @@
         <li><span data-l="zh"><b>未经 Apple 公证。</b>App 用 Shifu 自己的固定证书签名。若被 macOS 拦下，确认来源后在「系统设置 → 隐私与安全性」里按提示放行。</span><span data-l="en"><b>Not notarized.</b> The app is signed with Shifu's own fixed certificate. If macOS blocks it, confirm the source and allow it under System Settings → Privacy &amp; Security.</span></li>
         <li><span data-l="zh"><b>只支持 Apple Silicon。</b>Intel、Linux、Windows 都没试过，没有对应的包。</span><span data-l="en"><b>Apple Silicon only.</b> Intel, Linux and Windows are untried and have no package.</span></li>
         <li><span data-l="zh"><b>Codex 首次启动</b>会让你检查 Shifu 传入的 hooks，读过再决定是否信任。</span><span data-l="en"><b>On first Codex launch</b> you are asked to review the hooks Shifu passes; read them before trusting.</span></li>
-        <li><span data-l="zh"><b>窗口界面目前是中文。</b>菜单栏跟随系统语言。</span><span data-l="en"><b>The window UI is in Chinese for now.</b> The menu bar follows the system language.</span></li>
+        <li><span data-l="zh"><b>窗口界面目前大多是中文。</b>菜单栏、第一次打开的引导和新建任务窗口跟随系统语言。</span><span data-l="en"><b>Most of the window UI is in Chinese for now.</b> The menu bar, the first-run screen and the new-task form follow the system language.</span></li>
       </ul>
     </aside>
 
@@ -431,8 +431,8 @@
       <article class="route" aria-labelledby="route-manual-title">
         <h3 id="route-manual-title"><span data-l="zh">手动安装</span><span data-l="en">Manual installation</span></h3>
         <p>
-          <span data-l="zh">自己下载安装包、核对校验值，再按步骤装好 App 和配套的 <code>shifu</code> 命令行。</span>
-          <span data-l="en">Download the package, verify its checksum and follow the steps to install the app and the matching <code>shifu</code> CLI.</span>
+          <span data-l="zh">自己下载安装包、核对校验值，再把 App 放到 <code>~/Applications</code>；App 自带配套的 <code>shifu</code> 命令行，要在终端里用时再另装。</span>
+          <span data-l="en">Download the package, verify its checksum and move the app to <code>~/Applications</code>. It carries its matching <code>shifu</code> CLI; install it separately only to use it in a terminal.</span>
         </p>
         <div class="route-actions">
           <!-- Opens the release in a new tab; main.js also opens the steps below. -->

@@ -2,12 +2,12 @@
 
 [回到 Shifu](../README.md)　[English](INSTALL.en.md)
 
-Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1)，内含 App、匹配的 Shifu CLI 和安装说明；使用普通会话无需 Rust，StepFun 另需 Node/Pi；tmux、Agent 和账号登录需自行准备。[远程安装与配对](REMOTE-RELAY.md)只在连接另一台 Mac 时需要，首次安装用不到。
+Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1)，内含 App、匹配的 Shifu CLI 和安装说明；使用普通会话无需 Rust，StepFun 另需 Node/Pi；tmux、Agent 和账号登录需自行准备。[远程安装与配对](REMOTE-RELAY.md)只在连接另一台 Mac 时需要，首次安装用不到。
 
 普通会话优先使用下载包；源码构建方式收在下方开发者说明。
 
 <!-- permission-mode: the one place that describes the permission mode; the site's install notes are generated from it. -->
-**权限模式：**0.4.3 默认以免确认模式启动支持该模式的 Agent。要保留 Agent 自己的权限规则，开始前在新建任务的「权限」里选「用 Agent 自己的设置」。选它时 Shifu 不加免确认参数，什么时候请求批准由 Agent 自己的配置决定；以后在「权限」里随时能改。之后的版本会在第一次开对话前先问一次，默认选「按 Agent 自己的设置」；从旧版升级的保持原来的设置。
+**权限模式：**第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」；以后在新建任务的「权限」里随时能改。第一次打开的引导里就是一个「免确认」开关，默认关着（即「按 Agent 自己的设置」），点「开始」时保存；跳过引导的，第一个 Agent 启动前再问一次。选「按 Agent 自己的设置」时 Shifu 不加免确认参数，什么时候请求批准由 Agent 自己的配置决定。从旧版升级的不会被问，保持原来的设置（0.4.3 及更早的版本没改过的是免确认）。
 <!-- /permission-mode -->
 
 选「免确认（全权）」时，Claude、Codex、CodeBuddy、Kimi、Qwen Code 和 opencode 用免确认参数启动（opencode 加 `--auto`，你明确 deny 的规则仍然有效；如 `--dangerously-skip-permissions`、`--dangerously-bypass-approvals-and-sandbox`、`--yolo`）。改了设置后，新开或恢复的对话按新的设置启动。Pi 本身不弹批准，这个开关对它不起作用。
@@ -16,9 +16,9 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 
 ## 快速开始
 
-[下载 Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1)，内含 App、匹配 CLI 和安装说明。普通会话无需 Rust；另备 tmux 和已登录的 Agent 即可。从 0.4.3 之后的版本起，第一次打开会出现一屏简短的引导：自动找出这台 Mac 上的 Agent 和项目文件夹，勾选项目后点「开始」。缺 tmux 或 Agent 时也在这一屏列出安装命令；以后可在 Shifu 菜单的「准备情况」里再看。StepFun 需[单独设置 Node/Pi 和订阅密钥](STEPFUN.md)。
+[下载 Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1)，内含 App、匹配 CLI 和安装说明。普通会话无需 Rust；另备 tmux 和已登录的 Agent 即可。App 自带同版命令行，只拖进 `~/Applications` 就能用；要在终端里用 `shifu` 时再另装。第一次打开会出现一屏简短的引导：自动找出这台 Mac 上的 Agent 和常用代码文件夹里的项目，勾选项目后点「开始」，每个项目建一个任务并打开第一条对话。缺 tmux 或 Agent 时也在这一屏列出安装命令；以后可在 Shifu 菜单的「准备情况…」里再看。StepFun 需[单独设置 Node/Pi 和订阅密钥](STEPFUN.md)。
 
-<!-- cli-step: required (the app in the linked release does not carry its CLI; scripts/release/check-docs.py checks this against the release tag) -->
+<!-- cli-step: optional (the app in the linked release carries its CLI; scripts/release/check-docs.py checks this against the release tag) -->
 
 ### 方式 A：让你的 AI 帮你装
 
@@ -27,16 +27,16 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 ```text
 帮我安装 Shifu（https://github.com/Nalu-Lab/shifu）。先读 README 和 docs/INSTALL.md。
 1. 确认当前 Mac 使用 Apple Silicon，检查 tmux 和我要使用的 Agent 是否已安装、登录；缺什么先告诉我。
-2. 从 Release remote-v0.4.3-preview.1（https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1）下载 ZIP 和 SHA256SUMS，不要用别的 Release；核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
-3. 按包内说明，将 Shifu.app 放到 ~/Applications，将同包 bin/shifu 装到 ~/.cargo/bin/shifu：0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用它（之后的版本 App 自带同版命令行，这一步只在终端里用 shifu 时才需要，以包内说明为准）。将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
-4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；还要告诉我：0.4.3 默认以免确认模式启动支持该模式的 Agent。要保留 Agent 自己的权限规则，开始前在新建任务的「权限」里选「用 Agent 自己的设置」。（之后的版本第一次开对话前会先问一次。）系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
-5. 打开后带我选一个项目；创建第一条 Agent 对话之前，先问我要「免确认（全权）」还是「用 Agent 自己的设置」，按我的选择设好「权限」再创建；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。
+2. 从 Release remote-v0.4.4-preview.1（https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1）下载 ZIP 和 SHA256SUMS，不要用别的 Release；核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
+3. 按包内说明，将 Shifu.app 放到 ~/Applications。App 自带同版命令行，对话状态、提醒和项目经理用它，不必另装；问我要不要在终端里用 shifu，要的话再将同包 bin/shifu 装到 ~/.cargo/bin/shifu，将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
+4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；还要告诉我：第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」；以后在新建任务的「权限」里随时能改。系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
+5. 打开后第一屏会找出 Agent 和项目：让我自己勾选项目、决定「免确认」开关（默认关，即「按 Agent 自己的设置」），再点「开始」；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。
 ```
 
 ### 方式 B：自己装
 
 1. 下载同一 Release 的 ZIP 和 `SHA256SUMS`，先在下载目录执行 `shasum -a 256 -c SHA256SUMS`，再解压。
-2. 已有 Shifu 时，先退出并备份旧 App 与 CLI。0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用同包的 CLI，请一起装好（之后的版本 App 自带同版命令行，这一步只在终端里用 `shifu` 时才需要，以包内说明为准）。先在解压后的包目录校验内容，再安装 CLI：
+2. 已有 Shifu 时，先退出并备份旧 App 与 CLI。App 自带同版命令行（`Shifu.app/Contents/Resources/bin/shifu`），对话状态、提醒和项目经理用它；下面装 CLI 的命令只在终端里用 `shifu` 时才需要（tmux 仍要装）。先在解压后的包目录校验内容，再安装 CLI：
 
    先单独校验，看到每一行都是 `OK` 再继续：
 
@@ -58,7 +58,7 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
    brew install tmux   # 已有 tmux 时跳过
    ```
 
-3. 校验通过后，将 `Shifu.app` 移到 `~/Applications`，再打开 Shifu，选择项目和已登录的 Agent，创建第一条对话（0.4.3 之后的版本打开时有简短引导，会自动找出两者）。连接另一台 Mac 时才需要[远程安装与配对](REMOTE-RELAY.md)。
+3. 校验通过后，将 `Shifu.app` 移到 `~/Applications`，再打开 Shifu：第一屏会找出已装的 Agent 和项目，勾选项目后点「开始」就开出第一条对话（也可以「跳过」，之后在空白页点「添加项目」）。连接另一台 Mac 时才需要[远程安装与配对](REMOTE-RELAY.md)。
 
 - 应用用 Shifu 自己的固定证书签名，尚未公证；首次打开若被拦，确认来源后按「系统设置 → 隐私与安全性」中的对应提示处理。
 - 第一次启动 Codex 会提示检查 hooks，请阅读后决定是否信任。CLI 安装路径保持不变时，无需每次重复设置。
@@ -83,7 +83,7 @@ npm run build:desktop -- --debug
 
 ## 升级
 
-0.4.3 之后的版本能在 App 里更新自己。0.4.3 及更早的版本还没有这个功能，要最后手动下载一次：按上面的方式 B 替换 `Shifu.app`。
+从 0.4.4 起 Shifu 能在 App 里更新自己。0.4.3 及更早的版本还没有这个功能，要最后手动下载一次：按上面的方式 B 替换 `Shifu.app`，之后就在 App 里更新。
 
 - 打开 Shifu 后它会悄悄查一次有没有新版（每天最多一次）。有新版时右下角出现一张小卡片，写着版本号和更新说明：点「更新并重启」就下载、核对签名、替换 `Shifu.app` 并重新打开；点「以后」先不更新。也可以随时点菜单 Shifu →「检查更新…」。
 - 重启不打断工作：Agent 对话跑在 tmux 里，Shifu 退出时它们继续运行，重新打开后照常接上。
@@ -152,4 +152,4 @@ cd app && npm run tauri dev                          # 开发模式
 
 StepFun 需额外配置 Node/Pi 和订阅密钥，见[StepFun设置](STEPFUN.md)。App与配套CLI应成对更新。后台托管脚本见[AUTOPILOT.md](AUTOPILOT.md)，不会因安装自动启动。
 
-0.4.3 下载包另提供 opencode 与 Pi 两种 Agent（装了 `opencode` / `pi` 就出现在新建列表；用你自己的配置和账号，Shifu 不改它们的配置文件，详见[Agent 描述表](AGENTS.md)）、[Qwen Code / Token Plan](QWEN.md)、[每日分析定时补跑](DAILY-ANALYSIS.md)和[工作区接续 / 会话恢复](WORKSPACES.md)。这些都已包含在上方下载包中。
+0.4.4 下载包另提供 opencode 与 Pi 两种 Agent（装了 `opencode` / `pi` 就出现在新建列表；用你自己的配置和账号，Shifu 不改它们的配置文件，详见[Agent 描述表](AGENTS.md)），装了就列出的 Aider、Goose、Amp、Cursor CLI、Factory Droid、GitHub Copilot CLI、Crush 和 `~/.shifu/app/agents.json` 里你自己的 CLI，以及[Qwen Code / Token Plan](QWEN.md)、[每日分析定时补跑](DAILY-ANALYSIS.md)和[工作区接续 / 会话恢复](WORKSPACES.md)。这些都已包含在上方下载包中。
