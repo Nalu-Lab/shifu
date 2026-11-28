@@ -34,6 +34,12 @@ final class Fixture: NSObject, NSApplicationDelegate {
             window.contentView!.addSubview(target)
             window.makeFirstResponder(field)
         }
+        if ProcessInfo.processInfo.environment["SHIFU_FIXTURE_PASTE"] == "1" {
+            // A focused control without a settable value, so paste-text has to use the clipboard.
+            let target = PasteTarget(at: NSRect(x: 170, y: 120, width: 230, height: 28))
+            window.contentView!.addSubview(target)
+            window.makeFirstResponder(target)
+        }
         if observationMode {
             let close = NSButton(title: "关闭测试窗口", target: self, action: #selector(closeTestWindows))
             close.frame = NSRect(x: 24, y: 58, width: 140, height: 28)
@@ -122,6 +128,27 @@ final class Fixture: NSObject, NSApplicationDelegate {
         } catch {
             NSLog("Fixture counter write failed: %@", String(describing: error))
         }
+    }
+}
+
+/// A focused view without a settable value, so paste-text has to use the clipboard; takes Cmd+V without a menu bar.
+@MainActor
+final class PasteTarget: NSView {
+    var pasted = ""
+    convenience init(at frame: NSRect) {
+        self.init(frame: frame)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.group)
+        setAccessibilityLabel("粘贴目标")
+    }
+    override var acceptsFirstResponder: Bool { true }
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.modifierFlags.contains(.command), event.charactersIgnoringModifiers == "v" else {
+            return super.performKeyEquivalent(with: event)
+        }
+        pasted = NSPasteboard.general.string(forType: .string) ?? ""
+        setAccessibilityLabel("已粘贴：" + pasted)
+        return true
     }
 }
 

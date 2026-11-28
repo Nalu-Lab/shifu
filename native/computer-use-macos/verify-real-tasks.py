@@ -96,7 +96,7 @@ def finder_task():
     subprocess.run(['open', '-R', str(old)], check=True, timeout=10)
     main = await_window('com.apple.finder', folder.name)
     call('finder-main', 'com.apple.finder', 'get-app-state', '--window-id', main, '--restore-window')
-    call('finder-enter', 'com.apple.finder', 'press-key', '--window-id', main, '--key', 'Return', '--restore-window')
+    call('finder-enter', 'com.apple.finder', 'press-key', '--window-id', main, '--key', 'Return', '--restore-window', '--keep-foreground')
     until = time.monotonic() + 3
     while True:
         editor = call('finder-editor', 'com.apple.finder', 'get-app-state')['result']['snapshot']
@@ -106,8 +106,8 @@ def finder_task():
         time.sleep(.1)
     assert editor['window']['height'] < 48, 'regression must exercise the small editor'
     editor_id = editor['window']['id']
-    call('finder-value', 'com.apple.finder', 'set-value', '--window-id', editor_id, '--element-index', editor['focusedElementId'], '--value', new.name, '--restore-window')
-    committed = call('finder-commit', 'com.apple.finder', 'press-key', '--window-id', editor_id, '--key', 'Return', '--expect-path', new, '--expect-missing-path', old, '--timeout-ms', 2500)
+    call('finder-value', 'com.apple.finder', 'set-value', '--window-id', editor_id, '--element-index', editor['focusedElementId'], '--value', new.name, '--restore-window', '--keep-foreground')
+    committed = call('finder-commit', 'com.apple.finder', 'press-key', '--window-id', editor_id, '--key', 'Return', '--restore-window', '--expect-path', new, '--expect-missing-path', old, '--timeout-ms', 2500)
     assert committed['result']['postcondition']['state'] == 'met'
     assert committed['result']['action']['targetWindowId'] == editor_id
     assert not old.exists() and new.read_text() == 'Shifu real Finder task\n'

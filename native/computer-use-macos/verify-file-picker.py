@@ -110,7 +110,7 @@ def main():
         panel_id, panel = wait('open_panel_ready', find_panel)
         assert panel['window']['id'] == panel_id and sheet_root(panel), 'panel must be its own sheet snapshot'
         panel_ids = {w['id'] for w in windows('before-go-to')}
-        call('go-to-path', 'hotkey', '--window-id', panel_id, '--key', 'CmdOrCtrl+Shift+G', '--restore-window')
+        call('go-to-path', 'hotkey', '--window-id', panel_id, '--key', 'CmdOrCtrl+Shift+G', '--restore-window', '--keep-foreground')
         def find_go_to():
             for w in windows('wait-go-to'):
                 if w['id'] not in panel_ids:

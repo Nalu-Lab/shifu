@@ -13,7 +13,7 @@ const MAX_RESPONSE: u64 = 64 * 1024 * 1024;
 // A supported 1 MiB stdin payload may expand sixfold as JSON \uXXXX escapes.
 const MAX_REQUEST: u64 = 6 * 1024 * 1024 + 64 * 1024;
 
-fn home() -> Result<PathBuf, String> {
+pub(super) fn home() -> Result<PathBuf, String> {
     if let Some(path) = std::env::var_os("SHIFU_COMPUTER_HOME") { return Ok(path.into()); }
     let user = std::env::var_os("HOME").ok_or("找不到用户目录")?;
     Ok(PathBuf::from(user).join(".shifu/computer"))
