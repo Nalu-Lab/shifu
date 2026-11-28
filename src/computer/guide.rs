@@ -4,7 +4,7 @@ pub const GUIDE: &str = r#"Shifu computer 使用指南
 
 Shifu 自带独立的 macOS 后台窗口工具，不依赖 Orca。可读取和截图指定窗口，并执行后台点击、输入、滚动和拖拽；先用 capabilities 核对本机实际支持。
 本人和 Agent 共用这台 Mac：首选不打断本人的后台路径。普通后台读取、点击、set-value、type-text、按键和滚动通过辅助功能或目标进程／窗口派发，不切前台、不移动真实鼠标、不碰剪贴板；部分路径会临时借用目标应用内的窗口焦点，应用也可能自行弹窗。
-会打断本人的只有 --restore-window、--foreground-fallback 和 paste-text（剪贴板）。它们只在本人已有 10 秒没碰键盘鼠标时执行（有 --timeout-ms 时在其内等待），否则返回 user_active，请求不会发出；结束后还原原应用、聚焦窗口和鼠标位置，result.foregroundRestore 给出结果。user_active 时改用后台路径或稍后再试，不要去掉门槛、换工具或反复重试；foreground_disabled 表示本人禁止了前台，只能用后台路径。
+会打断本人的只有 --restore-window、--foreground-fallback 和 paste-text（剪贴板）。它们只在本人已有 10 秒没碰键盘鼠标时执行（默认最多等 90 秒，--idle-wait-ms 可改），否则返回 user_active，请求不会发出；结束后还原原应用、聚焦窗口和鼠标位置，result.foregroundRestore 给出结果。user_active 时改用后台路径或稍后再试，不要去掉门槛、换工具或反复重试；foreground_disabled 表示本人禁止了前台，只能用后台路径。
 多步前台流程（如 Finder 改名、文件选择框）中间一步可加 --keep-foreground 暂不还原前台（鼠标仍还原），最后一步不加，以便交还前台。
 只需补截图时，使用 get-app-state --app <应用> --window-id <ID> --background-only，并打开返回的截图路径；不需要点击或恢复前台。
 

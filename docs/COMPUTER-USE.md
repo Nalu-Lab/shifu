@@ -150,7 +150,7 @@ Finder 等应用可能把临时编辑框作为独立的小窗口暴露，而不�
 
 辅助程序本身用 `open -n -g` 在后台启动，不会抢前台。
 
-**空闲门槛：** 需要前台或剪贴板的请求，只在本人已有 10 秒没用键盘鼠标时发出。读的是 macOS 记录的硬件键鼠事件（按键、修饰键、移动、按下、拖动、滚轮）；辅助程序自己的后台点击不算本人，前台点击和按键由 Shifu 记在 `<computer home>/foreground-input.json`，同样不算本人。没到 10 秒时在 `--timeout-ms`（默认 5 秒）内等待；仍不空闲就返回 `ok:false`、`error.code: user_active`，请求没有发出，`result.foregroundGate` 给出空闲秒数，`result.recovery.nextStep` 为 `use_background_or_wait`。成功的请求同样带 `result.foregroundGate`。
+**空闲门槛：** 需要前台或剪贴板的请求，只在本人已有 10 秒没用键盘鼠标时发出。读的是 macOS 记录的硬件键鼠事件（按键、修饰键、移动、按下、拖动、滚轮）；辅助程序自己的后台点击不算本人，前台点击和按键由 Shifu 记在 `<computer home>/foreground-input.json`，同样不算本人。没到 10 秒时等本人停手：默认最多等 90 秒，可用 `--idle-wait-ms` 设为 0–600000 毫秒（只给 `--timeout-ms` 时按它）；这样本人正在打字时，请求通常等到下一次停顿就执行，而不是被拒绝。等满仍不空闲才返回 `ok:false`、`error.code: user_active`，请求没有发出，`result.foregroundGate` 给出空闲秒数，`result.recovery.nextStep` 为 `use_background_or_wait`。成功的请求同样带 `result.foregroundGate`。
 
 **还原：** 前台请求结束后（失败也一样），辅助程序把原前台应用重新激活、把它原来的聚焦窗口提回前面，并把鼠标移回原位；`result.foregroundRestore` 记录 `app`（`restored`、`unchanged`、`kept`、`failed`、`unknown`）和 `pointer`（`restored`、`unchanged`、`failed`）。多步前台流程（Finder 改名、文件选择框的“前往文件夹”）中间一步加 `--keep-foreground`，暂不还原前台，鼠标仍还原；最后一步不加，交还前台。旧辅助程序不会还原，CLI 发现它不支持时拒绝前台请求（`feature_unsupported`），需要重新运行 `bash scripts/install-computer.sh`。
 

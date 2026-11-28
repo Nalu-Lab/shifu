@@ -6,8 +6,11 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub const DEFAULT_IDLE_SECONDS: f64 = 10.0;
-/// Without `--timeout-ms` a foreground request waits this long for the person to pause.
-pub const DEFAULT_WAIT: Duration = Duration::from_millis(5000);
+/// Without `--idle-wait-ms` (or `--timeout-ms`) a foreground request waits this long for the person to pause:
+/// long enough that a person who is typing is rarely refused, short enough for an agent's two-minute tool call.
+pub const DEFAULT_WAIT: Duration = Duration::from_millis(90_000);
+/// The most `--idle-wait-ms` may ask for.
+pub const MAX_IDLE_WAIT_MS: u64 = 600_000;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Mode {

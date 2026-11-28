@@ -1,0 +1,2 @@
+- Computer Use 需要前台或剪贴板的一步，现在最多等 90 秒让本人停手（原来 5 秒），通常在下一次停顿时执行，而不是返回 `user_active`；`--idle-wait-ms` 可改等待上限（最多 10 分钟）。
+- Computer Use: a foreground or clipboard step now waits up to 90 seconds for the person to pause (was 5), so it usually runs at the next pause instead of returning `user_active`; `--idle-wait-ms` sets the wait (up to 10 minutes).
