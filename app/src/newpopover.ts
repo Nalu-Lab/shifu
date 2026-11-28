@@ -132,6 +132,11 @@ export function agentDropdown(specs: readonly AgentSpec[], current: string, onPi
       return item;
     }));
   };
+  // WebKit can blur the focused option on mouse down, hiding the list before
+  // the clicked button receives its click. Let the click handler move focus.
+  box.addEventListener("mousedown", (event) => {
+    if (event.button === 0 && (event.target as Element).closest("button")) event.preventDefault();
+  });
   toggle.addEventListener("click", () => setOpen(list.hidden));
   box.addEventListener("keydown", (event) => {
     if (list.hidden) return;
