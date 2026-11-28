@@ -1,7 +1,8 @@
 /** Updating Shifu from inside the app: a quiet check soon after launch (at most once a day, `update_check: false`
- *  in settings.json turns it off) and 「检查更新…」 in the Shifu menu. The card follows the menu bar's language. */
+ *  in settings.json turns it off) and 「检查更新…」 in the Shifu menu. Text follows the system language (i18n.ts). */
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { isChinese, tr } from "./i18n";
 
 export interface UpdateCheck {
   status: "available" | "latest" | "skipped" | "unsupported";
@@ -10,7 +11,6 @@ export interface UpdateCheck {
   notes: string | null;
   date: string | null;
   message: string | null;
-  zh: boolean;
 }
 
 type Progress = { phase: "download"; downloaded: number; total: number | null } | { phase: "install" } | { phase: "restart" };
@@ -25,8 +25,8 @@ export function notesFor(notes: string | null, zh: boolean): string {
   return text.trim();
 }
 
-export function progressText(p: Progress, zh: boolean): string {
-  const t = (cn: string, en: string) => (zh ? cn : en);
+export function progressText(p: Progress): string {
+  const t = tr;
   if (p.phase === "install") return t("正在安装…", "Installing…");
   if (p.phase === "restart") return t("正在重启…", "Restarting…");
   const mb = (n: number) => (n / 1048576).toFixed(1);
@@ -63,21 +63,20 @@ function showCard(fill: (body: HTMLElement) => void): void {
   document.body.append(card);
 }
 
-function showMessage(text: string, zh: boolean): void {
+function showMessage(text: string): void {
   showCard((body) => {
     const p = document.createElement("p");
     p.className = "update-message";
     p.textContent = text;
     const row = document.createElement("div");
     row.className = "update-actions";
-    row.append(button(zh ? "好" : "OK", true, closeCard));
+    row.append(button(tr("好", "OK"), true, closeCard));
     body.append(p, row);
   });
 }
 
 function showAvailable(check: UpdateCheck): void {
-  const zh = check.zh;
-  const t = (cn: string, en: string) => (zh ? cn : en);
+  const t = tr;
   showCard((body) => {
     const title = document.createElement("div");
     title.className = "update-title";
@@ -86,7 +85,7 @@ function showAvailable(check: UpdateCheck): void {
     sub.className = "update-sub";
     sub.textContent = t(`现在是 ${check.current}`, `You have ${check.current}`) + (check.date ? ` · ${check.date}` : "");
     body.append(title, sub);
-    const notes = notesFor(check.notes, zh);
+    const notes = notesFor(check.notes, isChinese());
     if (notes) {
       const pre = document.createElement("div");
       pre.className = "update-notes";
@@ -117,7 +116,7 @@ function showAvailable(check: UpdateCheck): void {
       status.classList.remove("error");
       status.textContent = t("正在连接…", "Connecting…");
       const stop = await listen<Progress>("update-progress", ({ payload }) => {
-        status.textContent = progressText(payload, zh);
+        status.textContent = progressText(payload);
         if (payload.phase === "download" && payload.total) bar.value = payload.downloaded / payload.total;
         else if (payload.phase !== "download") bar.removeAttribute("value");
       });
@@ -144,16 +143,13 @@ async function check(manual: boolean): Promise<void> {
   if (!result) return; // preview mocks
   if (result.status === "available") showAvailable(result);
   else if (manual && result.status === "latest")
-    showMessage(result.zh ? `Shifu ${result.current} 已是最新版本。` : `Shifu ${result.current} is up to date.`, result.zh);
-  else if (manual && result.message) showMessage(result.message, result.zh);
+    showMessage(tr(`Shifu ${result.current} 已是最新版本。`, `Shifu ${result.current} is up to date.`));
+  else if (manual && result.message) showMessage(result.message);
 }
 
 /** The menu item: always asks, and says so when there is nothing new or the check failed. */
 export function checkForUpdates(): void {
-  void check(true).catch((error) => {
-    const zh = navigator.language.startsWith("zh");
-    showMessage(String(error), zh);
-  });
+  void check(true).catch((error) => showMessage(String(error)));
 }
 
 /** Once after launch; failures stay quiet (the menu item reports them). The Computer Use helper inside this app

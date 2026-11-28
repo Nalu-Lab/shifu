@@ -101,8 +101,6 @@ pub struct Check {
     notes: Option<String>,
     date: Option<String>,
     message: Option<String>,
-    /// The language the menu bar uses, which the update card follows.
-    zh: bool,
 }
 
 /// The update found by the last check, kept for `update_install`.
@@ -111,9 +109,9 @@ pub struct Pending(Mutex<Option<Update>>);
 
 #[tauri::command]
 pub async fn update_check(app: AppHandle, cfg: State<'_, Config>, pending: State<'_, Pending>, manual: bool) -> Result<Check, String> {
-    let zh = crate::menu_in_chinese(crate::preferred_language().as_deref());
+    let zh = crate::ui_chinese();
     let current = app.package_info().version.to_string();
-    let mut check = Check { status: "skipped", current, zh, ..Default::default() };
+    let mut check = Check { status: "skipped", current, ..Default::default() };
     let now = now_secs();
     if !manual && !(background_enabled(&cfg.home) && background_due(last_check(&cfg.home), now)) {
         return Ok(check);
@@ -204,7 +202,7 @@ exec /usr/bin/open -n "$@""#;
 pub async fn computer_helper_sync(cfg: State<'_, Config>) -> Result<Option<String>, String> {
     let cli = cfg.shifu_bin.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let zh = crate::menu_in_chinese(crate::preferred_language().as_deref());
+        let zh = crate::ui_chinese();
         let exe = std::env::current_exe().map_err(|e| e.to_string())?;
         let Some(bundled) = bundle_of(&exe).map(|b| b.join("Contents/Resources/helpers").join(HELPER)) else { return Ok(None) };
         let installed = installed_helper();

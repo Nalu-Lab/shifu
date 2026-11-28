@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { setChinese } from "./i18n";
 import { notesFor, progressText } from "./update";
+
+afterEach(() => setChinese(true));
 
 describe("notesFor", () => {
   const body = "下载包包含：\n- 应用内更新\n\n---\n\nThe download includes:\n- In-app updates";
@@ -14,9 +17,11 @@ describe("notesFor", () => {
 });
 
 describe("progressText", () => {
-  it("shows a percentage when the size is known", () => {
-    expect(progressText({ phase: "download", downloaded: 5242880, total: 20971520 }, true)).toBe("正在下载 25%（5.0 / 20.0 MB）");
-    expect(progressText({ phase: "download", downloaded: 1048576, total: null }, false)).toBe("Downloading 1.0 MB");
-    expect(progressText({ phase: "restart" }, false)).toBe("Restarting…");
+  it("shows a percentage when the size is known, in the system language", () => {
+    setChinese(true);
+    expect(progressText({ phase: "download", downloaded: 5242880, total: 20971520 })).toBe("正在下载 25%（5.0 / 20.0 MB）");
+    setChinese(false);
+    expect(progressText({ phase: "download", downloaded: 1048576, total: null })).toBe("Downloading 1.0 MB");
+    expect(progressText({ phase: "restart" })).toBe("Restarting…");
   });
 });
