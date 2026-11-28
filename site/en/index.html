@@ -93,7 +93,7 @@
       <span class="sep" aria-hidden="true">/</span>
       <span class="hide-sm">macOS · Apple Silicon</span>
       <span class="sep hide-sm" aria-hidden="true">/</span>
-      <span>0.4.4 preview</span>
+      <span>0.4.5 preview</span>
     </p>
     <h1>
       
@@ -164,7 +164,7 @@
       </div>
       <figcaption id="demo-note">
         <!-- Generated from DEMO / DEMO_NOTE in tools/build.py: the post-re-recording caption once DEMO["version"] is the release's. -->
-        * The video and screenshots were recorded with the 0.4.2 preview (plus Gemini CLI from source at the time); the current download is 0.4.4, and some interface details may differ. They come from an isolated demo: projects, tasks, terminal output and times are demo data. The notification banner and key hints in the video are added overlays. Apart from the menus, the first-run screen and the new-task form, the app's labels are in Chinese for now.
+        * The video and screenshots were recorded with the 0.4.2 preview (plus Gemini CLI from source at the time); the current download is 0.4.5, and some interface details may differ. They come from an isolated demo: projects, tasks, terminal output and times are demo data. The notification banner and key hints in the video are added overlays. Apart from the menus, the first-run screen and the new-task form, the app's labels are in Chinese for now.
       </figcaption>
     </figure>
 
@@ -281,7 +281,7 @@
       <span>Shifu starts each agent's own CLI with your own account. How much state the sidebar can show depends on whether the agent can report its events to Shifu.</span>
     </p>
     <table class="matrix">
-      <caption class="sr-only"><span>Live status and setup for each agent (0.4.4 preview)</span></caption>
+      <caption class="sr-only"><span>Live status and setup for each agent (0.4.5 preview)</span></caption>
       <thead>
         <tr>
           <th scope="col">Agent</th>
@@ -370,7 +370,7 @@
   <div class="wrap">
     <p class="kicker"><span>Install</span></p>
     <h2 id="install-title"><span>Install Shifu</span></h2>
-    <p class="install-meta"><span>0.4.4 preview · Apple Silicon · Free</span></p>
+    <p class="install-meta"><span>0.4.5 preview · Apple Silicon · Free</span></p>
     <p class="lead">
       
       <span>Shifu works alongside the coding agents you already use, through their own CLIs and accounts.</span>
@@ -399,7 +399,7 @@
         <h3 id="route-ai-title"><span>AI-assisted installation</span></h3>
         <p>
           
-          <span>Paste the prompt into Claude Code or Codex. It checks your Mac, downloads and verifies the package from <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1">remote-v0.4.4-preview.1</a> and walks you through setup. Review the commands it runs and handle the system security prompts yourself.</span>
+          <span>Paste the prompt into Claude Code or Codex. It checks your Mac, downloads and verifies the package from <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.5-preview.1">remote-v0.4.5-preview.1</a> and walks you through setup. Review the commands it runs and handle the system security prompts yourself.</span>
         </p>
         <div class="route-actions">
           <!-- Shown and wired by main.js; without it the prompt below stays open to select and copy. -->
@@ -414,7 +414,7 @@
           <summary><span>View installation prompt</span></summary>
           <div class="code"><pre id="install-prompt" class="wrap-text">Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and docs/INSTALL.en.md first.
 1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
-2. Download the ZIP and SHA256SUMS from release remote-v0.4.4-preview.1 (https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1), not any other release. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
+2. Download the ZIP and SHA256SUMS from release remote-v0.4.5-preview.1 (https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.5-preview.1), not any other release. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
 3. Follow the package instructions: put Shifu.app in ~/Applications. The app carries its matching CLI for conversation status, notifications and the project manager, so nothing else is needed. Ask me whether I want shifu in a terminal; if so, install the package's bin/shifu to ~/.cargo/bin/shifu, add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
 4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and tell me: Before your first conversation, Shifu asks once how agents may act, with Agent's own settings preselected; change it any time under Permissions in the new-task form. Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
 5. When it opens, the first screen finds agents and projects: let me tick the projects and decide on the No confirmation switch (off by default, which is Agent's own settings) before pressing Start. On the first Codex launch, let me review its hooks before deciding whether to trust them.</pre></div>
@@ -430,11 +430,11 @@
         </p>
         <div class="route-actions">
           <!-- Opens the release in a new tab; main.js also opens the steps below. -->
-          <a class="btn btn-secondary" id="manual-download" href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1" target="_blank" rel="noopener" aria-controls="manual-details">
+          <a class="btn btn-secondary" id="manual-download" href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.5-preview.1" target="_blank" rel="noopener" aria-controls="manual-details">
             <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
             <span>Download ZIP and view instructions</span>
           </a>
-          <span class="route-note">GitHub Release remote-v0.4.4-preview.1</span>
+          <span class="route-note">GitHub Release remote-v0.4.5-preview.1</span>
         </div>
         <details class="route-more" id="manual-details">
           <summary><span>Installation steps</span></summary>
@@ -596,7 +596,7 @@ brew install tmux   # Skip if tmux is already installed; not needed from 0.4.5 o
 <section class="cta-band" aria-labelledby="cta-title">
   <div class="wrap">
     <h2 id="cta-title"><span>Run more agents. Manage less.</span></h2>
-    <p class="cta-sub"><span>0.4.4 preview · Apple Silicon · Free and open source</span></p>
+    <p class="cta-sub"><span>0.4.5 preview · Apple Silicon · Free and open source</span></p>
     <div class="hero-cta">
       <a class="btn btn-primary" href="#install">
         <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
