@@ -2,6 +2,25 @@
 
 [回到 Shifu](../README.md)　[English](#english)
 
+## 0.4.4 预发布 · 2026-11-28
+
+下载包现已包含 0.4.3 之后的改动，App、CLI 和可选电脑操作组件配套提供：
+
+- 应用内更新：从这一版起 Shifu 能在 App 里更新自己。菜单 Shifu →「检查更新…」，打开后每天也会悄悄查一次；有新版时右下角出现一张卡片，点「更新并重启」就下载、核对签名、替换并重新打开，Agent 对话在 tmux 里继续运行。App 自带的命令行和已装的电脑操作组件一起更新。0.4.3 及更早的版本要最后手动下载一次。
+- 只装 App 就能用：App 自带同版命令行，对话状态、提醒和项目经理不用另装 `shifu`；只有在终端里用 `shifu` 时才需要另装。
+- 第一次打开是一屏引导：自动找出这台 Mac 上的 Agent 和常用代码文件夹里的项目，勾选后点「开始」，每个项目建一个任务并打开第一条对话。缺 tmux 或 Agent 时列出安装命令，以后在 Shifu 菜单的「准备情况…」里再看。修好新装后选不了文件夹、建不了任务的问题；空白页可以「添加项目」。引导、新建任务窗口和空白页在英文系统上显示英文。
+- 权限：全新安装在第一次开对话前问一次（引导里就是「免确认」开关），默认「按 Agent 自己的设置」；从旧版升级的保持原来的设置。Antigravity 只在 Shifu 以免确认启动它时才自动放行工具调用。
+- 更多 Agent：装了 Aider、Goose、Amp、Cursor CLI、Factory Droid、GitHub Copilot CLI 或 Crush 就会出现在新建列表（侧栏只显示在运行）；自己的 CLI 可以写进 `~/.shifu/app/agents.json`；`shifu agents` 列出每个 Agent 在哪、是否登录、怎么回报状态。修好新建任务里选不了 Agent 的下拉框。
+- Agent 启动几秒就退出时（没装、没登录、Node.js 太旧），面板说明原因，给出可复制的安装或登录命令和最后几行输出；「重试」按原来的方式重新启动。
+- 「在等你」按急的程度排：先是等批准的，再是在问你的，最后是做完了的；每行一句话说它要什么（如「要运行：git push」）。子 agent 的批准不再漏掉，⌘J 和 `shifu jump` 先跳到最急的那个。
+- 菜单「文件 › 打开文件…」（⌘O）可以在 Shifu 里打开任意文件；Word 预览加上 DOC、RTF、ODT，看不了的文件提示用默认程序打开。
+- 侧栏：新选的文件夹马上出现在侧栏；把对话拖到还没有任务的文件夹就在那里建任务，文件夹右边的 × 把它从侧栏拿掉（磁盘上的文件不动）。「我的 Bot」可以加入动物伙伴，或随机挑一只。用量面板只显示装了的 CLI，暂无数据的收起来；Claude 额度优先显示定时查询的结果。
+- 浏览器和电脑操作不再打扰你：`shifu browser open` 默认不弹窗口（要看时加 `--show`）；`shifu computer` 要用前台或剪贴板时，等你停手再做（最多等 90 秒），做完还原原来的应用、窗口和鼠标位置；能按控件输入文字并回读确认。`shifu web` 页面重载后不会写进换掉的控件。
+- Codex 回复里一个标题对应多个文件时，路径含编码中文的文件也能列出。
+- 0.4.3 及更早的包继续保留。
+
+本包由 GitHub 云端从公开源码构建，用 Shifu 自己的固定证书签名、未公证；构建来源见包内 BUILD-INFO.json。从 0.4.1 及之后的版本升级不用重新授权电脑操作。
+
 ## 0.4.3 预发布 · 2026-11-23
 
 下载包现已包含 0.4.2 之后的改动，App、CLI 和可选电脑操作组件配套提供：
@@ -165,6 +184,25 @@
 Finder 的独立改名输入框现已可读取、输入并提交；操作结果仍应核对文件路径。浏览器后台可能只有工具栏，等待文字时应选正文中的明确片段；目前没有 DOM 操作通道。
 
 ## English
+
+### 0.4.4 preview · November 28, 2026
+
+The download now includes the changes since 0.4.3, with a matching app, CLI and optional Computer Use helper:
+
+- In-app updates: from this version on, Shifu updates itself. Use Shifu → Check for Updates…, or let it check quietly once a day after opening; when there is a new version, a card in the bottom-right corner offers Update and Restart, which downloads it, checks its signature, replaces the app and opens it again while agent conversations keep running in tmux. The CLI inside the app and an installed Computer Use helper come along. 0.4.3 and earlier need one last manual download.
+- The app alone is enough: it carries its matching CLI, so conversation status, notifications and the project manager no longer need a separate `shifu` install. Install the CLI only to use `shifu` in a terminal.
+- First run is one screen: it finds the agents on this Mac and the projects in your usual code folders; tick them and press Start to get one task per project with the first conversation open. Missing tmux or agents are listed with their install commands, and Shifu → Setup Checklist… shows them again later. Fixed a dead end where a new install could not choose a folder or create a task; the empty page has Add Project. The first-run screen, the new-task form and the empty page are in English on an English Mac.
+- Permissions: a fresh install asks once before the first conversation (on the first-run screen, the No confirmation switch), with Agent's own settings preselected; upgrades keep their setting. Antigravity tool calls are approved automatically only when Shifu started it in no-confirmation mode.
+- More agents: Aider, Goose, Amp, Cursor CLI, Factory Droid, GitHub Copilot CLI and Crush appear in the new-conversation list when installed (the sidebar shows only that they are running). Add your own CLIs in `~/.shifu/app/agents.json`; `shifu agents` lists where each agent was found, whether it is signed in and how it reports status. Fixed picking an agent in the new-task dropdown.
+- When an agent ends within seconds of starting (not installed, not signed in, Node.js too old), its panel explains why, with the install or sign-in command to copy and the last lines of output; Retry starts it again the same way.
+- Waiting for you is ordered by urgency: approvals, then questions, then finished results, each row with one line saying what it needs, such as the command it wants to run. Sub-agent approvals are no longer missed, and ⌘J and `shifu jump` go to the most urgent one first.
+- File › Open File… (⌘O) opens any file in Shifu. Word preview adds DOC, RTF and ODT; files Shifu cannot show offer to open in their default app.
+- Sidebar: a newly chosen folder shows up right away; drop a conversation on a folder without tasks to start a task there, and the × next to it removes it from the sidebar (files on disk stay). My Bots can add animal companions or pick one at random. The usage panel shows only installed CLIs and folds away those without numbers; Claude quota prefers the scheduled check.
+- Browser and Computer Use stay out of your way: `shifu browser open` no longer shows a window by default (add `--show` to watch); `shifu computer` waits for you to pause (up to 90 seconds) before a foreground or clipboard step and then restores your app, window and pointer; it can type into a chosen text field and read it back. `shifu web` no longer types into a control that changed after a page reload.
+- A Codex reply title naming several files also lists files whose paths contain encoded non-ASCII names.
+- 0.4.3 and earlier packages remain available.
+
+Built by GitHub Actions from the public source; signed with Shifu's own fixed certificate and not notarized. The build source is recorded in BUILD-INFO.json inside the package. Upgrading from 0.4.1 or later keeps the Computer Use permissions.
 
 ### 0.4.3 preview · November 23, 2026
 

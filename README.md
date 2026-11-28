@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="README.en.md">English</a> ·
-  <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1">下载预发布版</a> ·
+  <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1">下载预发布版</a> ·
   <a href="#快速开始">快速开始</a> ·
   <a href="#可以试试这些">可以试试</a> ·
   <a href="#一起做">一起做</a> ·
@@ -25,7 +25,7 @@ Agent 多起来以后，不用逐个翻终端：Shifu 把需要你接手的会�
 
 **各家终端原样保留** · **关掉窗口继续运行** · **任务与布局保存在本机**
 
-> **早期版本。** 目前主要在 Apple Silicon Mac 上使用，可下载 Apple Silicon 预发布包或从源码编译，应用尚未公证。第一次开对话前 Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」；只有你选「免确认（全权）」时，Claude、Codex、CodeBuddy、Kimi 和 Qwen Code 修改文件、执行命令才不再逐项询问（从旧版升级的保持原来的设置；0.4.3 下载包还不会询问，默认免确认，见[权限模式](docs/INSTALL.md)）；安装前请读[启动说明](#快速开始)和[已知问题](#已知问题)。
+> **早期版本。** 目前主要在 Apple Silicon Mac 上使用，可下载 Apple Silicon 预发布包或从源码编译，应用尚未公证。第一次开对话前 Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」；只有你选「免确认（全权）」时，Claude、Codex、CodeBuddy、Kimi、Qwen Code 和 opencode 修改文件、执行命令才不再逐项询问（从旧版升级的保持原来的设置，见[权限模式](docs/INSTALL.md)）；安装前请读[启动说明](#快速开始)和[已知问题](#已知问题)。
 
 <p align="center"><img src="docs/images/shifu-workspace.png" width="960" alt="Shifu 当前界面的模拟演示：侧栏显示会话状态，两个 Agent 的终端左右并排。"></p>
 <p align="center"><sub>这是模拟会话演示：界面来自当前版本，终端内容、会话状态与额度为演示数据。</sub></p>
@@ -64,7 +64,7 @@ Shifu 把 Claude Code、Codex、Kimi、CodeBuddy、Antigravity、opencode、Pi�
 
 ## 快速开始
 
-[下载 Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1)，内含 App、匹配 CLI 和安装说明。普通会话无需 Rust；另备 tmux 和已登录的 Agent 即可。StepFun 需[单独设置 Node/Pi 和订阅密钥](docs/STEPFUN.md)。
+[下载 Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1)，内含 App、匹配 CLI 和安装说明。普通会话无需 Rust；另备 tmux 和已登录的 Agent 即可。App 自带同版命令行，第一次打开时一屏引导会找出这台 Mac 上的 Agent 和项目，勾选后点「开始」。StepFun 需[单独设置 Node/Pi 和订阅密钥](docs/STEPFUN.md)。
 
 ### 方式 A：让你的 AI 帮你装
 
@@ -73,16 +73,16 @@ Shifu 把 Claude Code、Codex、Kimi、CodeBuddy、Antigravity、opencode、Pi�
 ```text
 帮我安装 Shifu（https://github.com/Nalu-Lab/shifu）。先读 README 和 docs/INSTALL.md。
 1. 确认当前 Mac 使用 Apple Silicon，检查 tmux 和我要使用的 Agent 是否已安装、登录；缺什么先告诉我。
-2. 从 Release remote-v0.4.3-preview.1（https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1）下载 ZIP 和 SHA256SUMS，不要用别的 Release；核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
-3. 按包内说明，将 Shifu.app 放到 ~/Applications，将同包 bin/shifu 装到 ~/.cargo/bin/shifu：0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用它（之后的版本 App 自带同版命令行，这一步只在终端里用 shifu 时才需要，以包内说明为准）。将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
-4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；还要告诉我：0.4.3 默认以免确认模式启动支持该模式的 Agent。要保留 Agent 自己的权限规则，开始前在新建任务的「权限」里选「用 Agent 自己的设置」。（之后的版本第一次开对话前会先问一次。）系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
-5. 打开后带我选一个项目；创建第一条 Agent 对话之前，先问我要「免确认（全权）」还是「用 Agent 自己的设置」，按我的选择设好「权限」再创建；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。
+2. 从 Release remote-v0.4.4-preview.1（https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1）下载 ZIP 和 SHA256SUMS，不要用别的 Release；核对下载文件及解压后的文件校验。默认使用现成 App 和 CLI，无需安装 Rust 或从源码编译。
+3. 按包内说明，将 Shifu.app 放到 ~/Applications。App 自带同版命令行，对话状态、提醒和项目经理用它，不必另装；问我要不要在终端里用 shifu，要的话再将同包 bin/shifu 装到 ~/.cargo/bin/shifu，将 ~/.cargo/bin 加入当前终端 PATH，验证 shifu --help，并说明新终端可用完整路径运行。已有 Shifu 时先说明升级需要短暂退出，保留旧 App、CLI 和会话；不要覆盖运行中的 App。
+4. 提醒我它用 Shifu 自己的证书签名、未经 Apple 公证；还要告诉我：第一次开对话前，Shifu 会问一次 Agent 的权限，默认选「按 Agent 自己的设置」；以后在新建任务的「权限」里随时能改。系统安全提示由我处理。StepFun、电脑操作、远程中继和后台托管仅在我要求时另行配置。
+5. 打开后第一屏会找出 Agent 和项目：让我自己勾选项目、决定「免确认」开关（默认关，即「按 Agent 自己的设置」），再点「开始」；首次启动 Codex 时，让我检查它提示的 hooks 后决定是否信任。
 ```
 
 ### 方式 B：自己装
 
 1. 下载同一 Release 的 ZIP 和 `SHA256SUMS`，先在下载目录执行 `shasum -a 256 -c SHA256SUMS`，再解压。
-2. 已有 Shifu 时，先退出并备份旧 App 与 CLI。0.4.3 的 App 不自带命令行，对话状态、提醒和项目经理都要用同包的 CLI，请一起装好（之后的版本 App 自带同版命令行，这一步只在终端里用 `shifu` 时才需要，以包内说明为准）。先在解压后的包目录校验内容，再安装 CLI：
+2. 已有 Shifu 时，先退出并备份旧 App 与 CLI。App 自带同版命令行（`Shifu.app/Contents/Resources/bin/shifu`），对话状态、提醒和项目经理用它；下面装 CLI 的命令只在终端里用 `shifu` 时才需要（tmux 仍要装）。先在解压后的包目录校验内容，再安装 CLI：
 
    先单独校验，看到每一行都是 `OK` 再继续：
 
@@ -104,7 +104,7 @@ Shifu 把 Claude Code、Codex、Kimi、CodeBuddy、Antigravity、opencode、Pi�
    brew install tmux   # 已有 tmux 时跳过
    ```
 
-3. 校验通过后，将 `Shifu.app` 移到 `~/Applications`，再打开 Shifu，选择项目和已登录的 Agent，创建第一条对话（0.4.3 之后的版本打开时有简短引导，会自动找出两者）。连接另一台 Mac 时才需要[远程安装与配对](docs/REMOTE-RELAY.md)。
+3. 校验通过后，将 `Shifu.app` 移到 `~/Applications`，再打开 Shifu：第一屏会找出已装的 Agent 和项目，勾选项目后点「开始」就开出第一条对话（也可以「跳过」，之后在空白页点「添加项目」）。连接另一台 Mac 时才需要[远程安装与配对](docs/REMOTE-RELAY.md)。
 
 - 应用用 Shifu 自己的固定证书签名，尚未公证；首次打开若被拦，确认来源后按「系统设置 → 隐私与安全性」中的对应提示处理。
 - 第一次启动 Codex 会提示检查 hooks，请阅读后决定是否信任。CLI 安装路径保持不变时，无需每次重复设置。
@@ -129,7 +129,7 @@ npm run build:desktop -- --debug
 
 ### 升级
 
-0.4.3 之后的版本能在 App 里更新自己：菜单 Shifu →「检查更新…」，打开后每天也会悄悄查一次；点「更新并重启」即可，Agent 对话在 tmux 里继续运行。App 自带的 CLI 和已装的电脑操作组件一起更新。0.4.3 及更早的版本要最后手动下载一次（按上面的方式 B）。详见[安装说明的「升级」](docs/INSTALL.md#升级)。
+从 0.4.4 起 Shifu 能在 App 里更新自己：菜单 Shifu →「检查更新…」，打开后每天也会悄悄查一次；点「更新并重启」即可，Agent 对话在 tmux 里继续运行。App 自带的 CLI 和已装的电脑操作组件一起更新。0.4.3 及更早的版本要最后手动下载一次（按上面的方式 B），之后就在 App 里更新。详见[安装说明的「升级」](docs/INSTALL.md#升级)。
 
 ## 快捷键
 
@@ -147,8 +147,8 @@ npm run build:desktop -- --debug
 
 | 想做的事 | 入口 |
 |---|---|
-| 使用百炼 Token Plan 运行 Qwen Code | [Qwen 设置](docs/QWEN.md)，需另备 Qwen CLI 和自己的密钥；当前源码提供 |
-| 记录 Git 工作区接续、恢复已退出的会话 | [`workspace` / `resume`](docs/WORKSPACES.md)，当前源码提供 |
+| 使用百炼 Token Plan 运行 Qwen Code | [Qwen 设置](docs/QWEN.md)，需另备 Qwen CLI 和自己的密钥 |
+| 记录 Git 工作区接续、恢复已退出的会话 | [`workspace` / `resume`](docs/WORKSPACES.md) |
 | 使用 Step Plan 订阅运行 StepFun | [StepFun 设置](docs/STEPFUN.md)，需另备 Node/Pi 和自己的密钥 |
 | 查看每日分析 | 左侧「每日分析」，数据来源按自己的环境配置；[定时触发与漏跑补偿](docs/DAILY-ANALYSIS.md) |
 | 让 Agent 查看和操作本机窗口 | [`shifu computer`](docs/COMPUTER-USE.md)，使用独立的 macOS 辅助程序 |
@@ -159,9 +159,9 @@ npm run build:desktop -- --debug
 | 从手机接回正在运行的会话 | [手机连接](docs/REMOTE.md)，单独安装本机服务并配置私有网络 |
 | 让长任务继续运行 | [杯子菜单](docs/STEAMCUP.md)，屏幕模式、定时与合盖运行 |
 | 查看全局或在会话中传话 | 左侧「项目经理」；传话仍需本人明确授权 |
-| 添加动物伙伴 | 当前源码的侧栏「我的 Bot」旁点「＋」，直接选一只，或点「随机动物」再决定是否加入 |
+| 添加动物伙伴 | 侧栏「我的 Bot」旁点「＋」，直接选一只，或点「随机动物」再决定是否加入 |
 | 离开后按已批准目标跟进现有 Codex 会话 | [轻量后台托管](docs/AUTOPILOT.md)，脚本配置目标、授权与截止时间；新预发布包也包含该入口 |
-| 给正在工作的原会话追加输入、查看本轮实际成果 | 当前源码支持持久输入队列和按回执统计的任务进度；停滞时提醒原总控调整。[配置与限制](docs/AUTOPILOT.md#追加输入与成果进度当前源码)；需配套更新 App/CLI，现有下载包尚未包含 |
+| 给正在工作的原会话追加输入、查看本轮实际成果 | 持久输入队列和按回执统计的任务进度；停滞时提醒原总控调整。[配置与限制](docs/AUTOPILOT.md#追加输入与成果进度当前源码)；需配套更新 App/CLI |
 
 会话搜索、额度和进程占用也在同一个窗口里。
 

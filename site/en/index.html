@@ -93,7 +93,7 @@
       <span class="sep" aria-hidden="true">/</span>
       <span class="hide-sm">macOS · Apple Silicon</span>
       <span class="sep hide-sm" aria-hidden="true">/</span>
-      <span>0.4.3 preview</span>
+      <span>0.4.4 preview</span>
     </p>
     <h1>
       
@@ -122,7 +122,7 @@
       <span>Apple Silicon only · Early preview · Not notarized · The app window is in Chinese for now</span>
     </p>
     <!-- Release-specific: generated from RELEASE["permission"] in tools/build.py, checked against docs/INSTALL*.md. -->
-    <p class="hero-note hero-perm" id="hero-permission"><span class="dot dot-amber" aria-hidden="true"></span><span>In 0.4.3, agents that support it skip individual approvals by default. To keep your agent's own permission rules, set 权限 to 用 Agent 自己的设置 (use the agent's own settings) in the new-task form before starting.</span></p>
+    <p class="hero-note hero-perm" id="hero-permission"><span class="dot dot-amber" aria-hidden="true"></span><span>Before your first conversation, Shifu asks once how agents may act, with Agent's own settings preselected; change it any time under Permissions in the new-task form.</span></p>
   </div>
 </section>
 
@@ -164,7 +164,7 @@
       </div>
       <figcaption id="demo-note">
         <!-- Generated from DEMO / DEMO_NOTE in tools/build.py: the post-re-recording caption once DEMO["version"] is the release's. -->
-        * The video and screenshots were recorded with the 0.4.2 preview (plus Gemini CLI from source at the time); the current download is 0.4.3, and some interface details may differ. They come from an isolated demo: projects, tasks, terminal output and times are demo data. The notification banner and key hints in the video are added overlays. The app's own labels are in Chinese for now.
+        * The video and screenshots were recorded with the 0.4.2 preview (plus Gemini CLI from source at the time); the current download is 0.4.4, and some interface details may differ. They come from an isolated demo: projects, tasks, terminal output and times are demo data. The notification banner and key hints in the video are added overlays. Apart from the menus, the first-run screen and the new-task form, the app's labels are in Chinese for now.
       </figcaption>
     </figure>
 
@@ -281,7 +281,7 @@
       <span>Shifu starts each agent's own CLI with your own account. How much state the sidebar can show depends on whether the agent can report its events to Shifu.</span>
     </p>
     <table class="matrix">
-      <caption class="sr-only"><span>Live status and setup for each agent (0.4.3 preview)</span></caption>
+      <caption class="sr-only"><span>Live status and setup for each agent (0.4.4 preview)</span></caption>
       <thead>
         <tr>
           <th scope="col">Agent</th>
@@ -366,11 +366,11 @@
 </section>
 
 <!-- ============ Install + quick start (prompt, steps and permission note generated from docs/INSTALL*.md) ============ -->
-<section class="section" id="install" aria-labelledby="install-title" data-cli-step="required">
+<section class="section" id="install" aria-labelledby="install-title" data-cli-step="optional">
   <div class="wrap">
     <p class="kicker"><span>Install</span></p>
     <h2 id="install-title"><span>Install Shifu</span></h2>
-    <p class="install-meta"><span>0.4.3 preview · Apple Silicon · Free</span></p>
+    <p class="install-meta"><span>0.4.4 preview · Apple Silicon · Free</span></p>
     <p class="lead">
       
       <span>Shifu works alongside the coding agents you already use, through their own CLIs and accounts.</span>
@@ -385,12 +385,12 @@
     <aside class="notice" aria-labelledby="notice-title">
       <h3 id="notice-title"><span class="dot dot-amber" aria-hidden="true"></span><span>Before you install</span></h3>
       <ul>
-        <li class="permission-release"><b>In 0.4.3, agents that support it skip individual approvals by default. To keep your agent's own permission rules, set 权限 to 用 Agent 自己的设置 (use the agent's own settings) in the new-task form before starting.</b></li>
-        <li class="permission-note"><b>Permission mode:</b>  With that setting Shifu adds no approval-bypass flags, and your agent's own configuration decides when it asks; you can change it any time under 权限. Later versions ask once before the first conversation, with 按 Agent 自己的设置 preselected; upgrades keep their setting.</li>
+        <li class="permission-release"><b>Before your first conversation, Shifu asks once how agents may act, with Agent's own settings preselected; change it any time under Permissions in the new-task form.</b></li>
+        <li class="permission-note"><b>Permission mode:</b>  On the first-run screen this is the No confirmation switch, off by default (Agent's own settings) and saved when you press Start; if you skip that screen, Shifu asks before the first agent starts. With Agent's own settings, Shifu adds no approval-bypass flags and your agent's own configuration decides when it asks. Upgrades are not asked and keep their setting (0.4.3 and earlier default to no confirmation if it was never changed).</li>
         <li><span><b>Not notarized.</b> The app is signed with Shifu's own fixed certificate. If macOS blocks it, confirm the source and allow it under System Settings → Privacy &amp; Security.</span></li>
         <li><span><b>Apple Silicon only.</b> Intel, Linux and Windows are untried and have no package.</span></li>
         <li><span><b>On first Codex launch</b> you are asked to review the hooks Shifu passes; read them before trusting.</span></li>
-        <li><span><b>The window UI is in Chinese for now.</b> The menu bar follows the system language.</span></li>
+        <li><span><b>Most of the window UI is in Chinese for now.</b> The menu bar, the first-run screen and the new-task form follow the system language.</span></li>
       </ul>
     </aside>
 
@@ -399,7 +399,7 @@
         <h3 id="route-ai-title"><span>AI-assisted installation</span></h3>
         <p>
           
-          <span>Paste the prompt into Claude Code or Codex. It checks your Mac, downloads and verifies the package from <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1">remote-v0.4.3-preview.1</a> and walks you through setup. Review the commands it runs and handle the system security prompts yourself.</span>
+          <span>Paste the prompt into Claude Code or Codex. It checks your Mac, downloads and verifies the package from <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1">remote-v0.4.4-preview.1</a> and walks you through setup. Review the commands it runs and handle the system security prompts yourself.</span>
         </p>
         <div class="route-actions">
           <!-- Shown and wired by main.js; without it the prompt below stays open to select and copy. -->
@@ -414,10 +414,10 @@
           <summary><span>View installation prompt</span></summary>
           <div class="code"><pre id="install-prompt" class="wrap-text">Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and docs/INSTALL.en.md first.
 1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
-2. Download the ZIP and SHA256SUMS from release remote-v0.4.3-preview.1 (https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1), not any other release. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
-3. Follow the package instructions: put Shifu.app in ~/Applications and install the package's bin/shifu to ~/.cargo/bin/shifu. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need this one (later versions carry a matching CLI inside the app, and this step is then only for using shifu in a terminal; follow the package instructions). Add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
-4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and tell me: In 0.4.3, agents that support it skip individual approvals by default. To keep your agent's own permission rules, set 权限 to 用 Agent 自己的设置 (use the agent's own settings) in the new-task form before starting. (Later versions ask once before the first conversation.) Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
-5. Help me choose a project. Before starting my first agent conversation, ask me whether I want 免确认（全权） (no confirmation) or 用 Agent 自己的设置 (the agent's own settings), set 权限 accordingly, then start it. On the first Codex launch, let me review its hooks before deciding whether to trust them.</pre></div>
+2. Download the ZIP and SHA256SUMS from release remote-v0.4.4-preview.1 (https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1), not any other release. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
+3. Follow the package instructions: put Shifu.app in ~/Applications. The app carries its matching CLI for conversation status, notifications and the project manager, so nothing else is needed. Ask me whether I want shifu in a terminal; if so, install the package's bin/shifu to ~/.cargo/bin/shifu, add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
+4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and tell me: Before your first conversation, Shifu asks once how agents may act, with Agent's own settings preselected; change it any time under Permissions in the new-task form. Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
+5. When it opens, the first screen finds agents and projects: let me tick the projects and decide on the No confirmation switch (off by default, which is Agent's own settings) before pressing Start. On the first Codex launch, let me review its hooks before deciding whether to trust them.</pre></div>
         </details>
         <script>document.getElementById('prompt-details').open = false;</script>
       </article>
@@ -426,19 +426,19 @@
         <h3 id="route-manual-title"><span>Manual installation</span></h3>
         <p>
           
-          <span>Download the package, verify its checksum and follow the steps to install the app and the matching <code>shifu</code> CLI.</span>
+          <span>Download the package, verify its checksum and move the app to <code>~/Applications</code>. It carries its matching <code>shifu</code> CLI; install it separately only to use it in a terminal.</span>
         </p>
         <div class="route-actions">
           <!-- Opens the release in a new tab; main.js also opens the steps below. -->
-          <a class="btn btn-secondary" id="manual-download" href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1" target="_blank" rel="noopener" aria-controls="manual-details">
+          <a class="btn btn-secondary" id="manual-download" href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1" target="_blank" rel="noopener" aria-controls="manual-details">
             <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
             <span>Download ZIP and view instructions</span>
           </a>
-          <span class="route-note">GitHub Release remote-v0.4.3-preview.1</span>
+          <span class="route-note">GitHub Release remote-v0.4.4-preview.1</span>
         </div>
         <details class="route-more" id="manual-details">
           <summary><span>Installation steps</span></summary>
-          <ol class="install-steps"><li><p>Download the ZIP and <code>SHA256SUMS</code> from the same release. Run <code>shasum -a 256 -c SHA256SUMS</code> in the download directory before extracting.</p></li><li><p>For an existing installation, quit it and back up the old app and CLI first. The 0.4.3 app does not carry its own CLI, so conversation status, notifications and the project manager need the package's CLI; install it too (later versions carry a matching CLI inside the app, and this step is then only for using <code>shifu</code> in a terminal; follow the package instructions). In the extracted package directory, verify its contents, then install the CLI:</p><p>Verify on its own first, and continue only when every line says <code>OK</code>:</p><div class="code" data-collapse><pre>shasum -a 256 -c SHA256SUMS</pre><button class="copy" type="button">Copy</button></div><p>Then install the CLI. This block verifies again and changes nothing if verification fails; an existing <code>web</code> folder is renamed as a backup, not deleted:</p><div class="code" data-collapse><pre>shasum -a 256 -c SHA256SUMS &amp;&amp; (
+          <ol class="install-steps"><li><p>Download the ZIP and <code>SHA256SUMS</code> from the same release. Run <code>shasum -a 256 -c SHA256SUMS</code> in the download directory before extracting.</p></li><li><p>For an existing installation, quit it and back up the old app and CLI first. The app carries its matching CLI (<code>Shifu.app/Contents/Resources/bin/shifu</code>) for conversation status, notifications and the project manager; the CLI install commands below are only for using <code>shifu</code> in a terminal (tmux is still needed). In the extracted package directory, verify its contents, then install the CLI:</p><p>Verify on its own first, and continue only when every line says <code>OK</code>:</p><div class="code" data-collapse><pre>shasum -a 256 -c SHA256SUMS</pre><button class="copy" type="button">Copy</button></div><p>Then install the CLI. This block verifies again and changes nothing if verification fails; an existing <code>web</code> folder is renamed as a backup, not deleted:</p><div class="code" data-collapse><pre>shasum -a 256 -c SHA256SUMS &amp;&amp; (
   set -e
   mkdir -p "$HOME/Applications" "$HOME/.cargo/bin"
   install -m 755 bin/shifu "$HOME/.cargo/bin/shifu"
@@ -446,7 +446,7 @@
   ditto bin/web "$HOME/.cargo/bin/web"   # runtime for shifu web
 )
 export PATH="$HOME/.cargo/bin:$PATH"
-brew install tmux   # Skip if tmux is already installed</pre><button class="copy" type="button">Copy</button></div></li><li><p>After successful verification, move <code>Shifu.app</code> to <code>~/Applications</code>. Open it, choose a project and a signed-in agent, and start your first conversation (versions after 0.4.3 open with a short guide that finds both). Use <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.en.md">remote setup and pairing</a> only when connecting another Mac.</p></li></ol>
+brew install tmux   # Skip if tmux is already installed</pre><button class="copy" type="button">Copy</button></div></li><li><p>After successful verification, move <code>Shifu.app</code> to <code>~/Applications</code>. Open it: the first screen finds your installed agents and projects; tick the projects and press Start to open your first conversation (or press Skip and use Add Project on the empty page later). Use <a href="https://github.com/Nalu-Lab/shifu/blob/main/docs/REMOTE-RELAY.en.md">remote setup and pairing</a> only when connecting another Mac.</p></li></ol>
           <p class="after-install">
             
             <span>The PATH setting only affects the current terminal; in a new one use <code>"$HOME/.cargo/bin/shifu"</code> or add the folder to your shell config.</span>
@@ -596,7 +596,7 @@ brew install tmux   # Skip if tmux is already installed</pre><button class="copy
 <section class="cta-band" aria-labelledby="cta-title">
   <div class="wrap">
     <h2 id="cta-title"><span>Run more agents. Manage less.</span></h2>
-    <p class="cta-sub"><span>0.4.3 preview · Apple Silicon · Free and open source</span></p>
+    <p class="cta-sub"><span>0.4.4 preview · Apple Silicon · Free and open source</span></p>
     <div class="hero-cta">
       <a class="btn btn-primary" href="#install">
         <svg viewbox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
