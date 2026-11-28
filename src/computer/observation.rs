@@ -49,6 +49,10 @@ pub fn validate(method: &str, params: &Value) -> Result<(), String> {
     if params["limit"].as_u64().is_some_and(|n| n == 0 || n > 1200) { return Err("--limit 范围是 1 到 1200".into()); }
     if params["ancestors"] == true && params["match"].is_null() && params["role"].is_null() { return Err("--ancestors 需要和 --match 或 --role 一起用".into()); }
     if params["timeoutMs"].as_u64().is_some_and(|n| n > 30000) { return Err("--timeout-ms 最多 30000 毫秒".into()); }
+    if params["idleWaitMs"].as_u64().is_some_and(|n| n > foreground::MAX_IDLE_WAIT_MS) { return Err("--idle-wait-ms 最多 600000 毫秒".into()); }
+    if !params["idleWaitMs"].is_null() && foreground::reason(method, params).is_none() {
+        return Err("--idle-wait-ms 只用于需要前台／剪贴板的请求（等本人空闲的上限）".into());
+    }
     if !params["timeoutMs"].is_null() && !waiting && foreground::reason(method, params).is_none() {
         return Err("--timeout-ms 需要至少一个等待条件，或用于需要前台／剪贴板的请求（等本人空闲的上限）".into());
     }
@@ -182,7 +186,9 @@ pub fn execute_gated(mut request: Value, gate: &Gate, mut call: impl FnMut(Value
         }
     }
     // After the helper is known to restore, before anything is sent that could take the foreground.
-    let foreground_budget = request["params"]["timeoutMs"].as_u64().map_or(foreground::DEFAULT_WAIT, Duration::from_millis);
+    let params = &request["params"];
+    let foreground_budget = params["idleWaitMs"].as_u64().or_else(|| params["timeoutMs"].as_u64())
+        .map_or(foreground::DEFAULT_WAIT, Duration::from_millis);
     let mut gate_details = match foreground::reason(request["method"].as_str().unwrap_or(""), &request["params"]) {
         None => None,
         Some(reason) => match foreground::admit(gate, reason, foreground_budget) {
@@ -574,6 +580,12 @@ mod tests {
         assert!(validate("getAppState", &json!({"role":" "})).is_err());
         assert!(validate("getAppState", &json!({"ancestors":true})).is_err());
         assert!(validate("listApps", &json!({"role":"button"})).is_err());
+        // --idle-wait-ms bounds only the wait for the person to pause, on requests that need the foreground.
+        assert!(validate("click", &json!({"restoreWindow":true,"idleWaitMs":600000})).is_ok());
+        assert!(validate("pasteText", &json!({"idleWaitMs":0})).is_ok());
+        assert!(validate("click", &json!({"restoreWindow":true,"idleWaitMs":600001})).is_err());
+        assert!(validate("click", &json!({"idleWaitMs":1000})).is_err());
+        assert_eq!(foreground::DEFAULT_WAIT, std::time::Duration::from_secs(90));
     }
     #[test]
     fn waits_for_control_not_window_title_and_never_repeats_action() {

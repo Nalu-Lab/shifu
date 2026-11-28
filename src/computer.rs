@@ -40,7 +40,7 @@ pub const HELP: &str = "shifu computer — 操作本机窗口，不依赖 Orca
 --foreground-fallback 只在等待读取超时前短暂前台读取一次，再还原原应用；本人在用电脑时跳过。
 --background-only 强制只读或对文本框 AXSetValue；拒绝前台恢复、点击、合成输入和剪贴板。
 默认后台操作，不切前台、不动鼠标和剪贴板。--restore-window 和 paste-text 会占用前台或剪贴板：
-只在本人已有 10 秒没碰键盘鼠标时执行（--timeout-ms 内等待），否则返回 user_active；结束后还原原应用、窗口和鼠标位置。
+只在本人已有 10 秒没碰键盘鼠标时执行：默认最多等 90 秒（--idle-wait-ms 可改，上限 600000；只给 --timeout-ms 时按它），仍在用才返回 user_active；结束后还原原应用、窗口和鼠标位置。
 多步前台流程的中间一步可加 --keep-foreground，暂不还原前台（鼠标仍还原）。
 SHIFU_COMPUTER_FOREGROUND=never 或 settings.json 的 \"computer_foreground\": \"never\" 完全禁止前台；
 SHIFU_COMPUTER_IDLE_SECONDS / \"computer_idle_seconds\" 调整空闲秒数。
@@ -118,6 +118,7 @@ pub fn request(args: &[String], namespace: &str) -> Result<Value, String> {
             "--match" => ("match", "text"), "--limit" => ("limit", "integer"),
             "--role" => ("role", "text"), "--within" => ("within", "integer"), "--ancestors" => ("ancestors", "bool"),
             "--wait-for" => ("waitFor", "text"), "--timeout-ms" => ("timeoutMs", "integer"),
+            "--idle-wait-ms" => ("idleWaitMs", "integer"),
             "--wait-for-gone" => ("waitForGone", "text"),
             "--wait-for-enabled" => ("waitForEnabled", "text"),
             "--wait-for-window" => ("waitForWindow", "text"),
