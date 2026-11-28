@@ -3,7 +3,9 @@ use serde_json::json;
 pub const GUIDE: &str = r#"Shifu computer 使用指南
 
 Shifu 自带独立的 macOS 后台窗口工具，不依赖 Orca。可读取和截图指定窗口，并执行后台点击、输入、滚动和拖拽；先用 capabilities 核对本机实际支持。
-普通后台输入通过辅助功能或目标进程／窗口派发，不主动切前台或移动真实鼠标；部分路径会临时借用目标窗口焦点，应用也可能自行弹窗。保持鼠标位置不等于全程不打断。
+本人和 Agent 共用这台 Mac：首选不打断本人的后台路径。普通后台读取、点击、set-value、type-text、按键和滚动通过辅助功能或目标进程／窗口派发，不切前台、不移动真实鼠标、不碰剪贴板；部分路径会临时借用目标应用内的窗口焦点，应用也可能自行弹窗。
+会打断本人的只有 --restore-window、--foreground-fallback 和 paste-text（剪贴板）。它们只在本人已有 10 秒没碰键盘鼠标时执行（有 --timeout-ms 时在其内等待），否则返回 user_active，请求不会发出；结束后还原原应用、聚焦窗口和鼠标位置，result.foregroundRestore 给出结果。user_active 时改用后台路径或稍后再试，不要去掉门槛、换工具或反复重试；foreground_disabled 表示本人禁止了前台，只能用后台路径。
+多步前台流程（如 Finder 改名、文件选择框）中间一步可加 --keep-foreground 暂不还原前台（鼠标仍还原），最后一步不加，以便交还前台。
 只需补截图时，使用 get-app-state --app <应用> --window-id <ID> --background-only，并打开返回的截图路径；不需要点击或恢复前台。
 
 优先使用应用已有的 API/CLI；必须操作界面时才使用本工具。先运行 capabilities、list-apps，再用 list-windows --app <应用> 列出窗口。
@@ -30,7 +32,7 @@ ok:true 不等于任务完成；检查 action.verification、result.postconditio
 调用 agent 必须用自己的图片读取工具打开该路径并查看截图；仅拿到路径不代表已经看过，本命令不会替 agent 打开图片。
 不需要截图时使用 --no-screenshot。可用 --screenshot-format png|jpeg、--screenshot-scale 和 --screenshot-max-edge 控制截图。截图像素坐标按返回的 scaleX 和 scaleY 换算。
 
-上传文件时，先核对本地绝对路径及目标站点。打开选择框后重新 list-windows，用选择框自己的窗口 ID 读取；不能用底下网页的控件树代表选择框。需要前台时须在已有授权内使用 --restore-window。
+上传文件时，先核对本地绝对路径及目标站点。打开选择框后重新 list-windows，用选择框自己的窗口 ID 读取；不能用底下网页的控件树代表选择框。需要前台时须在已有授权内使用 --restore-window，并受上面的空闲门槛约束。
 标准 macOS 选择框可用 CmdOrCtrl+Shift+G 打开路径框；发现新路径窗口后读取其聚焦输入框，用 set-value --value-stdin 写完整路径并核对回读。Return 只确认路径，再读取原选择框，确认唯一选中的文件行与预期文件名一致且 Open 可用，才点 Open 一次。
 最后回到网页核对附件文件名、大小及上传完成/错误状态。选择框关闭不等于上传完成，更不等于申请提交。按钮疑似未生效时先检查新窗口和附件；没有完成状态不要盲点或重传。网页读取不到上传状态时保留未知，请本人核查。
 
@@ -40,11 +42,11 @@ observation_failed 可能发生在动作已经执行之后；若存在 action �
 snapshot.foreground 记录回读采样时的前台：target_app、other_app 或 unknown。临时编辑框消失且前台已切换时，应重新观察和选定目标，再决定下一步；不要把已投递按键当成编辑成功。该状态不是前台占用承诺，foreground-fallback 结束后仍会恢复原应用。
 权限错误先运行 permissions，并请本人在系统设置中授权；不要代点授权框。必要时用 stop 停止当前辅助进程。
 
-默认后台操作。只有本人明确允许接管前台时才使用 --restore-window，并在任务授权范围内操作。
+默认后台操作。只有后台路径确实不行、本人允许接管前台时才使用 --restore-window，并在任务授权范围内操作；paste-text 先考虑 type-text --element-index 或 set-value。
 本人要求严格不打断时，显式加 --background-only。该模式先核辅助程序确实支持，只允许读取及文本框／文本区域的字符串 set-value；前台恢复、点击、次要动作、按键、输入／粘贴、滚动和拖拽在执行前拒绝。不会使用系统剪贴板或合成输入兜底；后续等待仍保留相同限制。旧辅助程序不认识该模式时不发送目标请求。
 这些拒绝来自严格模式的保守白名单，不表示普通后台没有对应能力：点击可能打开原生对话框，部分输入／拖拽依赖临时窗口焦点，粘贴可能占用剪贴板；滚动也被首版白名单整类排除，并非每次滚动都会打断。严格模式拒绝后，不得自行去掉参数、改用其他工具或前台路径绕过本人的不打断要求。
 严格后台模式仅约束 Shifu 的输入路径，应用响应文本变化仍可能自行显示界面；它不提供最小化窗口 DOM 能力，也不恢复失效的 Chrome 宿主连接。真实网页提交与上传优先使用已授权的浏览器页接口。
---foreground-fallback 只用于带等待条件的 get-app-state，也只应在前台切换已获明确授权时使用；它只补充读取，不重做动作。
+--foreground-fallback 只用于带等待条件的 get-app-state，也只应在前台切换已获明确授权时使用；它只补充读取，不重做动作。本人在用电脑时跳过，postcondition.foregroundFallbackSkipped 记为 user_active。
 提交表单、发送消息、购买、删除及处理敏感授权须在当前任务已有的明确授权范围内；结果不确定时先观察，不盲目重试。"#;
 
 pub fn run(args: &[String]) -> Result<(), String> {

@@ -7,6 +7,7 @@ use std::io::Read;
 mod runtime;
 mod guide;
 mod observation;
+pub(crate) mod foreground;
 
 pub const HELP: &str = "shifu computer — 操作本机窗口，不依赖 Orca
 
@@ -36,9 +37,13 @@ pub const HELP: &str = "shifu computer — 操作本机窗口，不依赖 Orca
 --wait-for-enabled 核对匹配控件的辅助功能可用状态。
 --wait-for-window 读取时等匹配的窗口；动作后等刚出现的匹配窗口。
 --expect-path / --expect-missing-path 核对绝对路径；超时报告失败，不重做动作。
---foreground-fallback 只在等待读取超时前短暂前台读取一次，再还原原应用。
+--foreground-fallback 只在等待读取超时前短暂前台读取一次，再还原原应用；本人在用电脑时跳过。
 --background-only 强制只读或对文本框 AXSetValue；拒绝前台恢复、点击、合成输入和剪贴板。
-默认后台操作；只有明确需要抢前台时才加 --restore-window。
+默认后台操作，不切前台、不动鼠标和剪贴板。--restore-window 和 paste-text 会占用前台或剪贴板：
+只在本人已有 10 秒没碰键盘鼠标时执行（--timeout-ms 内等待），否则返回 user_active；结束后还原原应用、窗口和鼠标位置。
+多步前台流程的中间一步可加 --keep-foreground，暂不还原前台（鼠标仍还原）。
+SHIFU_COMPUTER_FOREGROUND=never 或 settings.json 的 \"computer_foreground\": \"never\" 完全禁止前台；
+SHIFU_COMPUTER_IDLE_SECONDS / \"computer_idle_seconds\" 调整空闲秒数。
 首次使用运行 permissions，在系统设置给 Shifu Computer Use 授权。";
 
 pub fn run(args: &[String]) -> Result<(), String> {
@@ -65,7 +70,8 @@ pub fn run(args: &[String]) -> Result<(), String> {
         }
         let namespace = std::env::var("SHIFU_ID").unwrap_or_else(|_| "default".into());
         let r = request(args, &namespace)?;
-        let mut response = observation::execute(r, runtime::call)?;
+        let gate = foreground::Gate::from_environment(runtime::home()?)?;
+        let mut response = observation::execute_gated(r, &gate, runtime::call)?;
         runtime::persist_screenshot(&mut response);
         println!("{}", serde_json::to_string_pretty(&response).map_err(|e| e.to_string())?);
         if response["ok"] == false { return Err("操作未完成，原因见上方 error".into()); }
@@ -103,6 +109,7 @@ pub fn request(args: &[String], namespace: &str) -> Result<Value, String> {
             "--action" => ("action", "text"), "--mouse-button" => ("mouseButton", "text"),
             "--modifiers" => ("modifiers", "text"), "--click-count" => ("clickCount", "integer"),
             "--no-screenshot" => ("noScreenshot", "bool"), "--restore-window" => ("restoreWindow", "bool"),
+            "--keep-foreground" => ("keepForeground", "bool"),
             "--screenshot-format" => ("screenshotFormat", "text"),
             "--screenshot-scale" => ("screenshotScale", "number"),
             "--screenshot-max-edge" => ("screenshotMaxEdge", "integer"),

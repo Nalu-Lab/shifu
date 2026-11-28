@@ -68,7 +68,7 @@ shifu computer type-text --app com.apple.TextEdit --window-id 123 --element-inde
 
 - 结果是 JSON，包含控件树、窗口、动作和验证信息。截图保存到 `~/.shifu/computer/screenshots/`，响应只返回路径，不把整张图片的 base64 塞进上下文；无需截图时加 `--no-screenshot`。
 - 每次 UI 改变后读取返回的新状态再操作。索引会过期，不能猜测或沿用其他对话的索引。默认使用 `SHIFU_ID` 隔离操作上下文；在外部终端并发操作时各自指定 `--session <名字>`。
-- 默认后台输入；只有本人允许接管前台时才加 `--restore-window`。原生弹出选项优先 `set-value`，不把后台点击失败当作成功。
+- 默认后台输入；只有后台路径不行、本人允许接管前台时才加 `--restore-window`，并受[空闲门槛](#不打断本人)约束。原生弹出选项优先 `set-value`，不把后台点击失败当作成功。
 - `ok: true` 表示请求执行成功，动作是否达成要看 `action.verification` 和实际回读。`unverified`、超时、断线均不能宣称完成；先观察再决定下一步，不能盲目重试可能发送/删除的操作。
 - 动作已返回、后续读取失败时，返回 `ok: false / observation_failed`，保留 `result.action` 和实际目标窗口；`result.observationError`（原生读取）或 `result.postcondition.state`（等待核对）说明失败发生在观察阶段。此时不要重复动作，先重新读取目标。
 - 返回 JSON 的失败响应还包含 `result.recovery`：`nextStep` 为 `observe`、`check_permissions` 或 `stop`，`automaticRetry` 始终为 false。`actionReported` 仅说明是否有动作回执，为 false 时不能推断动作未发生。原始错误、快照和动作保留；恢复建议不会自行执行输入、切前台或重做动作。首次传输错误仍直接报告结果未知。
@@ -97,7 +97,7 @@ shifu computer press-key --app com.apple.finder --window-id 123 --key Return --e
 
 `--match` 不区分大小写；`--wait-for`、`--wait-for-gone` 是控件行中区分大小写的文字片段，不匹配窗口标题或末尾的焦点摘要。可用 `heading ...`、`text ...` 等更具体的片段等待正文。消失条件要求控件树非空且未截断；它只证明当前可读控件里没有该文字，后台缺正文时应同时等待明确的结果文字，不能据此推断保存或业务完成。筛选在等待判断之后进行，返回 `snapshot.view` 的匹配/显示/省略数量；`elementCount` 仍是完整窗口数量，原生树自身的截断信息另行保留。
 
-等待默认 5 秒，可用 `--timeout-ms` 设为 0–30000 毫秒。只重复观察，不重做点击、输入等动作；窗口出现后固定其 ID，按序号操作后的回读也固定到实际接收动作的窗口，防止窗口重排后读错。原生读取本身也需要时间，因此总耗时可能超过等待预算。权限和传输错误立即返回。`--foreground-fallback` 仅用于带条件的 `get-app-state`，在等待预算过半后尝试一次前台读取，并恢复原前台应用；未达到条件时继续后台观察到预算结束，不再切前台。原焦点窗口可读取时也恢复该窗口，不会恢复页面内部的选择或滚动位置，不用于自动重试动作。
+等待默认 5 秒，可用 `--timeout-ms` 设为 0–30000 毫秒。只重复观察，不重做点击、输入等动作；窗口出现后固定其 ID，按序号操作后的回读也固定到实际接收动作的窗口，防止窗口重排后读错。原生读取本身也需要时间，因此总耗时可能超过等待预算。权限和传输错误立即返回。`--foreground-fallback` 仅用于带条件的 `get-app-state`，在等待预算过半后、本人已空闲时尝试一次前台读取，并恢复原前台应用和鼠标位置；本人在用时跳过并在 `postcondition.foregroundFallbackSkipped` 记 `user_active`；未达到条件时继续后台观察到预算结束，不再切前台。原焦点窗口可读取时也恢复该窗口，不会恢复页面内部的选择或滚动位置，不用于自动重试动作。
 
 动作的 `verification.scope: element` 仅表示控件层面的核对；`taskCompletion: not_checked` 不宣称业务任务完成。显式提供的条件另记在 `result.postcondition`，超时令 `ok: false`，但保留原动作回执。文件条件只核对路径存在性，不证明内容、保存成功或变化由本次动作造成。
 
@@ -111,7 +111,7 @@ Finder 等应用可能把临时编辑框作为独立的小窗口暴露，而不�
 
 需要验证界面改名时：先选中测试文件并按 Return 进入编辑，读取当前输入窗口及控件索引，向该控件 `set-value`，最后向**输入窗口**发送 Return，并用 `--expect-path` / `--expect-missing-path` 核对文件结果。不要把列表中的文件名控件赋值当作提交。仅需处理文件时，仍优先用现有文件接口。
 
-`--restore-window` 会激活指定的窗口；窗口索引在激活前解析，避免窗口顺序变化后选错。已有焦点的输入框不会被重复打开应用的动作打断。输入框提交后即使关闭，动作回执的 `action.targetWindowId` 仍记录实际接收操作的窗口；返回的 `snapshot.window.id` 可以是操作后的主窗口。
+`--restore-window` 会激活指定的窗口，结束后交还原前台、窗口和鼠标位置（见[不打断本人](#不打断本人)）；窗口索引在激活前解析，避免窗口顺序变化后选错。已有焦点的输入框不会被重复打开应用的动作打断。输入框提交后即使关闭，动作回执的 `action.targetWindowId` 仍记录实际接收操作的窗口；返回的 `snapshot.window.id` 可以是操作后的主窗口。
 
 **目前限制：** Safari 后台有时只返回工具栏；需要正文时显式等待正文，必要时使用前台读取回退。原生通道不保证所有应用的自定义控件可操作；DOM 控制由独立的 `shifu browser` 提供，使用 Chrome/Playwright。
 
@@ -119,7 +119,7 @@ Finder 等应用可能把临时编辑框作为独立的小窗口暴露，而不�
 
 ## 文件选择和上传
 
-默认后台操作仍可能触发应用自己的弹窗；当前没有强制静默策略或浏览器上传接口。
+默认后台操作仍可能触发应用自己的弹窗；可用 `SHIFU_COMPUTER_FOREGROUND=never` 禁止前台，但没有浏览器上传接口。
 
 原生选择框及其“前往文件夹”路径框可作为独立 sheet 暴露。按 `list-windows` 返回的真实窗口 ID 读取、操作；即使小面板位于大网页范围内，也不会用网页树冒充它。Firefox 只在焦点接口暴露、未列入普通窗口数组的面板也会参与匹配。明确身份不符、无法唯一匹配时拒绝，不按包含面积猜窗口。
 
@@ -128,11 +128,60 @@ Finder 等应用可能把临时编辑框作为独立的小窗口暴露，而不�
 标准 macOS 流程：
 
 1. 核对要上传的本地文件及站点；打开选择框后重新列窗口。若按钮只返回 `suspected_noop`，先观察窗口及附件状态；必要时从新截图确认位置，在允许前台操作的范围内切换输入方式，不重复盲点。
-2. 对选择框发送 `hotkey --key CmdOrCtrl+Shift+G --restore-window`，发现新路径 sheet 后读取聚焦文本框，用 `set-value --value-stdin` 输入完整绝对路径，并核对值。
+2. 对选择框发送 `hotkey --key CmdOrCtrl+Shift+G --restore-window --keep-foreground`，发现新路径 sheet 后读取聚焦文本框，用 `set-value --value-stdin` 输入完整绝对路径，并核对值。
 3. 向路径 sheet 发送一次 Return。等待它关闭，重读原选择框；确认目标文件名在唯一选中的文件行里，Open 可用，再对该按钮执行一次点击。
 4. 回到网页核对实际附件名称、大小及上传完成/错误状态；自动解析后仍核姓名、邮箱、任职、学历及日期。原生选文件、网页上传、最终提交是不同结果，不能只凭窗口关闭或拿到回执宣称上传成功。
 
 可复跑的本地流程：编译 `FilePickerFixture.swift`，设置较短的隔离 `SHIFU_COMPUTER_HOME`（例如独立的 `/tmp/shifu-picker-test`，避免 Unix socket 路径长度限制）后运行 `verify-file-picker.py NEW_OUTPUT COMPILED_FIXTURE`。它只选择自己创建的中文/空格路径文件，校验文件名及单次选择，再停止自己的 fixture/broker。`FilePickerFixture.html` 可在现有 Firefox 中检查浏览器附件读回，无表单或网络上传。
+
+## 不打断本人
+
+本人和 Agent 共用这台 Mac。打断指：换掉前台应用或键盘焦点、移动鼠标、把窗口顶到本人窗口前面或切换桌面、在前面弹出新窗口、改动剪贴板、因操作发出提示音。应用自己因后台动作弹出的对话框不算 Shifu 的输入路径，但仍可能出现。
+
+**哪些路径会打断：**
+
+| 路径 | 会发生什么 | 现在的处理 |
+|---|---|---|
+| 读取、截图、`set-value`、后台 `click`（控件动作或按窗口派发的点击）、`type-text`、`press-key`、`hotkey`、`scroll` | 不切前台、不移动鼠标、不碰剪贴板；部分路径临时借用目标应用内的窗口焦点（WebKit 网页点击、按键、拖动），目标应用可能因此执行“变为活跃”的逻辑 | 不设门槛 |
+| `--restore-window` | 激活目标应用、取消最小化并提升窗口，必要时 `open -b` 重新打开应用；坐标点击、滚动、拖动在系统输入层派发，会移动真实鼠标；按键也走系统输入层 | 空闲门槛；结束后还原 |
+| `--foreground-fallback` | 等待中途短暂激活目标应用读取一次 | 本人在用时跳过，结果记 `foregroundFallbackSkipped` |
+| `paste-text` | 控件不能直接写入时，把文字写进系统剪贴板、发 Cmd+V、约 0.2 秒后放回原内容（剪贴板计数加 2） | 空闲门槛；标记为临时内容（`org.nspasteboard.TransientType`），剪贴板管理工具按约定不记录 |
+| `permissions` | 打开 Shifu Computer Use 的授权窗口 | 只由本人运行 |
+
+辅助程序本身用 `open -n -g` 在后台启动，不会抢前台。
+
+**空闲门槛：** 需要前台或剪贴板的请求，只在本人已有 10 秒没用键盘鼠标时发出。读的是 macOS 记录的硬件键鼠事件（按键、修饰键、移动、按下、拖动、滚轮）；辅助程序自己的后台点击不算本人，前台点击和按键由 Shifu 记在 `<computer home>/foreground-input.json`，同样不算本人。没到 10 秒时在 `--timeout-ms`（默认 5 秒）内等待；仍不空闲就返回 `ok:false`、`error.code: user_active`，请求没有发出，`result.foregroundGate` 给出空闲秒数，`result.recovery.nextStep` 为 `use_background_or_wait`。成功的请求同样带 `result.foregroundGate`。
+
+**还原：** 前台请求结束后（失败也一样），辅助程序把原前台应用重新激活、把它原来的聚焦窗口提回前面，并把鼠标移回原位；`result.foregroundRestore` 记录 `app`（`restored`、`unchanged`、`kept`、`failed`、`unknown`）和 `pointer`（`restored`、`unchanged`、`failed`）。多步前台流程（Finder 改名、文件选择框的“前往文件夹”）中间一步加 `--keep-foreground`，暂不还原前台，鼠标仍还原；最后一步不加，交还前台。旧辅助程序不会还原，CLI 发现它不支持时拒绝前台请求（`feature_unsupported`），需要重新运行 `bash scripts/install-computer.sh`。
+
+**完全禁止前台：** 环境变量 `SHIFU_COMPUTER_FOREGROUND=never`，或 `<SHIFU_HOME>/settings.json`（桌面应用是 `~/.shifu/app/settings.json`，终端版 `~/.shifu/settings.json`）里写 `"computer_foreground": "never"`。此后上面三类请求都返回 `foreground_disabled`，前台回退读取被跳过。空闲秒数用 `SHIFU_COMPUTER_IDLE_SECONDS` 或 `"computer_idle_seconds"` 调整（0 到 86400）。环境变量优先于 settings.json；写错的值直接报错，不按默认值执行。
+
+**还不能保证的：** 空闲判断和发出请求之间有极短的间隔，本人恰好在这时开始操作仍会被打断一次；前台请求期间（每步约 0.5 秒）目标窗口会出现在前面，还原时又切回来，本人看得到这一闪；应用自己的弹窗、提示音不受控制。
+
+### 测量
+
+```bash
+swiftc -swift-version 6 native/computer-use-macos/Fixture.swift -o /tmp/shifu-fixture
+SHIFU_COMPUTER_HELPER=/absolute/candidate/helper \
+  python3 scripts/verify-quiet.py /tmp/shifu-quiet-new --cli /absolute/path/to/shifu --fixture /tmp/shifu-fixture \
+  --scenarios browser-default,browser-headless,browser-show,computer-background,computer-paste,computer-foreground,computer-gate
+```
+
+`scripts/interruption-monitor.swift` 只观察、不发输入、不需要系统权限：记录应用激活通知、最前面窗口的所属进程、桌面切换、鼠标位置（每 20 毫秒）和剪贴板计数，最后报告次数、事件和是否回到初始状态。`scripts/measure_interruptions.py 新目录 -- 命令` 可单独测一条命令。`verify-quiet.py` 只操作自己启动的 Fixture 进程（按 PID）、自己提供的 localhost 页面和隔离的 `SHIFU_BROWSER_HOME`、`SHIFU_COMPUTER_HOME`；需要前台的场景只在本人已空闲 15 秒时运行，否则记为 `not_run`。
+
+2026-11-27 在本机测得（同一 Fixture 和本地页面；“改前”为已安装的 0.4.3 CLI 和辅助程序，“改后”为本分支构建的 CLI 和候选辅助程序；每个场景跑一次，次数是监测到的事件数，不是本人主观感受）：
+
+| 场景 | 改前 | 改后 |
+|---|---|---|
+| 浏览器默认 `open`、快照、点击、开标签、关闭 | 4 次（Chrome 激活并占住前台约 1.5 秒，直到关闭） | 0 |
+| 同上加旧参数 `--headless` | 0 | 0 |
+| 同上加 `--show`（改前无此参数） | — | 8 次：启动和开新标签时 Chrome 各抢一次前台，分别在约 0.1 秒内还回；结束时前台是原应用 |
+| 后台读取、两种点击、`set-value`、`type-text`、`press-key`、`scroll` | 0 | 0（鼠标未移动） |
+| `paste-text` 到不可直接写入的控件 | 剪贴板 2 次，不检查本人是否在用 | 剪贴板 2 次（本人已空闲时），并加临时标记 |
+| 三步前台（控件点击、坐标点击、按键，均 `--restore-window`）加一次前台回退读取 | 3 次，结束时前台仍是 Fixture，鼠标停在点击处 | 18 次：每步切过去再切回来；结束时前台和鼠标都回到原处 |
+| 本人“在用”（空闲秒数设为一天）或禁止前台 | — | 0：`user_active`、`foreground_disabled`，回退读取被跳过 |
+
+改后的前台场景事件更多，是因为每一步都把前台交还；改前少，是因为前台被拿走后一直没有还。
 
 ## 进程与数据
 
@@ -181,7 +230,7 @@ python3 native/computer-use-macos/evaluate-tasks.py /tmp/shifu-tasks-new --runs 
 
 输出目录必须尚不存在。评估器使用独立的短路径 computer home，逐轮执行 Finder 改名和 Safari 多窗口任务；一项失败后仍执行另一项。`report.json` 分别记录 `passed/failed/not_run`、失败阶段、原始错误、耗时、证据和清理结果。每轮最多90秒；清理未完成或无法确认时保留未知状态。`owned-windows.json` 记录 Finder 窗口；Safari 在创建前写入 `owned-pages.json`，即使标题未出现或子进程超时，外层仍按登记 URL 清理。`pageCleanup.remaining` 为空只证明这些 URL 已不存在；用户把测试标签导航到别处时，不再追着关闭新页面。
 
-报告标为 `scripted_ui_tasks`：这里测量脚本驱动的界面任务可靠性，未包含模型决策，不能称为 Agent 自主任务成功率。没有持续监测的人工介入和前台打断次数保留为 unknown；单按钮、文字等待等机制用例不计作额外完整任务。
+报告标为 `scripted_ui_tasks`：这里测量脚本驱动的界面任务可靠性，未包含模型决策，不能称为 Agent 自主任务成功率。评估器本身不监测人工介入和前台打断，这两项在其报告中仍为 unknown；打断次数由 `scripts/verify-quiet.py` 单独测得，见[不打断本人](#不打断本人)；单按钮、文字等待等机制用例不计作额外完整任务。
 
 比较两个执行器的共同能力，可运行 `compare-providers.py OUTPUT --fixture ABS --shifu ABS --orca ABS --runs 3`。两边使用同一编译的单窗 Fixture、交替执行顺序，完成相同的读取、计数点击、中文赋值和完整回读；只操作自建 PID，无截图或前台接管。记录完整观察和全部响应的控件树字节数、耗时及原始失败，不把字节数当模型 token，也不把小任务对照推广为复杂应用成功率。
 

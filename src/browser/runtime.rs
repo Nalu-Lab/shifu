@@ -117,6 +117,17 @@ pub(super) fn call(request: &Request) -> Result<Value, String> {
     }
     let caller = std::env::current_dir().map_err(|e| e.to_string())?;
     let args = prepare_args(&request.args, &caller)?;
+    // A visible session is remembered so that its later commands (tab-new, clicks that open windows) are watched too.
+    let visible_marker = workspace.join("visible");
+    if args[0] == "open" {
+        if args.iter().any(|s| s == "--headed") {
+            fs::write(&visible_marker, b"").map_err(|e| e.to_string())?;
+        } else {
+            let _ = fs::remove_file(&visible_marker);
+        }
+    }
+    #[cfg(target_os = "macos")]
+    let mut focus_guard = visible_marker.exists().then(super::focus::Guard::start);
     let mut child = Command::new(&node)
         .arg(&cli)
         .arg(format!("-s={}", request.session))
@@ -147,10 +158,19 @@ pub(super) fn call(request: &Request) -> Result<Value, String> {
     let out = std::thread::spawn(move || capture(stdout));
     let err = std::thread::spawn(move || capture(stderr));
     let deadline = Instant::now() + Duration::from_millis(request.timeout_ms);
+    #[cfg(target_os = "macos")]
+    let mut ticks = 0u32;
     let status = loop {
         match child.try_wait().map_err(|e| e.to_string())? {
             Some(status) => break Some(status),
-            None if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(25)),
+            None if Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(25));
+                #[cfg(target_os = "macos")]
+                {
+                    ticks += 1;
+                    if ticks.is_multiple_of(4) && let Some(guard) = focus_guard.as_mut() { guard.poll(); }
+                }
+            }
             None => {
                 let _ = child.kill();
                 let _ = child.wait();
@@ -158,6 +178,18 @@ pub(super) fn call(request: &Request) -> Result<Value, String> {
             }
         }
     };
+    #[cfg(target_os = "macos")]
+    let focus = focus_guard.as_mut().map(|guard| {
+        // Chrome may activate just after the command returns (a window finishing its launch).
+        for _ in 0..3 {
+            guard.poll();
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        guard.report()
+    });
+    if request.args[0] == "close" {
+        let _ = fs::remove_file(&visible_marker);
+    }
     let stdout = out.join().map_err(|_| "读取浏览器结果失败")??;
     let stderr = err.join().map_err(|_| "读取浏览器错误失败")??;
     let Some(status) = status else {
@@ -182,6 +214,10 @@ pub(super) fn call(request: &Request) -> Result<Value, String> {
     }
     let mut response =
         json!({"ok":ok,"session":request.session,"backend":"playwright-cli","result":raw});
+    #[cfg(target_os = "macos")]
+    if let Some(focus) = focus {
+        response["focus"] = focus;
+    }
     if !ok {
         response["error"] = json!({"code":"browser_error","message":raw["error"].as_str().unwrap_or("浏览器命令未完成；查看 result，先重新观察")});
         response["recovery"] = json!({"automaticRetry":false,"nextStep":"observe"});
@@ -258,23 +294,25 @@ fn prepare_args(args: &[String], caller: &Path) -> Result<Vec<String>, String> {
         }
     }
     if command == "open" {
+        // Quiet by default: no window, so nothing takes the person's focus. --show (or the official --headed)
+        // opens a visible window for a person to log in or watch; --headless is still accepted and changes nothing.
         let headless = args.iter().any(|s| s == "--headless");
         let ephemeral = args.iter().any(|s| s == "--ephemeral");
-        let headed = args.iter().any(|s| s == "--headed");
+        let headed = args.iter().any(|s| s == "--headed" || s == "--show");
         let profile = args
             .iter()
             .any(|s| s == "--persistent" || s == "--profile" || s.starts_with("--profile="));
         if (headless && headed) || (ephemeral && profile) {
-            return Err("--headless 不能与 --headed 同用，--ephemeral 不能与持久化配置同用".into());
+            return Err("--headless 不能与 --show/--headed 同用，--ephemeral 不能与持久化配置同用".into());
         }
-        args.retain(|s| !matches!(s.as_str(), "--headless" | "--ephemeral"));
+        args.retain(|s| !matches!(s.as_str(), "--headless" | "--ephemeral" | "--show" | "--headed"));
         if !args
             .iter()
             .any(|s| s == "--browser" || s.starts_with("--browser="))
         {
             args.push("--browser=chrome".into());
         }
-        if !headless && !headed {
+        if headed {
             args.push("--headed".into());
         }
         if !ephemeral && !profile {
@@ -363,14 +401,23 @@ mod tests {
     }
 
     #[test]
-    fn dedicated_browser_is_visible_and_persistent_with_explicit_background_and_temporary_modes() {
+    fn dedicated_browser_is_windowless_and_persistent_unless_asked_to_show() {
         let args = ["open", "about:blank"].map(String::from);
         let defaults = prepare_args(&args, Path::new("/work")).unwrap();
-        assert!(defaults.contains(&"--headed".into()) && defaults.contains(&"--persistent".into()));
+        assert_eq!(defaults, ["open", "about:blank", "--browser=chrome", "--persistent"]);
+        // Old scripts that still say --headless get the same quiet browser.
+        let args = ["open", "about:blank", "--headless"].map(String::from);
+        assert_eq!(prepare_args(&args, Path::new("/work")).unwrap(), defaults);
         let args = ["open", "about:blank", "--headless", "--ephemeral"].map(String::from);
         let temporary = prepare_args(&args, Path::new("/work")).unwrap();
         assert_eq!(temporary, ["open", "about:blank", "--browser=chrome"]);
-        let args = ["open", "--headless", "--headed"].map(String::from);
-        assert!(prepare_args(&args, Path::new("/work")).is_err());
+        for flag in ["--show", "--headed"] {
+            let args = ["open", "https://dip.example", "--profile", "/p/dip", flag].map(String::from);
+            assert_eq!(prepare_args(&args, Path::new("/work")).unwrap(),
+                ["open", "https://dip.example", "--profile", "/p/dip", "--browser=chrome", "--headed"]);
+        }
+        for args in [["open", "--headless", "--headed"], ["open", "--headless", "--show"]] {
+            assert!(prepare_args(&args.map(String::from), Path::new("/work")).is_err());
+        }
     }
 }

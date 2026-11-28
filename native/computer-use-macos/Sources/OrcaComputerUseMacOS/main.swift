@@ -260,6 +260,27 @@ final class Provider {
                 }
             }
         }
+        // Why: a foreground request borrows the person's desktop; hand back the frontmost app, its focused
+        // window and the pointer afterwards, even when the action fails. Multi-step flows may keep the target
+        // in front with keepForeground (the pointer is still restored).
+        let borrowsForeground = params["restoreWindow"]?.bool == true || params["briefForeground"]?.bool == true
+        guard borrowsForeground else { return try dispatch(method: method, params: params) }
+        let scope = ForegroundRestoreScope.capture()
+        let keep = params["keepForeground"]?.bool == true && params["briefForeground"]?.bool != true
+        let result: Any
+        do {
+            result = try dispatch(method: method, params: params)
+        } catch {
+            _ = scope.restore(keepForeground: keep)
+            throw error
+        }
+        let report = scope.restore(keepForeground: keep)
+        guard var dictionary = result as? [String: Any] else { return result }
+        dictionary["foregroundRestore"] = report
+        return dictionary
+    }
+
+    private func dispatch(method: String, params: [String: JSONValue]) throws -> Any {
         switch method {
         case "handshake":
             return providerHandshake()
@@ -269,23 +290,6 @@ final class Provider {
             return try listWindows(params: params)
         case "getAppState":
             if params["briefForeground"]?.bool == true {
-                let previous = currentForegroundApplication()
-                let previousWindow = previous.flatMap {
-                    copyElement(AXUIElementCreateApplication($0.processIdentifier), kAXFocusedWindowAttribute as String)
-                }
-                defer {
-                    if let previous, !previous.isTerminated {
-                        if let previousWindow {
-                            let current = copyElement(AXUIElementCreateApplication(previous.processIdentifier), kAXFocusedWindowAttribute as String)
-                            if current.map({ CFEqual($0, previousWindow) }) != true {
-                                _ = AXUIElementPerformAction(previousWindow, kAXRaiseAction as CFString)
-                            }
-                        }
-                        if currentForegroundApplication()?.processIdentifier != previous.processIdentifier {
-                            _ = previous.activate(options: [])
-                        }
-                    }
-                }
                 var foregroundParams = params
                 foregroundParams["restoreWindow"] = .bool(true)
                 return try renderSnapshot(observe(params: foregroundParams), includeEnabledElements: params["includeEnabledElements"]?.bool == true)
@@ -685,6 +689,8 @@ final class Provider {
                     "background": BackgroundInputTransport.isAvailable,
                     "backgroundOnly": true,
                     "backgroundOnlyMethods": BackgroundOnlyPolicy.methods,
+                    // Foreground requests hand back the frontmost app, focused window and pointer.
+                    "foregroundRestore": true,
                 ],
             ],
         ]
@@ -1782,6 +1788,62 @@ private func matchingWindow(appElement: AXUIElement, candidate: WindowCandidate)
     }
     guard let index = WindowIdentityMatcher.match(candidates, target: candidate.windowId, frame: candidate.bounds) else { return nil }
     return windows[index]
+}
+
+/// What a foreground request takes from the person, captured before and handed back after it.
+private struct ForegroundRestoreScope {
+    let app: NSRunningApplication?
+    let window: AXUIElement?
+    let pointer: CGPoint?
+
+    static func capture() -> ForegroundRestoreScope {
+        let app = currentForegroundApplication()
+        let window = app.flatMap {
+            copyElement(AXUIElementCreateApplication($0.processIdentifier), kAXFocusedWindowAttribute as String)
+        }
+        return ForegroundRestoreScope(app: app, window: window, pointer: CGEvent(source: nil)?.location)
+    }
+
+    func restore(keepForeground: Bool) -> [String: Any] {
+        var report: [String: Any] = [:]
+        // Foreground clicks, scrolls and drags post at the HID tap, which moves the real pointer.
+        if let pointer, let now = CGEvent(source: nil)?.location,
+           abs(now.x - pointer.x) > 0.5 || abs(now.y - pointer.y) > 0.5 {
+            let warped = CGWarpMouseCursorPosition(pointer) == .success
+            _ = CGAssociateMouseAndMouseCursorPosition(1)
+            report["pointer"] = warped ? "restored" : "failed"
+        } else {
+            report["pointer"] = "unchanged"
+        }
+        guard !keepForeground else {
+            report["app"] = "kept"
+            return report
+        }
+        guard let app, !app.isTerminated else {
+            report["app"] = "unknown"
+            return report
+        }
+        report["appPid"] = Int(app.processIdentifier)
+        if let window {
+            let current = copyElement(AXUIElementCreateApplication(app.processIdentifier), kAXFocusedWindowAttribute as String)
+            if current.map({ CFEqual($0, window) }) != true {
+                _ = AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+                _ = AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
+            }
+        }
+        if currentForegroundApplication()?.processIdentifier == app.processIdentifier {
+            report["app"] = "unchanged"
+            return report
+        }
+        _ = app.activate(options: [])
+        // Activation is asynchronous; report what the person ends up with.
+        for _ in 0..<25 {
+            if currentForegroundApplication()?.processIdentifier == app.processIdentifier { break }
+            usleep(20_000)
+        }
+        report["app"] = currentForegroundApplication()?.processIdentifier == app.processIdentifier ? "restored" : "failed"
+        return report
+    }
 }
 
 private func currentForegroundApplication() -> NSRunningApplication? {
@@ -3129,6 +3191,11 @@ private enum Input {
         } ?? []
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        // nspasteboard.org markers: clipboard managers skip transient, generated content instead of keeping
+        // the agent's text in the person's clipboard history.
+        for marker in ["org.nspasteboard.TransientType", "org.nspasteboard.AutoGeneratedType"] {
+            pasteboard.setData(Data(), forType: NSPasteboard.PasteboardType(marker))
+        }
         let changeCount = pasteboard.changeCount
         defer {
             // Why: posting Cmd+V returns before the receiver reads the pasteboard.

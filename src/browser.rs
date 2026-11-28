@@ -3,12 +3,14 @@ use serde_json::json;
 
 #[cfg(unix)]
 mod runtime;
+#[cfg(target_os = "macos")]
+mod focus;
 
 pub const HELP: &str = r#"shifu browser — 浏览器 DOM、标签页和截图（官方 Playwright CLI）
 
   shifu browser guide [--json]             Agent 使用指南，无需安装运行时
   shifu browser doctor [--json]            检查运行时和 Node，不启动浏览器
-  shifu browser [--session 名字] open [URL] [--headless] [--ephemeral]
+  shifu browser [--session 名字] open [URL] [--show] [--ephemeral]
   shifu browser [--session 名字] snapshot
   shifu browser [--session 名字] click <快照中的引用>
   shifu browser [--session 名字] fill <引用> <文字>
@@ -19,7 +21,8 @@ pub const HELP: &str = r#"shifu browser — 浏览器 DOM、标签页和截图�
   shifu browser [--session 名字] attach --extension=chrome
   shifu browser help <命令>                 官方命令的参数说明
 
-操作返回 JSON。默认打开可见的 Chrome 专用窗口并保留登录状态；--headless 用于后台流程。
+操作返回 JSON。默认在后台运行无窗口的 Chrome 专用浏览器并保留登录状态，不抢前台。
+--show 打开可见窗口，供本人登录或旁观；窗口启动时抢走的前台会马上还给原应用。旧的 --headless 仍可用，效果同默认。
 --session 默认使用 SHIFU_ID，否则为 default；不同会话独立，工作目录变化不影响会话。
 全局参数放在命令前；--timeout-ms 1000..120000 控制等待上限，默认 45000。
 专用浏览器的登录状态默认保存到本机；--ephemeral 使用一次性内存配置，不借用日常 Chrome 配置。
@@ -29,8 +32,10 @@ pub const HELP: &str = r#"shifu browser — 浏览器 DOM、标签页和截图�
 pub const GUIDE: &str = r#"Shifu browser 使用指南
 
 网页优先使用 shifu browser 的 DOM 操作；系统窗口使用 shifu computer guide。
-先运行 doctor；open URL 创建可见的 Shifu 专用 Chrome 窗口并保留专用登录状态，不接管日常浏览器。
-后台流程显式加 --headless；不希望保留登录时加 --ephemeral。--headed 和 --persistent 仍可显式使用。
+先运行 doctor；open URL 默认在后台启动无窗口的 Shifu 专用 Chrome 并保留专用登录状态，不弹窗、不抢前台，不接管日常浏览器。
+本人在用这台 Mac，默认方式不打断本人；截图、快照、点击和输入都在无窗口模式下进行。
+只有本人要亲自登录、输入验证码或旁观时才加 --show（同 --headed）：窗口在后面打开，启动或开标签时抢走的前台会马上还给本人原来的应用；本人自己切过去之后不再抢回。登录完成后 close，再按默认方式 open，同一会话或同一 --profile 的登录状态照旧可用。
+不希望保留登录时加 --ephemeral。旧脚本里的 --headless 仍可用，效果同默认。
 要操作已有标签，必须先由本人通过 Chrome 的调试入口或 Playwright 扩展授权，再 attach --cdp=本机端点 或 attach --extension=chrome。不要为了连接重启日常 Chrome、复制个人配置、导出登录凭据或关闭浏览器保护。
 
 默认按 SHIFU_ID 隔离；外部终端和并行调用显式使用 --session 名字。全局参数放在命令前。

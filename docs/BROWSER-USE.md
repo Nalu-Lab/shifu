@@ -22,11 +22,11 @@ shifu browser guide
 ## 专用浏览器
 
 ```bash
-# 默认打开可见的专用窗口并保存专用登录状态；不改用或关闭日常 Chrome。
+# 默认在后台运行无窗口的专用浏览器并保存专用登录状态；不弹窗、不抢前台，不改用或关闭日常 Chrome。
 shifu browser open https://example.com
-# 后台自动化可显式关闭窗口显示；临时任务可额外加 --ephemeral，不保留登录。
-shifu browser --session background open https://example.com --headless
-shifu browser --session temporary open https://example.com --headless --ephemeral
+# 本人要亲自登录或旁观时才显示窗口；临时任务可加 --ephemeral，不保留登录。
+shifu browser --session login open https://example.com/login --show
+shifu browser --session temporary open https://example.com --ephemeral
 shifu browser --session research open https://example.com
 shifu browser --session research snapshot
 shifu browser --session research click e3
@@ -37,6 +37,14 @@ shifu browser --session research tab-select 0
 shifu browser --session research screenshot
 shifu browser --session research close
 ```
+
+### 不打断本人
+
+本人和 Agent 共用这台 Mac。默认的无窗口模式不出现窗口、不切换前台、不移动鼠标，快照、截图、点击和输入照常可用；旧脚本里的 `--headless` 仍被接受，效果同默认。无窗口会话闲置一小时后由 Playwright 自动关闭，登录状态保存在配置里，下次 `open` 继续可用。
+
+`--show`（同官方的 `--headed`）只在本人要亲自登录、输入验证码或旁观时使用。Chrome 没有“启动时不激活”的选项，启动和开新标签时它会把自己切到前台；Shifu 在这类会话的每条命令执行期间每 0.1 秒查看前台，发现是自动化启动的 Chrome（带 `--remote-debugging-pipe` 的进程，不会是本人日常 Chrome）抢走了前台，就马上还给原来的应用，窗口留在后面。本人在命令执行期间用过键盘或鼠标时不还，以免把本人刚点开的窗口抢走。返回 JSON 的 `focus` 记录还了几次（`foregroundReturned`）、失败几次、是否留给了本人（`leftToPerson`）。本人要看窗口时从程序坞或 Cmd-Tab 切过去。
+
+可见窗口和无窗口共用同一份专用配置。登录流程：`open 登录页 --show`，本人登录，`close`，之后不加 `--show` 再 `open`，登录状态照旧可用；自己指定的 `--profile 目录` 同样适用。少数网站会识别并拒绝无窗口浏览器，此时只能改用 `--show`。
 
 `e3`、`e5` 必须替换为本会话最新快照中的真实引用。页面变化、导航和切换标签之后重新观察。快照可能是内联的节点数组，也可能是 `snapshot.file` 与新增的绝对 `snapshot.path`；后一种需要调用者先读该文件。`tab-list` 保留官方 CLI 的文本结果，位于 JSON 的 `result.result` 中。
 
@@ -77,3 +85,5 @@ python3 scripts/verify-browser.py /tmp/shifu-browser-new --cli /absolute/path/to
 ```
 
 目录必须尚不存在。脚本只启动自己的无头会话和临时 localhost 页面，核对中文输入、点击回读、失效引用、iframe、标签、截图、会话隔离及专用配置重开；结束时逐个关闭自己的会话。原始响应、截图和 `report.json` 保留在指定目录，不操作日常浏览器。这是脚本驱动的本地功能检查，不代表 Agent 在任意网站上的任务成功率。
+
+前台切换、鼠标移动和剪贴板改动次数用 `scripts/verify-quiet.py` 统计，方法和结果见 [Computer Use 的“不打断本人”](COMPUTER-USE.md#不打断本人)。

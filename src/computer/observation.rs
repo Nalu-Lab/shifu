@@ -3,6 +3,7 @@ use serde_json::{Value, json};
 use std::collections::HashSet;
 use std::path::Path;
 use std::time::{Duration, Instant};
+use super::foreground::{self, Gate};
 
 const OPTIONS: &[&str] = &[
     "match", "limit", "role", "within", "ancestors", "waitFor", "waitForGone", "waitForEnabled",
@@ -48,7 +49,12 @@ pub fn validate(method: &str, params: &Value) -> Result<(), String> {
     if params["limit"].as_u64().is_some_and(|n| n == 0 || n > 1200) { return Err("--limit 范围是 1 到 1200".into()); }
     if params["ancestors"] == true && params["match"].is_null() && params["role"].is_null() { return Err("--ancestors 需要和 --match 或 --role 一起用".into()); }
     if params["timeoutMs"].as_u64().is_some_and(|n| n > 30000) { return Err("--timeout-ms 最多 30000 毫秒".into()); }
-    if !params["timeoutMs"].is_null() && !waiting { return Err("--timeout-ms 需要至少一个等待条件".into()); }
+    if !params["timeoutMs"].is_null() && !waiting && foreground::reason(method, params).is_none() {
+        return Err("--timeout-ms 需要至少一个等待条件，或用于需要前台／剪贴板的请求（等本人空闲的上限）".into());
+    }
+    if params["keepForeground"] == true && params["restoreWindow"] != true {
+        return Err("--keep-foreground 只和 --restore-window 一起用".into());
+    }
     if params["foregroundFallback"] == true && (method != "getAppState" || !waiting || params["restoreWindow"] == true) {
         return Err("--foreground-fallback 只用于带等待条件的 get-app-state，且不能和 --restore-window 同用".into());
     }
@@ -145,7 +151,12 @@ fn window_check(inventory: &Value, title: &str, previous_ids: Option<&HashSet<u6
     Ok(json!({"kind":"window", "expected":title, "new":previous_ids.is_some(), "window":found, "met":found.is_some()}))
 }
 
-pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, String>) -> Result<Value, String> {
+#[cfg(test)]
+pub fn execute(request: Value, call: impl FnMut(Value) -> Result<Value, String>) -> Result<Value, String> {
+    execute_gated(request, &foreground::test_gate(foreground::Mode::WhenIdle, vec![f64::MAX]), call)
+}
+
+pub fn execute_gated(mut request: Value, gate: &Gate, mut call: impl FnMut(Value) -> Result<Value, String>) -> Result<Value, String> {
     let params = &request["params"];
     let verification_capabilities = [
         (params["backgroundOnly"] == true && request["method"] != "handshake", "input", "backgroundOnly", "background_only_unsupported", "严格后台模式"),
@@ -153,6 +164,8 @@ pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, 
         (!params["waitForEnabled"].is_null(), "observation", "enabledElements", "feature_unsupported", "控件可用状态核对"),
         (!params["waitForWindow"].is_null(), "windows", "offscreenDiscovery", "feature_unsupported", "窗口核对"),
         (request["method"] == "typeText" && !params["elementIndex"].is_null(), "actions", "typeTextElement", "feature_unsupported", "按控件索引输入文字"),
+        // Without it an older helper would leave the person's desktop with the target app in front.
+        (params["restoreWindow"] == true || params["foregroundFallback"] == true, "input", "foregroundRestore", "feature_unsupported", "前台操作后还原原应用、窗口和鼠标位置"),
     ];
     if verification_capabilities.iter().any(|&(required, ..)| required) {
         // Older helpers ignore unknown parameters. Verify support before sending the target request.
@@ -168,6 +181,15 @@ pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, 
             },"result":{"recovery":{"automaticRetry":false,"actionReported":false,"nextStep":"stop"}}}));
         }
     }
+    // After the helper is known to restore, before anything is sent that could take the foreground.
+    let foreground_budget = request["params"]["timeoutMs"].as_u64().map_or(foreground::DEFAULT_WAIT, Duration::from_millis);
+    let mut gate_details = match foreground::reason(request["method"].as_str().unwrap_or(""), &request["params"]) {
+        None => None,
+        Some(reason) => match foreground::admit(gate, reason, foreground_budget) {
+            Ok(details) => Some(details),
+            Err(refusal) => return Ok(refusal),
+        },
+    };
     let mut options = json!({});
     for &key in OPTIONS {
         if let Some(value) = request["params"].as_object_mut().unwrap().remove(key) { options[key] = value; }
@@ -197,9 +219,17 @@ pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, 
     let timeout = Duration::from_millis(options["timeoutMs"].as_u64().unwrap_or(5000));
     let start = Instant::now();
     let explicit_window = !request["params"]["windowId"].is_null() || !request["params"]["windowIndex"].is_null();
-    let mut response = call(request.clone())?;
+    let response = call(request.clone());
+    if let Some(details) = &mut gate_details {
+        gate.remember(details);
+        details.as_object_mut().unwrap().remove("admittedAt");
+    }
+    let mut response = response?;
+    if let Some(details) = &gate_details
+        && response["result"].is_object() { response["result"]["foregroundGate"] = details.clone(); }
     let action = response["result"]["action"].clone();
     let mut used_foreground = false;
+    let mut fallback_skipped: Option<&str> = None;
     loop {
         if !waiting { break; }
         let retryable = is_read && matches!(response["error"]["code"].as_str(), Some("window_not_found" | "app_not_found"));
@@ -246,7 +276,7 @@ pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, 
                 response["result"] = json!({"observationError":response["error"].clone()});
             }
             if !response["result"].is_object() { response["result"] = json!({}); }
-            response["result"]["postcondition"] = json!({"state":if met {"met"} else {"timeout"},"checks":checks,"foregroundFallbackUsed":used_foreground,"elapsedMs":start.elapsed().as_millis() as u64});
+            response["result"]["postcondition"] = json!({"state":if met {"met"} else {"timeout"},"checks":checks,"foregroundFallbackUsed":used_foreground,"foregroundFallbackSkipped":fallback_skipped,"elapsedMs":start.elapsed().as_millis() as u64});
             if met && target_lost {
                 response["ok"] = json!(true);
                 response.as_object_mut().unwrap().remove("error");
@@ -270,8 +300,15 @@ pub fn execute(mut request: Value, mut call: impl FnMut(Value) -> Result<Value, 
         std::thread::sleep(interval.min(timeout.saturating_sub(start.elapsed())));
         if target_lost { continue; }
         if !used_foreground && options["foregroundFallback"] == true && start.elapsed() >= timeout / 2 {
-            request["params"]["briefForeground"] = json!(true);
-            used_foreground = true;
+            // The person comes first: no waiting here, the next poll asks again until the budget ends.
+            match foreground::admit(gate, "foreground_fallback", Duration::ZERO) {
+                Ok(_) => {
+                    request["params"]["briefForeground"] = json!(true);
+                    used_foreground = true;
+                    fallback_skipped = None;
+                }
+                Err(refusal) => fallback_skipped = Some(if refusal["error"]["code"] == "user_active" { "user_active" } else { "foreground_disabled" }),
+            }
         }
         response = match call(request.clone()) {
             Ok(response) => response,
@@ -575,10 +612,59 @@ mod tests {
         }).unwrap();
         assert_eq!(calls, 1); assert_eq!(r["error"]["code"], "permission_denied");
     }
+    fn restoring_helper() -> Value {
+        json!({"ok":true,"result":{"supports":{"input":{"foregroundRestore":true}}}})
+    }
+    #[test]
+    fn foreground_waits_for_the_person_and_never_sends_while_they_are_active() {
+        use foreground::{Mode, test_gate};
+        for (gate, code) in [(test_gate(Mode::WhenIdle, vec![1.0]), "user_active"), (test_gate(Mode::Never, vec![1000.0]), "foreground_disabled")] {
+            for (method, options) in [("click", json!({"restoreWindow":true,"elementIndex":1,"timeoutMs":0})), ("pasteText", json!({"text":"x","timeoutMs":0}))] {
+                let mut sent = vec![];
+                let r = execute_gated(request(method, options), &gate, |q| {
+                    if q["method"] == "handshake" { return Ok(restoring_helper()); }
+                    sent.push(q["method"].clone()); Ok(snapshot("0 window"))
+                }).unwrap();
+                assert_eq!(r["error"]["code"], code, "{method}");
+                assert!(sent.is_empty(), "{method}: {sent:?}");
+                assert_eq!(r["result"]["recovery"]["automaticRetry"], false);
+            }
+        }
+        let idle = test_gate(Mode::WhenIdle, vec![30.0]);
+        let r = execute_gated(request("click", json!({"restoreWindow":true,"elementIndex":1})), &idle, |q| {
+            if q["method"] == "handshake" { return Ok(restoring_helper()); }
+            Ok(json!({"ok":true,"result":{"action":{"targetWindowId":1}}}))
+        }).unwrap();
+        assert_eq!(r["ok"], true);
+        assert_eq!(r["result"]["foregroundGate"]["idleSeconds"], 30.0);
+        assert!(r["result"]["foregroundGate"]["admittedAt"].is_null());
+    }
+    #[test]
+    fn helpers_that_cannot_restore_the_desktop_get_no_foreground_request() {
+        let mut sent = 0;
+        let r = execute(request("click", json!({"restoreWindow":true,"elementIndex":1})), |q| {
+            if q["method"] == "handshake" { return Ok(json!({"ok":true,"result":{"supports":{"input":{}}}})); }
+            sent += 1; Ok(snapshot("0 window"))
+        }).unwrap();
+        assert_eq!(r["error"]["code"], "feature_unsupported");
+        assert_eq!(sent, 0);
+    }
+    #[test]
+    fn foreground_fallback_is_skipped_while_the_person_works() {
+        let gate = foreground::test_gate(foreground::Mode::WhenIdle, vec![0.5]);
+        let r = execute_gated(request("getAppState", json!({"waitFor":"body","timeoutMs":20,"foregroundFallback":true})), &gate, |q| {
+            if q["method"] == "handshake" { return Ok(restoring_helper()); }
+            assert_ne!(q["params"]["briefForeground"], true);
+            Ok(snapshot("0 window"))
+        }).unwrap();
+        assert_eq!(r["result"]["postcondition"]["foregroundFallbackUsed"], false);
+        assert_eq!(r["result"]["postcondition"]["foregroundFallbackSkipped"], "user_active");
+    }
     #[test]
     fn fallback_is_explicit_once_and_only_reads() {
         let mut calls = 0;
         let r = execute(request("getAppState", json!({"waitFor":"body","timeoutMs":20,"foregroundFallback":true})), |q| {
+            if q["method"] == "handshake" { return Ok(restoring_helper()); }
             calls += 1;
             assert_eq!(q["method"], "getAppState");
             if q["params"]["briefForeground"] == true { Ok(snapshot("2 text body")) }
@@ -608,6 +694,7 @@ mod tests {
         let mut calls = 0;
         let mut foreground = 0;
         let r = execute(request("getAppState", json!({"waitFor":"Ready","timeoutMs":2000,"foregroundFallback":true})), |q| {
+            if q["method"] == "handshake" { return Ok(restoring_helper()); }
             calls += 1;
             if q["params"]["briefForeground"] == true { foreground += 1; }
             // Ready only appears after the single foreground read, so the result does not depend on scheduler timing.

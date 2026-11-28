@@ -375,7 +375,7 @@ fn computer_note() -> Res<String> {
     // `shifu` is spelled out once, at the start of the context (`talk_note`).
     let (command, browser, find) = ("shifu computer guide", "shifu browser guide", "shifu find");
     Ok(format!(
-        "优先用已有 API/CLI；网页先读 {browser}，本机窗口先读 {command}；用户提到“我发的、之前那份、微信里的”文件时先用 {find} 查候选。Shifu 自带后台截图、点击、输入和滚动，不依赖 Orca；普通后台保持鼠标位置，应用仍可能改变焦点或弹窗。--background-only 仅允许读取和文本框赋值，不得去掉限制重试。截图路径须打开查看；不扩大前台接管、发送或交易授权。"
+        "优先用已有 API/CLI；网页先读 {browser}，本机窗口先读 {command}；用户提到“我发的、之前那份、微信里的”文件时先用 {find} 查候选。Shifu 自带后台截图、点击、输入和滚动，不依赖 Orca；前台操作遇 user_active 改走后台，不绕过。--background-only 仅允许读取和文本框赋值，不得去掉限制重试。截图路径须打开查看；不扩大前台接管、发送或交易授权。"
     ))
 }
 
