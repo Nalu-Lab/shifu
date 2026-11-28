@@ -208,6 +208,18 @@ def check_site(build, version, tag):
             fail(f"{rel}: unfilled placeholder in the install section")
 
 
+def check_updater():
+    """The app must read the feed that update-feed.yml writes, and carry the updater's public key."""
+    spec = importlib.util.spec_from_file_location("update_manifest", os.path.join(ROOT, "scripts/release/update-manifest.py"))
+    manifest = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(manifest)
+    updater = json.loads(read("app/src-tauri/tauri.conf.json")).get("plugins", {}).get("updater", {})
+    if updater.get("endpoints") != [manifest.FEED_URL]:
+        fail(f"app/src-tauri/tauri.conf.json: updater endpoints {updater.get('endpoints')}, expected [{manifest.FEED_URL}]")
+    if not updater.get("pubkey"):
+        fail("app/src-tauri/tauri.conf.json: no updater pubkey")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--tag", help="release tag being built (default: RELEASE['tag'] in site/tools/build.py)")
@@ -226,6 +238,7 @@ def main():
     check_permission(build, version)
     check_prompt(build, tag)
     check_site(build, version, tag)
+    check_updater()
     if build.DEMO["version"] != version and not problems:
         print(f"note: the demo video and screenshots are from {build.DEMO['version']}; the note says so (see site/README.md to re-record)")
     if problems:

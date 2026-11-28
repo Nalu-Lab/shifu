@@ -81,6 +81,17 @@ npm run build:desktop -- --debug
 
 </details>
 
+## 升级
+
+0.4.3 之后的版本能在 App 里更新自己。0.4.3 及更早的版本还没有这个功能，要最后手动下载一次：按上面的方式 B 替换 `Shifu.app`。
+
+- 打开 Shifu 后它会悄悄查一次有没有新版（每天最多一次）。有新版时右下角出现一张小卡片，写着版本号和更新说明：点「更新并重启」就下载、核对签名、替换 `Shifu.app` 并重新打开；点「以后」先不更新。也可以随时点菜单 Shifu →「检查更新…」。
+- 重启不打断工作：Agent 对话跑在 tmux 里，Shifu 退出时它们继续运行，重新打开后照常接上。
+- 更新包只取 GitHub Releases 上已发布的预览版，下载后先用 Shifu 的更新密钥核对签名，不符就不安装，原来的 App 不动。App 仍用同一张 Shifu 证书签名，所以 macOS 里给过的权限保留。`Shifu.app` 要放在你有写权限的地方（如 `~/Applications`）；在 `/Applications` 时 macOS 会要管理员密码；直接从「下载」或解压目录里打开时，macOS 可能在只读的临时位置运行它，先把它移到 `~/Applications` 再更新。
+- 一起更新的：App 自带的命令行（`Shifu.app/Contents/Resources/bin/shifu`，状态、通知和项目经理用它）；装过电脑操作组件（`~/Applications/Shifu Computer Use.app`）的，新版 Shifu 第一次打开时用 App 里同版本的组件替换它，上一份备份在 `~/.shifu/computer/backups/`，辅助功能和屏幕录制权限保留。签名不同的组件（自己从源码编的）不会被替换。
+- 不会自动更新的：另装在 `~/.cargo/bin/shifu` 的命令行。在终端里用它的话，从同版本下载包里重新装一次（方式 B 第 2 步）。
+- 不想让它自己查：在 `~/.shifu/app/settings.json` 里加上 `"update_check": false`；菜单里的「检查更新…」照常可用。
+
 ## 快捷键
 
 | 键 | 作用 |

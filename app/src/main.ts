@@ -6,6 +6,7 @@ import "@xterm/xterm/css/xterm.css";
 import "dockview/dist/styles/dockview.css";
 import "./style.css";
 import { showAppearancePopover } from "./appearance";
+import { checkForUpdates, startUpdateChecks } from "./update";
 import { applyStoredTheme } from "./theme";
 import { ProgressPage } from "./progress";
 import { progressReader } from "./progressrefresh";
@@ -393,6 +394,7 @@ async function main() {
   }
   void pmDir().then((dir) => sidebar.setRoleDir("pm", dir)).catch(reportError);
   void cliMismatch().then((why) => why && sidebar.setNotice(why)).catch(reportError);
+  startUpdateChecks((why) => sidebar.setNotice(why));
   // Preview mocks answer unknown commands with null; the 每日分析 row then stays hidden.
   void dailyDir().then((dir) => dir && sidebar.setRoleDir("daily", dir)).catch(reportError);
   const body = document.createElement("div");
@@ -616,6 +618,7 @@ async function main() {
       sidebar.focusSearch();
     }
     else if (payload === "appearance") showAppearancePopover(sidebar.newButton);
+    else if (payload === "check-update") checkForUpdates();
     else if (payload === "setup-check") {
       void refreshClis().catch(reportError);
       showSetupChecklist();

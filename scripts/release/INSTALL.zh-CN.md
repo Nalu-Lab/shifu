@@ -2,6 +2,8 @@
 
 这是 App、CLI 和可选电脑操作辅助程序的配套版本。不要覆盖正在运行的 App；安装前退出 Shifu 并保留旧 App/CLI 备份，现有会话和设置目录无需删除。
 
+以后升级：这一版起 Shifu 能在 App 里更新自己（菜单 Shifu →「检查更新…」，打开后每天也会悄悄查一次），App 自带的 CLI 和已装的电脑操作组件随之更新；只有另装在 `~/.cargo/bin` 的 CLI 要从新包里重装。
+
 1. 在下载目录运行 `shasum -a 256 -c SHA256SUMS`，解压后在本目录再次运行同一命令。
 2. 通过 Finder 将 `Shifu.app` 放到 `~/Applications`，首次安装需创建该目录。
 3. 可选：要在终端里直接用 `shifu` 命令时，在本目录安装匹配 CLI。App 自带同版命令行（`Shifu.app/Contents/Resources/bin/shifu`），对话状态、提醒和项目经理不需要这一步：

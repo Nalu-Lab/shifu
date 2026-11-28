@@ -30,6 +30,7 @@ mod session;
 mod statusline;
 mod tasks;
 mod taskgoals;
+mod update;
 
 use agents::{AgentView, Branches, PendingQuestions};
 use config::Config;
@@ -687,6 +688,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let item = |id: &str, text: &str, accel: &str| MenuItemBuilder::with_id(id, text).accelerator(accel).build(app);
     let app_menu = SubmenuBuilder::new(app, "Shifu")
         .about(None)
+        .item(&MenuItemBuilder::with_id("check-update", tr("检查更新…", "Check for Updates…")).build(app)?)
         .separator()
         .item(&item("appearance", tr("外观…", "Appearance…"), "CmdOrCtrl+,")?)
         .item(&MenuItemBuilder::with_id("setup-check", tr("准备情况…", "Setup Checklist…")).build(app)?)
@@ -742,6 +744,7 @@ fn main() {
         } else { std::process::exit(2); }
         return;
     }
+    update::remember_launch_env();
     let cfg = config::init();
     // Before anything writes into the home: an existing user's home keeps starting agents as before (`bypass`),
     // a fresh one is marked so the window asks before its first agent (`shifu::launch::settle_permissions_in`).
@@ -749,8 +752,12 @@ fn main() {
     std::fs::create_dir_all(&cfg.home).unwrap_or_else(|e| panic!("cannot create {}: {e}", cfg.home.display()));
     // Read before the window can start an agent: one new session and the tmux server no longer looks gone.
     let power = power::Power::new(&cfg.home);
+    let mut context = tauri::generate_context!();
+    update::configure(&mut context);
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update::Pending::default())
         .manage(cfg)
         .manage(Ptys::default())
         .manage(Branches::default())
@@ -886,9 +893,12 @@ fn main() {
             clipboard_write,
             term_shift_enter,
             term_leave_scroll,
-            fullscreen::fullscreen_inset
+            fullscreen::fullscreen_inset,
+            update::update_check,
+            update::update_install,
+            update::computer_helper_sync
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building Shifu")
         .run(|app, event| {
             if matches!(event, tauri::RunEvent::Exit)

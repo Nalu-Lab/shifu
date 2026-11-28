@@ -2,6 +2,8 @@
 
 The app, CLI and optional Computer Use helper are a matching set. Quit Shifu before replacing it and back up the old app and CLI. Keep existing session and settings directories.
 
+Later upgrades: from this version on Shifu updates itself (Shifu → Check for Updates…, plus a quiet check once a day after opening); the CLI inside the app and an installed Computer Use helper come along. Only a CLI installed separately in `~/.cargo/bin` needs reinstalling from the new package.
+
 1. Run `shasum -a 256 -c SHA256SUMS` next to the downloaded archive; unzip and run it again inside this directory.
 2. Use Finder to copy `Shifu.app` into `~/Applications`; create that folder for a first installation.
 3. Optional: to use the `shifu` command in your own terminal, install the matching CLI from this directory. The app carries the same CLI inside (`Shifu.app/Contents/Resources/bin/shifu`), so conversation status, notifications and the project manager (项目经理) work without this step:

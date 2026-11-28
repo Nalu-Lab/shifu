@@ -81,6 +81,17 @@ npm run build:desktop -- --debug
 
 </details>
 
+## Upgrading
+
+Versions after 0.4.3 update themselves from inside the app. 0.4.3 and earlier do not have this yet and need one last manual download: replace `Shifu.app` as in Option B above.
+
+- After opening, Shifu quietly checks for a new version (at most once a day). When there is one, a small card in the bottom-right corner shows the version and release notes: Update and Restart downloads it, checks its signature, replaces `Shifu.app` and opens it again; Later leaves it for now. You can also check any time with Shifu → Check for Updates….
+- Restarting does not interrupt work: agent conversations run in tmux, keep running while Shifu restarts, and reconnect when it opens again.
+- Updates come only from published preview releases on GitHub Releases. The download is checked against Shifu's update key before anything is replaced; if it does not match, nothing is installed and the current app stays. The app is still signed with the same Shifu certificate, so permissions granted in macOS are kept. Keep `Shifu.app` somewhere you can write to, such as `~/Applications`; in `/Applications` macOS asks for an administrator password. Opened straight from Downloads or the extracted folder, macOS may run it from a read-only temporary location: move it to `~/Applications` first.
+- Updated along with the app: its own CLI (`Shifu.app/Contents/Resources/bin/shifu`, used for status, notifications and the project manager), and, if you installed it, the Computer Use helper (`~/Applications/Shifu Computer Use.app`): the first time the new Shifu opens, it replaces the helper with the copy of the same version inside the app, keeps the previous one in `~/.shifu/computer/backups/`, and Accessibility and Screen Recording stay granted. A helper with a different signature (one you built from source) is left alone.
+- Not updated automatically: a CLI installed separately at `~/.cargo/bin/shifu`. If you use it in a terminal, install it again from the same version's package (Option B, step 2).
+- To stop the automatic check, add `"update_check": false` to `~/.shifu/app/settings.json`; Check for Updates… in the menu still works.
+
 ## Shortcuts
 
 | Key | Does |
