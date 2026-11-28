@@ -127,6 +127,10 @@ npm run build:desktop -- --debug
 
 </details>
 
+### Upgrading
+
+Versions after 0.4.3 update themselves: Shifu → Check for Updates…, plus a quiet check once a day after opening; Update and Restart does the rest while agent conversations keep running in tmux. The CLI inside the app and an installed Computer Use helper come along. 0.4.3 and earlier need one last manual download (Option B above). See [Upgrading in the install guide](docs/INSTALL.en.md#upgrading).
+
 ## Shortcuts
 
 | Key | Does |

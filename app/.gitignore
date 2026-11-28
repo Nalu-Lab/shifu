@@ -6,3 +6,5 @@ src-tauri/remote-bundle/*
 !src-tauri/remote-bundle/README.md
 src-tauri/cli-bundle/*
 !src-tauri/cli-bundle/README.md
+src-tauri/helpers-bundle/*
+!src-tauri/helpers-bundle/README.md

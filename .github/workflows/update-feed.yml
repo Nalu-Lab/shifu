@@ -1,0 +1,60 @@
+name: update-feed
+
+# The app checks one fixed URL for updates (tauri.conf.json plugins.updater.endpoints):
+#   https://github.com/Nalu-Lab/shifu/releases/download/update-feed-preview/latest.json
+# Releases are drafts until someone publishes them, and drafts cannot be downloaded, so the feed only moves when a
+# release is published: this copies that release's latest.json (from release.yml) onto the fixed
+# `update-feed-preview` pre-release, with the release's own notes and date. Run it by hand to re-point the feed,
+# e.g. back to an earlier release (with force) if a release has to be withdrawn.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Published release whose update the app should offer, e.g. remote-v0.4.4-preview.1'
+        required: true
+      force:
+        description: 'Also when the feed already offers a newer version'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-feed
+  cancel-in-progress: false
+
+jobs:
+  feed:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag || github.event.release.tag_name }}
+      FEED: update-feed-preview
+    steps:
+      - uses: actions/checkout@v4
+      - name: Put the release's update on the feed
+        run: |
+          case "$TAG" in remote-v*) ;; *) echo "$TAG is not a Shifu release; feed unchanged."; exit 0;; esac
+          work=$(mktemp -d)
+          gh release view "$TAG" --json body,publishedAt,assets,isDraft > "$work/release.json"
+          if ! gh release download "$TAG" -p latest.json -D "$work/release"; then
+            echo "$TAG has no latest.json (built without the updater key); feed unchanged."
+            exit 0
+          fi
+          if ! gh release view "$FEED" >/dev/null 2>&1; then
+            gh release create "$FEED" --prerelease --target "$GITHUB_SHA" --title "Update feed (preview channel)" \
+              --notes "Not a download. Shifu's in-app updater reads latest.json here; it names the newest published preview. Maintained by .github/workflows/update-feed.yml."
+          fi
+          gh release download "$FEED" -p latest.json -D "$work/feed" || true
+          force=()
+          [ "${{ inputs.force }}" = true ] && force=(--force)
+          status=0
+          python3 scripts/release/update-manifest.py feed --tag "$TAG" --manifest "$work/release/latest.json" \
+            --release "$work/release.json" --current "$work/feed/latest.json" "${force[@]}" --out "$work/latest.json" || status=$?
+          [ "$status" = 3 ] && exit 0
+          [ "$status" = 0 ] || exit "$status"
+          gh release upload "$FEED" "$work/latest.json" --clobber
+          gh release download "$FEED" -p latest.json -O - | python3 -c 'import json,sys; m=json.load(sys.stdin); print("feed now offers", m["version"], m["platforms"]["darwin-aarch64"]["url"])'

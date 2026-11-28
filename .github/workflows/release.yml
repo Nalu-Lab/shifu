@@ -46,7 +46,17 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kp" "$kc" >/dev/null
           security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
           echo "SHIFU_RELEASE_IDENTITY=Shifu Release Signing" >> "$GITHUB_ENV"
-      - run: bash scripts/release/package.sh "$GITHUB_REF_NAME"
+      # Versions, download links, install steps and the site must agree with this tag (scripts/release/check-docs.py).
+      - run: python3 scripts/release/check-docs.py --tag "$GITHUB_REF_NAME"
+      - name: Build the package
+        env:
+          # The in-app updater's key (tauri.conf.json plugins.updater.pubkey is its public half). Without it the
+          # package is built as before, with no in-app update package: users of earlier versions are not offered it.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] || echo '::warning::No TAURI_SIGNING_PRIVATE_KEY secret: this release has no in-app update package.'
+          bash scripts/release/package.sh "$GITHUB_REF_NAME"
       - name: Check the package
         run: |
           cd target/release-package.noindex
@@ -63,12 +73,27 @@ jobs:
           file bin/shifu | grep -q arm64
           bin/shifu --help >/dev/null
           test -f bin/web/cli.mjs && test -f bin/web/node_modules/playwright-core/package.json
+          test -x "Shifu.app/Contents/Resources/helpers/Shifu Computer Use.app/Contents/MacOS/shifu-computer-use-macos"
+      - name: Check the in-app update package
+        run: |
+          cd target/release-package.noindex
+          ls Shifu-remote-v*-apple-silicon.app.tar.gz >/dev/null 2>&1 || { echo 'No in-app update package (no updater key).'; exit 0; }
+          tarball=$(ls Shifu-remote-v*-apple-silicon.app.tar.gz)
+          rm -rf updater-check && mkdir updater-check && tar -xzf "$tarball" -C updater-check
+          codesign --verify --deep --strict updater-check/Shifu.app
+          # The updater package is the same app as the zip's.
+          diff -r updater-check/Shifu.app check/Shifu-remote-v*-apple-silicon/Shifu.app
+          python3 ../../scripts/release/update-manifest.py check --tag "$GITHUB_REF_NAME" --manifest latest.json --package "$tarball"
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(sed -E 's/^remote-v([0-9.]+).*/\1/' <<<"$GITHUB_REF_NAME")
+          out=target/release-package.noindex
+          # The in-app update package and latest.json go up with the zip; update-feed.yml offers them to the app
+          # once this draft is published.
+          updater=$(ls "$out"/Shifu-remote-v*-apple-silicon.app.tar.gz "$out"/Shifu-remote-v*-apple-silicon.app.tar.gz.sig "$out"/latest.json 2>/dev/null || true)
           gh release create "$GITHUB_REF_NAME" --draft --prerelease \
             --title "Shifu $version Preview" \
-            --notes "Built in GitHub Actions from $GITHUB_SHA (run $GITHUB_RUN_ID). Edit these notes, then publish. See docs/UPDATES.md for what changed." \
-            target/release-package.noindex/Shifu-remote-v*-apple-silicon.zip target/release-package.noindex/SHA256SUMS
+            --notes "Built in GitHub Actions from $GITHUB_SHA (run $GITHUB_RUN_ID). Edit these notes, then publish: Chinese, a line with ---, then English; the app's update card shows the half in the menu language. See docs/UPDATES.md for what changed." \
+            "$out"/Shifu-remote-v*-apple-silicon.zip "$out"/SHA256SUMS $updater

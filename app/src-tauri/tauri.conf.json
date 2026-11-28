@@ -58,7 +58,17 @@
     "resources": {
       "remote-bundle/": "remote/",
       "cli-bundle/": "bin/",
+      "helpers-bundle/": "helpers/",
       "../../docs/third-party/Steamcup-LICENSE": "licenses/Steamcup-LICENSE"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDBBNzQ0QzM2QkFGNjZFQ0QKUldUTmJ2YTZOa3gwQ3A3azg4bU42d1NJclFHMVZvUWtza3lTVkRveEp2TjRQSkY1OEFkT2JBQkkK",
+      "endpoints": [
+        "https://github.com/Nalu-Lab/shifu/releases/download/update-feed-preview/latest.json"
+      ],
+      "requireSignedVersion": true
     }
   }
 }
