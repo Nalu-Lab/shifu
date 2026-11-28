@@ -28,6 +28,12 @@ pub struct Found {
     /// Whether its sign-in was found: only for agents whose credentials sit in a known file (`signed_in`), only
     /// once it is installed, and filled in by the app's report (`None` from `detect`, which is called often).
     pub signed_in: Option<bool>,
+    /// `built-in` (status hooks), `plain` (a table row without hooks) or `agents.json` (the user's own).
+    pub source: String,
+    /// How it reports status (`agents_spec::Hooks::name`); `none` for plain agents.
+    pub hooks: String,
+    /// Offered only when found: a missing one is not named under 未安装 (extra plain rows, the user's own).
+    pub extra: bool,
 }
 
 /// The common install folders a login shell may not list (or there is no login shell answer yet). Missing folders
@@ -157,10 +163,15 @@ pub fn shifu_usable(bin: &str) -> bool {
     !bin.is_empty() && find_program(&path, &[bin]).is_some()
 }
 
-/// Every agent in `agents_spec::AGENTS` with where it was found in `path`. StepFun counts as installed when node is
-/// there and Shifu's Pi runtime is set up; Qwen honours `SHIFU_QWEN_BIN` as `shifu qwen` does.
+/// Every agent in `agents_spec::AGENTS`, then the user's own from `<SHIFU_HOME>/agents.json`, with where each was
+/// found in `path`. StepFun counts as installed when node is there and Shifu's Pi runtime is set up; Qwen honours
+/// `SHIFU_QWEN_BIN` as `shifu qwen` does.
 pub fn detect(path: &str) -> Vec<Found> {
-    crate::agents_spec::AGENTS
+    detect_with(path, &crate::user_agents::load().0)
+}
+
+pub fn detect_with(path: &str, users: &[crate::user_agents::UserAgent]) -> Vec<Found> {
+    let mut found: Vec<Found> = crate::agents_spec::AGENTS
         .iter()
         .map(|spec| {
             let found = match spec.id {
@@ -180,9 +191,32 @@ pub fn detect(path: &str) -> Vec<Found> {
                 install_command: spec.install_command.map(Into::into),
                 login_command: spec.login_command.map(Into::into),
                 signed_in: None,
+                source: crate::agents_spec::source(spec).into(),
+                hooks: spec.hooks.name().into(),
+                extra: spec.extra,
             }
         })
-        .collect()
+        .collect();
+    found.extend(users.iter().map(|user| {
+        let program = if user.command.starts_with('/') {
+            Some(PathBuf::from(&user.command)).filter(|p| is_executable(p))
+        } else {
+            find_program(path, &[user.command.as_str()])
+        };
+        Found {
+            kind: user.id.clone(),
+            name: user.label.clone(),
+            path: program.map(|p| p.to_string_lossy().into_owned()),
+            install_url: user.install_url.clone().unwrap_or_default(),
+            install_command: None,
+            login_command: None,
+            signed_in: None,
+            source: "agents.json".into(),
+            hooks: crate::agents_spec::Hooks::None.name().into(),
+            extra: true,
+        }
+    }));
+    found
 }
 
 /// Whether `kind` looks signed in, from a file or variable its CLI itself keeps: nothing is run and no secret is
@@ -208,6 +242,89 @@ pub fn signed_in(kind: &str, user_home: &Path, var: impl Fn(&str) -> Option<Stri
         "gemini" => Some(set("GEMINI_API_KEY") || user_home.join(".gemini/oauth_creds.json").is_file()),
         _ => None,
     }
+}
+
+pub const AGENTS_USAGE: &str = "用法: shifu agents [--json]
+  列出 Shifu 认识的每个 Agent：在哪里找到（或 not installed）、是否已登录（yes / no / unknown）、
+  状态怎么回报（hook 类型，或 none = 只看窗格是否在运行）、来源（built-in / plain / agents.json）。
+  和桌面应用一样找：登录 shell 的 PATH、当前 PATH、常见安装目录（nvm、volta、bun…）；只看文件，不运行它们。
+  自己的 Agent 写在 <SHIFU_HOME>/agents.json（桌面应用的是 ~/.shifu/app/agents.json）：
+    [{\"id\":\"mybot\",\"label\":\"My Bot\",\"command\":\"mybot\",\"args\":[\"--foo\"],\"install_url\":\"https://…\"}]
+  写错的条目会被跳过，并在这里列出原因。";
+
+/// The PATH `shifu agents` looks in, as the app builds it: the login shell's (asked now; last saved answer if it
+/// does not reply), the inherited one, then the usual install folders.
+fn cli_path() -> String {
+    let var = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
+    let user_home = var("HOME").unwrap_or_default();
+    let shell = var("SHELL").unwrap_or_else(|| "/bin/zsh".into());
+    let fresh = login_shell_path(&shell, Duration::from_secs(10))
+        .or_else(|| std::fs::read_to_string(crate::agent::shifu_home().join("shell-path")).ok().map(|s| s.trim().to_string()));
+    merge_paths(&[fresh.as_deref().unwrap_or(""), &var("PATH").unwrap_or_default(), &fallback_dirs(&user_home).join(":")])
+}
+
+/// `shifu agents [--json]`.
+pub fn cmd_agents(args: &[String]) -> Result<(), String> {
+    let json = match args.first().map(String::as_str) {
+        None => false,
+        Some("--json") if args.len() == 1 => true,
+        Some("-h" | "--help") => {
+            println!("{AGENTS_USAGE}");
+            return Ok(());
+        }
+        Some(other) => return Err(format!("shifu agents 不认识 {other:?}。{AGENTS_USAGE}")),
+    };
+    let file = crate::user_agents::path_in(&crate::agent::shifu_home());
+    let (users, warnings) = crate::user_agents::load_from(&file);
+    let user_home = PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
+    let mut agents = detect_with(&cli_path(), &users);
+    for agent in agents.iter_mut().filter(|a| a.path.is_some()) {
+        agent.signed_in = signed_in(&agent.kind, &user_home, |key| std::env::var(key).ok());
+    }
+    if json {
+        let out = serde_json::json!({ "agents": agents, "agents_json": file, "warnings": warnings });
+        println!("{}", serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?);
+        return Ok(());
+    }
+    print!("{}", agents_table(&agents));
+    let shown = if file.is_file() { format!("{}（{} 个）", file.display(), users.len()) } else { format!("{}（没有这个文件）", file.display()) };
+    println!("\n自己的 Agent：{shown}");
+    for warning in &warnings {
+        eprintln!("shifu: {warning}");
+    }
+    Ok(())
+}
+
+/// One line per agent: label, path or `not installed`, signed in, status reporting, source.
+pub fn agents_table(agents: &[Found]) -> String {
+    let rows: Vec<[String; 5]> = agents
+        .iter()
+        .map(|a| {
+            let signed = match a.signed_in {
+                Some(true) => "yes",
+                Some(false) => "no",
+                None => "unknown",
+            };
+            [
+                a.name.clone(),
+                a.path.clone().unwrap_or_else(|| "not installed".into()),
+                format!("signed in: {signed}"),
+                format!("status: {}", a.hooks),
+                a.source.clone(),
+            ]
+        })
+        .collect();
+    let width = |i: usize| rows.iter().map(|r| r[i].chars().count()).max().unwrap_or(0);
+    let widths = [width(0), width(1), width(2), width(3)];
+    let mut out = String::new();
+    for r in &rows {
+        for (i, w) in widths.iter().enumerate() {
+            out.push_str(&format!("{:<w$}  ", r[i], w = w));
+        }
+        out.push_str(&r[4]);
+        out.push('\n');
+    }
+    out
 }
 
 /// The PATH sessions the app starts are given; `None` until the app sets it (then tmux's own environment is used).
@@ -319,7 +436,7 @@ mod tests {
         }
         let path = format!("{}:{}", first.display(), second.display());
         assert_eq!(find_program(&path, &["codex"]), Some(second.join("codex")));
-        let found = detect(&path);
+        let found = detect_with(&path, &[]);
         let path_of = |kind: &str| found.iter().find(|f| f.kind == kind).unwrap().path.clone();
         assert_eq!(path_of("claude"), Some(second.join("claude").to_string_lossy().into_owned()));
         assert_eq!(path_of("antigravity"), Some(second.join("agy").to_string_lossy().into_owned()));
@@ -328,7 +445,59 @@ mod tests {
         assert_eq!(path_of("pi"), Some(second.join("pi").to_string_lossy().into_owned()));
         assert_eq!(path_of("kimi"), None);
         let order: Vec<&str> = found.iter().map(|f| f.kind.as_str()).collect();
-        assert_eq!(order, ["claude", "codex", "codebuddy", "kimi", "antigravity", "stepfun", "qwen", "opencode", "pi", "gemini"]);
+        assert_eq!(order, [
+            "claude", "codex", "codebuddy", "kimi", "antigravity", "stepfun", "qwen", "opencode", "pi", "gemini",
+            "aider", "goose", "amp", "cursor-agent", "droid", "copilot", "crush",
+        ]);
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn the_agents_table_has_one_aligned_line_per_agent() {
+        let mut found = detect_with("/nonexistent-shifu-path", &[]);
+        found[0].path = Some("/bin/claude".into());
+        found[0].signed_in = Some(true);
+        let table = agents_table(&found[..2]);
+        let lines: Vec<&str> = table.lines().collect();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].starts_with("Claude  /bin/claude    signed in: yes      status: claude-settings  built-in"), "{table}");
+        assert!(lines[1].starts_with("Codex   not installed  signed in: unknown  status: codex"), "{table}");
+    }
+
+    #[test]
+    fn extra_and_user_agents_are_found_the_same_way_and_marked_extra() {
+        use crate::user_agents::UserAgent;
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("shifu-clis-extra-{}", std::process::id()));
+        let bin = root.join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        for name in ["aider", "mybot", "elsewhere"] {
+            let p = bin.join(name);
+            std::fs::write(&p, "#!/bin/sh\n").unwrap();
+            std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        let user = |id: &str, command: String| UserAgent { id: id.into(), label: id.to_uppercase(), command, args: vec![], install_url: None };
+        let users = [
+            user("mybot", "mybot".into()),
+            user("byPath", bin.join("elsewhere").to_string_lossy().into_owned()),
+            user("gone", "not-installed-here".into()),
+            user("gone2", "/no/such/program".into()),
+        ];
+        let found = detect_with(&bin.to_string_lossy(), &users);
+        let get = |kind: &str| found.iter().find(|f| f.kind == kind).unwrap();
+        assert_eq!(get("aider").path, Some(bin.join("aider").to_string_lossy().into_owned()));
+        assert_eq!((get("aider").source.as_str(), get("aider").hooks.as_str(), get("aider").extra), ("plain", "none", true));
+        assert_eq!((get("gemini").source.as_str(), get("gemini").extra), ("plain", false));
+        assert_eq!((get("claude").source.as_str(), get("claude").hooks.as_str(), get("claude").extra), ("built-in", "claude-settings", false));
+        assert_eq!(get("droid").path, None);
+        let mybot = get("mybot");
+        assert_eq!((mybot.name.as_str(), mybot.source.as_str(), mybot.extra), ("MYBOT", "agents.json", true));
+        assert_eq!(mybot.path, Some(bin.join("mybot").to_string_lossy().into_owned()));
+        assert_eq!(get("byPath").path, Some(bin.join("elsewhere").to_string_lossy().into_owned()));
+        assert_eq!((get("gone").path.clone(), get("gone2").path.clone()), (None, None));
+        // The user's own come after the table, in file order.
+        let tail: Vec<&str> = found.iter().rev().take(4).rev().map(|f| f.kind.as_str()).collect();
+        assert_eq!(tail, ["mybot", "byPath", "gone", "gone2"]);
         std::fs::remove_dir_all(&root).unwrap();
     }
 

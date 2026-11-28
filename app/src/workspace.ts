@@ -14,7 +14,7 @@ import { AgentTab, FileTab } from "./tab";
 import { getClis, onClisChange, splitAgents } from "./models";
 import { missingLine } from "./newpopover";
 import { setupNotes } from "./setupcheck";
-import { vendorIcon } from "./vendoricons";
+import { markFor, vendorIcon } from "./vendoricons";
 import { TerminalPanel } from "./terminal";
 import { FILE_PREFIX, FilePanel, isFilePanel, setFileOpener } from "./preview";
 import { findAgent, getCurrentTask, getTasks, reportError, subscribe } from "./store";
@@ -128,7 +128,7 @@ class EmptyState implements IWatermarkRenderer {
     buttons.append(
       ...splitAgents(getClis()).installed.map((a) => {
         const b = this.button(a.name, () => this.hooks.addAgent(a.kind));
-        b.prepend(vendorIcon(a.kind, "agent-mark"));
+        b.prepend(vendorIcon(markFor(a.kind), "agent-mark"));
         return b;
       }),
     );

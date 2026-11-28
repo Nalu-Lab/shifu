@@ -9,6 +9,7 @@ const USAGE: &str = "shifu — 多 agent 终端工作台
                                开一个 agent：claude、codex 或任意命令名
                                --focus 建好后切到它
   shifu ls                     列出所有 agent
+  shifu agents [--json]        这台 Mac 上找到哪些 Agent CLI、是否登录、怎么回报状态（含 agents.json 里自己加的）
   shifu jump                   跳到最急的在等你的 agent（先批准，再提问，再做完的）
   shifu status [--json]        Shifu 应用里每个对话在干什么、等了多久、在等什么、最后一句
   shifu tell <对话> [--from 谁] <话>
@@ -67,6 +68,7 @@ fn subcommand_usage(cmd: &str) -> Option<&'static str> {
         "ask" => "用法: shifu ask <对话> [--wait 秒] <问题>",
         "reply" => "用法: shifu reply <提问编号> <答复>",
         "read" => "用法: shifu read <对话> [行数]",
+        "agents" => shifu::clis::AGENTS_USAGE,
         _ => return None,
     })
 }
@@ -84,6 +86,10 @@ fn dispatch(args: &[String]) -> Result<(), String> {
         None => commands::cmd_open(),
         Some("new") => commands::cmd_new(&args[1..]),
         Some("ls") => commands::cmd_ls(),
+        Some("agents") => {
+            bridge::default_to_app();
+            shifu::clis::cmd_agents(&args[1..])
+        }
         Some("jump") => commands::cmd_jump(),
         Some("computer") => computer::run(&args[1..]),
         Some("browser") => shifu::browser::run(&args[1..]),
@@ -146,7 +152,7 @@ mod tests {
 
     #[test]
     fn help_flag_is_usage_for_commands_that_create_or_send() {
-        for cmd in ["new", "tell", "resume", "inbox", "act", "status", "ask", "reply", "read"] {
+        for cmd in ["new", "tell", "resume", "inbox", "act", "status", "ask", "reply", "read", "agents"] {
             assert!(subcommand_usage(cmd).is_some(), "{cmd}");
             assert!(wants_help(&s(&[cmd, "--help"])));
             assert!(wants_help(&s(&[cmd, "-h"])));
@@ -157,7 +163,7 @@ mod tests {
 
     #[test]
     fn help_dispatch_does_not_touch_sessions() {
-        for cmd in ["new", "tell", "resume", "inbox", "act", "status", "ask", "reply", "read"] {
+        for cmd in ["new", "tell", "resume", "inbox", "act", "status", "ask", "reply", "read", "agents"] {
             assert_eq!(dispatch(&s(&[cmd, "--help"])), Ok(()), "{cmd}");
         }
     }

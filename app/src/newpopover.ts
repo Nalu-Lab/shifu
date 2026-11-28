@@ -17,7 +17,7 @@ import {
   specOf,
   splitAgents,
 } from "./models";
-import { vendorIcon } from "./vendoricons";
+import { markFor, vendorIcon } from "./vendoricons";
 import { PERMISSION_OPTIONS, hintOf } from "./permissions";
 
 /** The agent a new task starts with: the one last picked here or in the first-run guide, kept across restarts. */
@@ -63,7 +63,7 @@ function label(text: string): HTMLElement {
 function agentLabel(spec: AgentSpec): Element[] {
   const name = document.createElement("span");
   name.textContent = spec.name;
-  return [vendorIcon(spec.kind, "agent-mark"), name];
+  return [vendorIcon(markFor(spec.kind), "agent-mark"), name];
 }
 
 /** A native select (one arrow drawn by CSS); the first option, "", is the CLI's own default. */

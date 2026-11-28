@@ -92,10 +92,22 @@ const LOGIN_WORDS: &[&str] = &[
 ];
 
 pub fn classify(agent: &Agent, status: Option<i32>, screen: &str) -> LaunchFailure {
+    let users = if spec_of(agent).is_none() { crate::user_agents::load().0 } else { Vec::new() };
+    classify_with(agent, status, screen, &users)
+}
+
+/// `classify`, with the agents from agents.json given: one of those is named by its label, its own program is
+/// the one not found, and its `install_url` (if any) is offered.
+pub fn classify_with(agent: &Agent, status: Option<i32>, screen: &str, users: &[crate::user_agents::UserAgent]) -> LaunchFailure {
     let spec = spec_of(agent);
-    let program = agent.command.as_str();
-    let label = spec.map_or(program, |s| s.label);
-    let install_url = spec.map(|s| s.install_url.to_string());
+    let user = users.iter().find(|u| spec.is_none() && agent.kind == Kind::Other && u.id == agent.command);
+    let program = match (spec, user) {
+        (Some(s), _) if s.kind == Kind::Other => s.commands[0],
+        (_, Some(u)) => u.command.as_str(),
+        _ => agent.command.as_str(),
+    };
+    let label = spec.map(|s| s.label).or(user.map(|u| u.label.as_str())).unwrap_or(program);
+    let install_url = spec.map(|s| s.install_url.to_string()).or_else(|| user.and_then(|u| u.install_url.clone()));
     let output = tail(screen);
     let text = screen.to_lowercase();
     // 127 is the shell's "command not found"; Shifu's own launchers (StepFun, Qwen) report the exec error instead.
@@ -212,6 +224,24 @@ mod tests {
         assert_eq!(f.reason, Reason::Node);
         assert!(f.message.starts_with("Gemini CLI 在 Node.js v18.20.8 上"), "{}", f.message);
         assert_eq!(f.output.last().map(String::as_str), Some("Node.js v18.20.8"));
+    }
+
+    #[test]
+    fn plain_and_user_agents_are_named_and_pointed_at_their_install_page() {
+        let aider = classify(&agent(Kind::Other, "aider", Status::Starting), Some(127), "zsh:1: command not found: aider");
+        assert_eq!(aider.reason, Reason::NotFound);
+        assert!(aider.message.contains("没找到 aider 命令，Aider"), "{}", aider.message);
+        assert_eq!(aider.command.as_deref(), Some("python -m pip install aider-install && aider-install"));
+        let user = crate::user_agents::UserAgent {
+            id: "mybot".into(), label: "My Bot".into(), command: "/opt/mybot/run".into(), args: vec![],
+            install_url: Some("https://example.com/mybot".into()),
+        };
+        let f = classify_with(&agent(Kind::Other, "mybot", Status::Starting), Some(127), "", std::slice::from_ref(&user));
+        assert!(f.message.contains("没找到 /opt/mybot/run 命令，My Bot"), "{}", f.message);
+        assert_eq!((f.command, f.install_url.as_deref()), (None, Some("https://example.com/mybot")));
+        let bare = classify_with(&agent(Kind::Other, "mybot", Status::Starting), Some(2), "boom", &[]);
+        assert!(bare.message.starts_with("mybot 启动后马上退出了（退出码 2）"), "{}", bare.message);
+        assert_eq!(bare.install_url, None);
     }
 
     #[test]

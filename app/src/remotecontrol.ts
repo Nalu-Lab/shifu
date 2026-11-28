@@ -4,7 +4,7 @@ import { RemoteChannel, parsePairLink, type Credential, type RelayTarget, type T
 import { remoteMacsLoad, remoteMacsSave, remoteMacsForget } from "./api";
 import { present, closeNewPopover } from "./newpopover";
 import { specOf } from "./models";
-import { vendorIcon } from "./vendoricons";
+import { markFor, vendorIcon } from "./vendoricons";
 import { remoteAgents, remoteTaskGroups, remoteStatuses, type RemoteAgent as Agent } from "./remoteagents";
 
 const button = (text: string) => Object.assign(document.createElement("button"), {type: "button", className: "btn", textContent: text});
@@ -272,7 +272,7 @@ class RemoteView {
       const row = button(""); row.className = "remote-control-session"; row.dataset.name = agent.name; row.dataset.status = agent.status;
       row.setAttribute("aria-current", String(this.selected?.name === agent.name)); row.title = `${agent.title}\n${agent.name}\n${agent.cwd}`;
       const spec = specOf(agent.kind);
-      if (spec) row.append(vendorIcon(spec.kind, "remote-control-agent-icon"));
+      if (spec) row.append(vendorIcon(markFor(spec.kind), "remote-control-agent-icon"));
       const content = document.createElement("span"); content.className = "remote-control-session-content";
       const labelText = agent.title === taskTitle ? spec?.name || agent.kind : agent.title;
       const label = Object.assign(document.createElement("span"), {className: "remote-control-session-name", textContent: labelText});

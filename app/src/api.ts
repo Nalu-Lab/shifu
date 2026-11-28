@@ -203,6 +203,12 @@ export interface CliFound {
   login_command?: string | null;
   /** Sign-in found in the file the CLI keeps it in; null when it cannot be told without guessing. */
   signed_in?: boolean | null;
+  /** "built-in" (status hooks), "plain" (no hooks) or "agents.json" (the user's own). */
+  source?: string;
+  /** How it reports status; "none" for plain agents. */
+  hooks?: string;
+  /** Offered only when found; not named under 未安装 when missing. */
+  extra?: boolean;
 }
 export interface CliReport {
   agents: CliFound[];

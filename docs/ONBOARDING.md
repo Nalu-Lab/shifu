@@ -83,7 +83,7 @@
 ## 第 6 阶段：准备情况清单（已完成，分支 `improve/firstrun`）
 
 - **目标：** 新用户不用开终端排查，就知道第一个 Agent 还差什么。见 `app/src/setupcheck.ts`。
-- **列什么：** tmux；这台 Mac 上找到的 Agent（沿用第 1 阶段的检测，只看文件）；一个都没找到时，列出全部 Agent，各带可复制的安装命令（`agents_spec` 的 `install_command`）和安装说明链接。装了至少一个以后，其余的只留一行安装链接。
+- **列什么：** tmux；这台 Mac 上找到的 Agent（沿用第 1 阶段的检测，只看文件）；一个都没找到时，列出全部核心 Agent（Aider 等额外的普通 Agent 和 agents.json 里自己加的只在找到时出现，见 [AGENTS.md](AGENTS.md)），各带可复制的安装命令（`agents_spec` 的 `install_command`）和安装说明链接。装了至少一个以后，其余的只留一行安装链接。
 - **登录：** 只看各家自己存登录信息的文件，不运行程序、不读出密钥（`shifu::clis::signed_in`）：
   - Claude Code：`~/.claude.json`（或 `$CLAUDE_CONFIG_DIR/.claude.json`）里有 `oauthAccount`，或有 `ANTHROPIC_API_KEY`；
   - Codex：`~/.codex/auth.json`（或 `$CODEX_HOME/auth.json`）存在；
