@@ -2,6 +2,18 @@
 
 [回到 Shifu](../README.md)　[English](#english)
 
+## 0.4.5 预发布 · 2026-11-28
+
+新 Mac 上开箱即用：
+
+- 不用先装 tmux：Shifu.app 自带一份，没装 tmux 时就用它；已经在用自己 tmux 的照旧。
+- 缺 Agent 时点「安装」：官方安装命令在 Shifu 的终端标签里运行，装好后自动出现在列表里；需要 Node.js 的 Agent 会先说明，Claude Code 不需要 Node，排在最前。没登录的 Agent 点「登录」。
+- 「准备情况」多了浏览器、电脑操作和通知三行，每行一个按钮。
+- `shifu browser` 第一次用时自己装好运行时（需要 Node.js 20+），`shifu computer` 第一次用时装好 App 自带的辅助程序，再由你授权；都不再需要 Shifu 源码。
+- 0.4.4 可以在 App 里直接更新到这一版（Shifu →「检查更新…」）。
+
+本包由 GitHub 云端从公开源码构建，用 Shifu 自己的固定证书签名、未公证；构建来源见包内 BUILD-INFO.json。
+
 ## 0.4.4 预发布 · 2026-11-28
 
 下载包现已包含 0.4.3 之后的改动，App、CLI 和可选电脑操作组件配套提供：
@@ -184,6 +196,18 @@
 Finder 的独立改名输入框现已可读取、输入并提交；操作结果仍应核对文件路径。浏览器后台可能只有工具栏，等待文字时应选正文中的明确片段；目前没有 DOM 操作通道。
 
 ## English
+
+### 0.4.5 preview · November 28, 2026
+
+Works out of the box on a new Mac:
+
+- No need to install tmux first: Shifu.app carries its own and uses it when none is installed; people with their own tmux keep using it.
+- Missing an agent? Click Install: its official installer runs in a Shifu terminal tab, and the agent appears in the list when it's done. Agents that need Node.js say so first; Claude Code needs no Node and is listed first. Agents that aren't signed in get Sign In.
+- The Setup Checklist gains Browser use, Computer use and Notifications rows, one button each.
+- `shifu browser` sets up its runtime on first use (needs Node.js 20+), and `shifu computer` installs the helper Shifu.app carries on first use, then you grant its permissions; neither needs the Shifu source anymore.
+- 0.4.4 can update to this version from inside the app (Shifu → Check for Updates…).
+
+Built by GitHub from the public source, signed with Shifu's own fixed certificate, not notarized; see BUILD-INFO.json in the package.
 
 ### 0.4.4 preview · November 28, 2026
 

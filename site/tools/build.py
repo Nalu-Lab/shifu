@@ -18,8 +18,8 @@ from html.parser import HTMLParser
 
 # ---- The one place to edit for a new release ---------------------------------------------------------------
 RELEASE = {
-    "version": "0.4.4",                      # shown as "0.4.4 预览版" / "0.4.4 preview"
-    "tag": "remote-v0.4.4-preview.1",        # GitHub release tag the download buttons point to
+    "version": "0.4.5",                      # shown as "0.4.5 预览版" / "0.4.5 preview"
+    "tag": "remote-v0.4.5-preview.1",        # GitHub release tag the download buttons point to
     # How this release starts agents, shown under the hero's download button (see PERMISSION_LINE below):
     #   "no-confirmation": it does not ask and starts agents without approvals (0.4.3 and earlier);
     #   "asks": a fresh install asks once (the first-run screen's toggle, or a question before the first agent

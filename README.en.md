@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="README.md">中文</a> ·
-  <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1">Download preview</a> ·
+  <a href="https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.5-preview.1">Download preview</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#things-to-try">Things to try</a> ·
   <a href="#build-with-us">Build with us</a> ·
@@ -64,7 +64,7 @@ You can also drive the remote Mac without opening a window: the `shifu remote` C
 
 ## Quick start
 
-[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately (from 0.4.5 on Shifu carries its own tmux, and its first screen installs a missing agent with one click). The app carries its matching CLI, and on first open one short screen finds the agents and projects on this Mac: tick them and press Start. StepFun requires [Node/Pi and subscription-key setup](docs/STEPFUN.md#english).
+[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.5-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately (from 0.4.5 on Shifu carries its own tmux, and its first screen installs a missing agent with one click). The app carries its matching CLI, and on first open one short screen finds the agents and projects on this Mac: tick them and press Start. StepFun requires [Node/Pi and subscription-key setup](docs/STEPFUN.md#english).
 
 ### Option A: let your AI install it
 
@@ -73,7 +73,7 @@ Paste this into Claude Code or Codex:
 ```text
 Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and docs/INSTALL.en.md first.
 1. Confirm this is an Apple Silicon Mac. Check that tmux and my chosen agent are installed and signed in; tell me what is missing.
-2. Download the ZIP and SHA256SUMS from release remote-v0.4.4-preview.1 (https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1), not any other release. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
+2. Download the ZIP and SHA256SUMS from release remote-v0.4.5-preview.1 (https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.5-preview.1), not any other release. Verify the download and extracted-file checksums. Use the packaged app and CLI by default; do not install Rust or build from source.
 3. Follow the package instructions: put Shifu.app in ~/Applications. The app carries its matching CLI for conversation status, notifications and the project manager, so nothing else is needed. Ask me whether I want shifu in a terminal; if so, install the package's bin/shifu to ~/.cargo/bin/shifu, add ~/.cargo/bin to the current shell PATH, verify shifu --help, and explain the full-path option for new terminals. For an existing installation, explain the brief quit needed for the upgrade and preserve the old app, CLI and sessions. Do not overwrite a running app.
 4. Explain that the app is signed with Shifu's own certificate and not notarized by Apple, and tell me: Before your first conversation, Shifu asks once how agents may act, with Agent's own settings preselected; change it any time under Permissions in the new-task form. Leave system security prompts to me. Configure StepFun, computer use, a remote relay or background follow-up only if I request them.
 5. When it opens, the first screen finds agents and projects: let me tick the projects and decide on the No confirmation switch (off by default, which is Agent's own settings) before pressing Start. On the first Codex launch, let me review its hooks before deciding whether to trust them.
