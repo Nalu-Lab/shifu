@@ -95,5 +95,7 @@ fn doctor_reports_the_missing_helper_without_opening_permissions() {
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert!(!output.status.success());
     assert_eq!(value["result"]["installed"], false);
-    assert!(value["result"]["nextStep"].as_str().unwrap().contains("install-computer.sh"));
+    // Where to get it: from the Shifu.app on this Mac when there is one, else the repo script.
+    let next = value["result"]["nextStep"].as_str().unwrap();
+    assert!(next.contains("install-computer.sh") || next.contains("shifu computer install"), "{next}");
 }

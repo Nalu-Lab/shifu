@@ -11,16 +11,16 @@ import {
   type Permissions,
   clipboardWrite,
   guideDoneSet,
-  pathOpen,
   permissionsGet,
   permissionsSet,
   projectsScan,
 } from "./api";
 import { shortPath } from "./format";
 import { tr } from "./i18n";
-import { type AgentSpec, getClis, installUrl, onClisChange, splitAgents } from "./models";
+import { type AgentSpec, getClis, onClisChange, splitAgents } from "./models";
 import { currentDefaultKind, setDefaultKind } from "./newpopover";
 import { reportError } from "./store";
+import { installItems, pageLinks, pageOnly, rowsElement, signInItems } from "./setupcheck";
 import { projectName } from "./tasks";
 import { markFor, vendorIcon } from "./vendoricons";
 
@@ -72,22 +72,6 @@ function btn(text: string, className: string, onClick: () => void): HTMLButtonEl
   return b;
 }
 
-/** Each name opens its install page. */
-function installLinks(specs: readonly AgentSpec[]): HTMLElement {
-  const line = el("div", "guide-links");
-  specs.forEach((spec, i) => {
-    if (i > 0) line.append(" · ");
-    const url = installUrl(getClis(), spec.kind);
-    const link = btn(spec.name, "link-btn", () => {
-      if (url) pathOpen(url).catch(reportError);
-    });
-    link.title = url ?? "";
-    link.disabled = !url;
-    line.append(link);
-  });
-  return line;
-}
-
 /** Puts the guide over the window. Finishing or skipping saves `guide_done`, so it does not come back. */
 export function showGuide(createTasks: CreateTasks): void {
   const overlay = el("div", "guide");
@@ -103,6 +87,7 @@ export function showGuide(createTasks: CreateTasks): void {
   let scanning = true;
   let protectedLeft: string[] = [];
   let busy = false;
+  let moreOpen = false;
   const close = () => {
     stop();
     overlay.remove();
@@ -130,9 +115,11 @@ export function showGuide(createTasks: CreateTasks): void {
       line.append(el("span", "guide-warn", tr("需要 tmux：", "Needs tmux:")), el("code", "", command), copy);
       agentBox.append(line);
     }
-    const { missing } = splitAgents(report);
+    // Install and Sign In open a terminal tab and step the guide aside until it is done (setupcheck.ts).
     if (agents.length === 0) {
-      agentBox.append(el("div", "guide-warn", tr("没找到 Agent，装一个：", "No agent found. Install one:")), installLinks(missing));
+      agentBox.append(el("div", "guide-warn", tr("没找到 Agent，装一个：", "No agent found. Install one:")), rowsElement(installItems(report), overlay, paintAgents));
+      const links = pageLinks(report);
+      if (links) agentBox.append(links);
     } else {
       const chips = el("div", "guide-chips");
       chips.setAttribute("role", "radiogroup");
@@ -143,17 +130,22 @@ export function showGuide(createTasks: CreateTasks): void {
         });
         chip.setAttribute("role", "radio");
         chip.setAttribute("aria-checked", String(spec.kind === kind));
+        // A missing sign-in has its own Sign In row below.
         chip.append(vendorIcon(markFor(spec.kind), "agent-mark"), el("span", "", spec.name));
-        if (report.agents.find((a) => a.kind === spec.kind)?.signed_in === false) {
-          chip.append(el("span", "guide-tag", tr("需登录", "sign in")));
-        }
         chips.append(chip);
       }
       agentBox.append(chips);
-      if (missing.length > 0) {
-        const more = el("details", "guide-more");
-        more.append(el("summary", "", tr("更多 Agent", "More agents")), installLinks(missing));
-        agentBox.append(more);
+      const signIn = signInItems(report);
+      if (signIn.length > 0) agentBox.append(rowsElement(signIn, overlay, paintAgents));
+      const more = installItems(report);
+      if (more.length > 0 || pageOnly(report).length > 0) {
+        const details = el("details", "guide-more");
+        details.open = moreOpen;
+        details.addEventListener("toggle", () => (moreOpen = details.open));
+        details.append(el("summary", "", tr("更多 Agent", "More agents")), rowsElement(more, overlay, paintAgents));
+        const links = pageLinks(report);
+        if (links) details.append(links);
+        agentBox.append(details);
       }
     }
     paintStart();

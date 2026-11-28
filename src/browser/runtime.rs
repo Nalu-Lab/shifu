@@ -44,6 +44,112 @@ fn private_dir(path: &Path) -> Result<(), String> {
     fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(|e| e.to_string())
 }
 
+/// The pinned runtime, carried inside the CLI so that `shifu browser install` works without the Shifu repo.
+const PACKAGE_JSON: &str = include_str!("../../browser/package.json");
+const PACKAGE_LOCK: &str = include_str!("../../browser/package-lock.json");
+const INSTALL: &str = "shifu browser install";
+const NEEDS_NODE: &str = "浏览器功能需要 Node.js 20+（https://nodejs.org）；装好后运行 shifu browser install";
+
+/// `node` and `npm` (Node 20+) on PATH or in the usual install folders; `None` when either is missing or too old.
+fn system_node() -> Option<(PathBuf, PathBuf)> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let path = crate::clis::merge_paths(&[&std::env::var("PATH").unwrap_or_default(), &crate::clis::fallback_dirs(&home).join(":")]);
+    let node = crate::clis::find_program(&path, &["node"])?;
+    let npm = crate::clis::find_program(&path, &["npm"])?;
+    let out = Command::new(&node).arg("--version").stdin(Stdio::null()).output().ok()?;
+    let major = String::from_utf8_lossy(&out.stdout).trim().trim_start_matches('v').split('.').next()?.parse::<u32>().ok()?;
+    (major >= 20).then_some((node, npm))
+}
+
+/// Node's distribution LICENSE for the node at `bin` (official package or Homebrew layout).
+fn node_license(bin: &Path) -> Option<PathBuf> {
+    let real = fs::canonicalize(bin).ok()?;
+    let up = |n: usize| real.ancestors().nth(n).map(|d| d.join("LICENSE"));
+    [up(2), up(3)].into_iter().flatten().find(|p| p.is_file())
+}
+
+/// Sets up the runtime under `<SHIFU_BROWSER_HOME>/runtime`, as scripts/install-browser.sh does: the pinned
+/// Playwright CLI (`npm ci` of the lock file carried in this binary), a copy of the Node it was installed with and
+/// Node's LICENSE. An existing runtime is kept in `backups/` until the new one is in place. npm's output goes to
+/// stderr, so stdout stays one JSON answer.
+pub(super) fn install() -> Result<Value, String> {
+    let Some((node_src, npm)) = system_node() else {
+        return Ok(json!({"ok":false,"error":{"code":"node_missing","message":NEEDS_NODE}}));
+    };
+    let license = node_license(&node_src).ok_or("找不到 Node 的 LICENSE；请使用官方 Node.js 安装包或 Homebrew 的 node")?;
+    let home = home()?;
+    let target = runtime(&home);
+    private_dir(&home)?;
+    private_dir(&home.join("backups"))?;
+    let stage = home.join(format!("runtime.install.{}", std::process::id()));
+    let _ = fs::remove_dir_all(&stage);
+    let staged = (|| -> Result<(), String> {
+        fs::create_dir_all(stage.join("bin")).map_err(|e| e.to_string())?;
+        fs::create_dir_all(stage.join("licenses")).map_err(|e| e.to_string())?;
+        fs::write(stage.join("package.json"), PACKAGE_JSON).map_err(|e| e.to_string())?;
+        fs::write(stage.join("package-lock.json"), PACKAGE_LOCK).map_err(|e| e.to_string())?;
+        eprintln!("正在安装浏览器运行时（首次使用，约需一分钟）…");
+        let node_dir = node_src.parent().unwrap_or(Path::new("/"));
+        let status = Command::new(&npm)
+            .args(["ci", "--ignore-scripts", "--omit=dev", "--no-audit", "--no-fund"])
+            .current_dir(&stage)
+            .env("PATH", format!("{}:{}", node_dir.display(), std::env::var("PATH").unwrap_or_default()))
+            .env("NO_UPDATE_NOTIFIER", "1")
+            .stdin(Stdio::null())
+            .stdout(std::io::stderr())
+            .status()
+            .map_err(|e| format!("无法运行 npm：{e}"))?;
+        if !status.success() {
+            return Err("npm ci 没有完成（见上方输出）；联网后再运行 shifu browser install".into());
+        }
+        fs::copy(&node_src, stage.join("bin/node")).map_err(|e| format!("复制 node 失败：{e}"))?;
+        // Homebrew's node keeps its code in ../lib/libnode.*.dylib (found through @loader_path/../lib).
+        if let Some(lib) = fs::canonicalize(&node_src).ok().and_then(|n| n.parent()?.parent().map(|d| d.join("lib"))) {
+            for entry in fs::read_dir(&lib).into_iter().flatten().flatten() {
+                if entry.file_name().to_string_lossy().starts_with("libnode") {
+                    fs::create_dir_all(stage.join("lib")).map_err(|e| e.to_string())?;
+                    fs::copy(entry.path(), stage.join("lib").join(entry.file_name())).map_err(|e| format!("复制 libnode 失败：{e}"))?;
+                }
+            }
+        }
+        fs::set_permissions(stage.join("bin/node"), fs::Permissions::from_mode(0o755)).map_err(|e| e.to_string())?;
+        fs::copy(&license, stage.join("licenses/Node-LICENSE")).map_err(|e| e.to_string())?;
+        let check = Command::new(stage.join("bin/node"))
+            .arg(stage.join(CLI))
+            .args(["--version", "--json"])
+            .env("NO_UPDATE_NOTIFIER", "1")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .status()
+            .map_err(|e| e.to_string())?;
+        if !check.success() {
+            return Err("装好的浏览器运行时无法启动".into());
+        }
+        Ok(())
+    })();
+    if let Err(e) = staged {
+        let _ = fs::remove_dir_all(&stage);
+        return Err(e);
+    }
+    let mut backup = None;
+    if target.exists() {
+        let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let dir = home.join("backups").join(format!("update-{secs}"));
+        fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        fs::rename(&target, dir.join("runtime")).map_err(|e| e.to_string())?;
+        backup = Some(dir);
+    }
+    if let Err(e) = fs::rename(&stage, &target) {
+        if let Some(dir) = &backup {
+            let _ = fs::rename(dir.join("runtime"), &target);
+        }
+        let _ = fs::remove_dir_all(&stage);
+        return Err(format!("放置浏览器运行时失败：{e}"));
+    }
+    Ok(json!({"ok":true,"result":{"runtime":target,"node":target.join("bin/node"),"previous":backup,
+        "nextStep":"shifu browser doctor；shifu browser open https://example.com"}}))
+}
+
 pub(super) fn doctor() -> Result<Value, String> {
     let home = home()?;
     let runtime = runtime(&home);
@@ -75,7 +181,7 @@ pub(super) fn doctor() -> Result<Value, String> {
     let ready = compatible && cli.is_file();
     Ok(
         json!({"ok":ready,"result":{"runtime":runtime,"node":node,"nodeVersion":version,"installed":node.is_file() && cli.is_file(),
-        "install":"在 Shifu 仓库运行 bash scripts/install-browser.sh",
+        "install":if system_node().is_some() { INSTALL } else { NEEDS_NODE },
         "browser":"默认使用本机 Chrome；本检查不启动浏览器、不读取登录信息"}}),
     )
 }
@@ -85,10 +191,15 @@ pub(super) fn call(request: &Request) -> Result<Value, String> {
     let runtime = runtime(&home);
     let node = node(&runtime);
     let cli = runtime.join(CLI);
+    // First use: set the runtime up now when Node is there (the runtime keeps its own copy of Node afterwards).
     if !node.is_file() || !cli.is_file() {
-        return Ok(
-            json!({"ok":false,"error":{"code":"runtime_missing","message":"尚未安装浏览器运行时；在 Shifu 仓库运行 bash scripts/install-browser.sh"}}),
-        );
+        if std::env::var_os("SHIFU_BROWSER_RUNTIME").is_some() || std::env::var_os("SHIFU_BROWSER_NODE").is_some() {
+            return Ok(json!({"ok":false,"error":{"code":"runtime_missing","message":"SHIFU_BROWSER_RUNTIME / SHIFU_BROWSER_NODE 指向的运行时不存在"}}));
+        }
+        let installed = install()?;
+        if installed["ok"] != true {
+            return Ok(json!({"ok":false,"error":{"code":"runtime_missing","message":installed["error"]["message"]}}));
+        }
     }
     if !runtime.is_absolute() || !node.is_absolute() {
         return Err("浏览器运行时和 Node 必须是绝对路径".into());

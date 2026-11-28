@@ -64,7 +64,7 @@ You can also drive the remote Mac without opening a window: the `shifu remote` C
 
 ## Quick start
 
-[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately. The app carries its matching CLI, and on first open one short screen finds the agents and projects on this Mac: tick them and press Start. StepFun requires [Node/Pi and subscription-key setup](docs/STEPFUN.md#english).
+[Download the Apple Silicon preview](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1), including the app, matching CLI and setup instructions. Ordinary sessions need no Rust; install tmux and sign into your agent separately (from 0.4.5 on Shifu carries its own tmux, and its first screen installs a missing agent with one click). The app carries its matching CLI, and on first open one short screen finds the agents and projects on this Mac: tick them and press Start. StepFun requires [Node/Pi and subscription-key setup](docs/STEPFUN.md#english).
 
 ### Option A: let your AI install it
 
@@ -82,7 +82,7 @@ Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and 
 ### Option B: install it yourself
 
 1. Download the ZIP and `SHA256SUMS` from the same release. Run `shasum -a 256 -c SHA256SUMS` in the download directory before extracting.
-2. For an existing installation, quit it and back up the old app and CLI first. The app carries its matching CLI (`Shifu.app/Contents/Resources/bin/shifu`) for conversation status, notifications and the project manager; the CLI install commands below are only for using `shifu` in a terminal (tmux is still needed). In the extracted package directory, verify its contents, then install the CLI:
+2. For an existing installation, quit it and back up the old app and CLI first. The app carries its matching CLI (`Shifu.app/Contents/Resources/bin/shifu`) for conversation status, notifications and the project manager; the CLI install commands below are only for using `shifu` in a terminal (tmux is still needed up to 0.4.4). In the extracted package directory, verify its contents, then install the CLI:
 
    Verify on its own first, and continue only when every line says `OK`:
 
@@ -101,7 +101,7 @@ Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and 
      ditto bin/web "$HOME/.cargo/bin/web"   # runtime for shifu web
    )
    export PATH="$HOME/.cargo/bin:$PATH"
-   brew install tmux   # Skip if tmux is already installed
+   brew install tmux   # Skip if tmux is already installed; not needed from 0.4.5 on
    ```
 
 3. After successful verification, move `Shifu.app` to `~/Applications`. Open it: the first screen finds your installed agents and projects; tick the projects and press Start to open your first conversation (or press Skip and use Add Project on the empty page later). Use [remote setup and pairing](docs/REMOTE-RELAY.en.md) only when connecting another Mac.

@@ -10,6 +10,7 @@ pub const HELP: &str = r#"shifu browser — 浏览器 DOM、标签页和截图�
 
   shifu browser guide [--json]             Agent 使用指南，无需安装运行时
   shifu browser doctor [--json]            检查运行时和 Node，不启动浏览器
+  shifu browser install                    安装或更新运行时（固定版本的 Playwright CLI，需要 Node.js 20+）
   shifu browser [--session 名字] open [URL] [--show] [--ephemeral]
   shifu browser [--session 名字] snapshot
   shifu browser [--session 名字] click <快照中的引用>
@@ -27,7 +28,7 @@ pub const HELP: &str = r#"shifu browser — 浏览器 DOM、标签页和截图�
 全局参数放在命令前；--timeout-ms 1000..120000 控制等待上限，默认 45000。
 专用浏览器的登录状态默认保存到本机；--ephemeral 使用一次性内存配置，不借用日常 Chrome 配置。
 截图只返回本地路径，Agent 必须用自己的看图工具打开。
-未安装时，在 Shifu 仓库运行 bash scripts/install-browser.sh。"#;
+首次使用时自动安装运行时（需要 Node.js 20+）；也可先运行 shifu browser install。"#;
 
 pub const GUIDE: &str = r#"Shifu browser 使用指南
 
@@ -86,10 +87,13 @@ pub fn run(args: &[String]) -> Result<(), String> {
         _ => {}
     }
     let default = std::env::var("SHIFU_ID").unwrap_or_else(|_| "default".into());
-    let request = parse(args, &default)?;
+    let install = args.iter().map(String::as_str).filter(|a| *a != "--json").eq(["install"]);
+    let request = if install { Request { session: default, args: vec!["install".into()], timeout_ms: 0 } } else { parse(args, &default)? };
     #[cfg(unix)]
     {
-        let result = if request.args[0] == "doctor" {
+        let result = if install {
+            runtime::install()
+        } else if request.args[0] == "doctor" {
             runtime::doctor()
         } else {
             runtime::call(&request)
@@ -193,7 +197,7 @@ pub(crate) fn parse(args: &[String], default: &str) -> Result<Request, String> {
         "kill-all" | "close-all" | "delete-data" | "install" | "install-browser"
     ) {
         return Err(
-            "请使用当前会话的 close/detach；安装运行时使用 scripts/install-browser.sh".into(),
+            "请使用当前会话的 close/detach；安装运行时使用 shifu browser install（不带其他参数）".into(),
         );
     }
     if forwarded

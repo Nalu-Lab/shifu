@@ -64,7 +64,7 @@ Shifu 把 Claude Code、Codex、Kimi、CodeBuddy、Antigravity、opencode、Pi�
 
 ## 快速开始
 
-[下载 Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1)，内含 App、匹配 CLI 和安装说明。普通会话无需 Rust；另备 tmux 和已登录的 Agent 即可。App 自带同版命令行，第一次打开时一屏引导会找出这台 Mac 上的 Agent 和项目，勾选后点「开始」。StepFun 需[单独设置 Node/Pi 和订阅密钥](docs/STEPFUN.md)。
+[下载 Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.4-preview.1)，内含 App、匹配 CLI 和安装说明。普通会话无需 Rust；另备 tmux 和已登录的 Agent 即可（从 0.4.5 起 Shifu 自带 tmux，第一屏点一下就能装缺的 Agent）。App 自带同版命令行，第一次打开时一屏引导会找出这台 Mac 上的 Agent 和项目，勾选后点「开始」。StepFun 需[单独设置 Node/Pi 和订阅密钥](docs/STEPFUN.md)。
 
 ### 方式 A：让你的 AI 帮你装
 
@@ -82,7 +82,7 @@ Shifu 把 Claude Code、Codex、Kimi、CodeBuddy、Antigravity、opencode、Pi�
 ### 方式 B：自己装
 
 1. 下载同一 Release 的 ZIP 和 `SHA256SUMS`，先在下载目录执行 `shasum -a 256 -c SHA256SUMS`，再解压。
-2. 已有 Shifu 时，先退出并备份旧 App 与 CLI。App 自带同版命令行（`Shifu.app/Contents/Resources/bin/shifu`），对话状态、提醒和项目经理用它；下面装 CLI 的命令只在终端里用 `shifu` 时才需要（tmux 仍要装）。先在解压后的包目录校验内容，再安装 CLI：
+2. 已有 Shifu 时，先退出并备份旧 App 与 CLI。App 自带同版命令行（`Shifu.app/Contents/Resources/bin/shifu`），对话状态、提醒和项目经理用它；下面装 CLI 的命令只在终端里用 `shifu` 时才需要（0.4.4 及以前 tmux 仍要装）。先在解压后的包目录校验内容，再安装 CLI：
 
    先单独校验，看到每一行都是 `OK` 再继续：
 
@@ -101,7 +101,7 @@ Shifu 把 Claude Code、Codex、Kimi、CodeBuddy、Antigravity、opencode、Pi�
      ditto bin/web "$HOME/.cargo/bin/web"   # shifu web 的运行文件
    )
    export PATH="$HOME/.cargo/bin:$PATH"
-   brew install tmux   # 已有 tmux 时跳过
+   brew install tmux   # 已有 tmux 时跳过；0.4.5 起不需要
    ```
 
 3. 校验通过后，将 `Shifu.app` 移到 `~/Applications`，再打开 Shifu：第一屏会找出已装的 Agent 和项目，勾选项目后点「开始」就开出第一条对话（也可以「跳过」，之后在空白页点「添加项目」）。连接另一台 Mac 时才需要[远程安装与配对](docs/REMOTE-RELAY.md)。

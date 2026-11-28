@@ -91,7 +91,7 @@
   - 其他 Agent 的登录在钥匙串或各自的存储里，没有可靠又便宜的判断办法，就不显示登录状态，不猜。
   - 没找到登录信息只显示提醒（「第一次开对话时按它的提示登录」，有登录命令的附上命令），不算没准备好：这些 Agent 没登录时会在自己界面里请你登录（第 4 阶段实测）。
 - **在哪里看到：** 引导第 1 步；空白页（没准备好时显示清单，准备好后只说找到了什么）；没有引导时，启动后若缺 tmux 或一个 Agent 都没有，自动弹出；Shifu 菜单「准备情况…」随时打开。回到窗口或点「重新检查」会重新检测并刷新。
-- **还做不到：** tmux 和 Agent 本身仍要在终端里装（清单给出确切命令和链接）；没有 Homebrew 时要先按 tmux 安装说明装。
+- **还做不到：** tmux 和 Agent 本身仍要在终端里装（清单给出确切命令和链接）；没有 Homebrew 时要先按 tmux 安装说明装。（第 8 阶段起 tmux 随 App 带，Agent 可一键安装。）
 
 ## 第 7 阶段：一屏扫描、勾选、开始（分支 `feat/first-run-scan`）
 
@@ -106,3 +106,14 @@
   - 「开始」给每个勾选的项目建一个任务（同一条 `task_new` 路径），都用默认 Agent，然后打开第一个。
 - **文字：** 一般情况下点「开始」前要读的中文约 40 字以内。
 - **语言：** 引导、新建任务窗口、空白页、准备情况和权限提问跟随系统语言（`ui_chinese`，与菜单同一规则，`app/src/i18n.ts` 的 `tr(zh, en)`），其余界面仍是中文。
+
+## 第 8 阶段：新 Mac 一键准备（分支 `feat/seamless-setup`）
+
+- **起因：** 下载包拿到一台全新的 Mac（可能没有 Homebrew、Node、tmux、任何 Agent）时，第 6、7 阶段只能给出终端命令和链接。目标：查找 → 列出 → 点一下。
+- **tmux 随 App 带：** `scripts/build-tmux.sh` 从固定版本的源码编出 arm64 tmux（libevent、utf8proc、jemalloc 静态链接，只依赖 `/usr/lib` 里 macOS 自带的库），`prepare-desktop.sh` 放进 `Contents/Resources/bin/tmux`，下载包另放一份 `bin/tmux`。`src/tmux.rs` 的选择顺序：`SHIFU_TMUX`；这个 socket 上正在运行的服务当初用的那个 tmux（启动时记在 `<SHIFU_HOME>/tmux-bin`，别的版本的 tmux 可能连不上它）；本人自己装的（Homebrew、/usr/local、PATH，跳过 Orca 的替身）；最后才是自带的。所以已有 tmux 的人照旧，没有的人不用装。
+- **安装 Agent：** 有 `install_command` 的 Agent 在清单和引导里有「安装」按钮。点了才运行（`app/src-tauri/src/setup.rs` 的 `setup_run`）：在当前任务（没有任务时在主目录新建一个「安装 …」任务）开一个终端标签，把命令打进去回车，本人看得到进度、能回答提问。清单（或引导）这时让开，右上角留「返回准备情况」；每 3 秒重新检测，找到这个 Agent 就自动回来。需要 npm 的在没有 Node 时只写「需要 Node.js」并链到 nodejs.org，Claude Code 的官方脚本不需要 Node，排在前面。命令只由后端按 Agent 表决定，页面传不了命令；测试时可用 `SHIFU_INSTALL_<ID>` 换成无害脚本。
+- **登录：** 已装但没找到登录信息的 Agent 有「登录」按钮：有 `login_command` 的在终端标签里运行它，没有的直接打开这个 Agent（它启动时会要求登录）。
+- **浏览器：** `shifu browser` 第一次使用时自己装运行时（`shifu browser install` 也行）：编进 CLI 的 `browser/package-lock.json`、`npm ci --ignore-scripts`、复制当前 Node 和它的 LICENSE，和 `scripts/install-browser.sh` 一样，不再需要仓库。没有 Node 20+ 时返回一行说明和那条命令。清单里的「设置」在终端标签里运行 `shifu browser install`。
+- **电脑操作：** 辅助程序随 App 带着（`Contents/Resources/helpers`）。第一次运行 `shifu computer` 命令（或 `shifu computer install`）时校验签名后放进 `~/Applications`；已装的不动。清单里的「设置」/「授权」装好后打开它的授权窗口，由本人在系统设置里授权；回到窗口时重新检查。
+- **清单的行：** tmux、Agent（安装 / 登录）、浏览器、电脑操作、通知（打开系统设置），每行一个按钮。空白页没准备好时只放一个「准备情况…」按钮。
+- **还做不到：** 用 npm 装的 Agent 仍要先装 Node.js（没有带 Node，太大）；通知授权读不出来（用的是旧的 NSUserNotification），只给打开设置的按钮。

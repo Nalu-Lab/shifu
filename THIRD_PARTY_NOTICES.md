@@ -29,3 +29,14 @@ Closed-lid power controls and recovery behavior in `app/src-tauri/src/lid.rs`, `
 ## Browser control
 
 `browser/package-lock.json` pins Microsoft's official [Playwright CLI](https://github.com/microsoft/playwright-cli), Playwright and Playwright Core, licensed under Apache-2.0. The browser installer retains the packages' licenses and notices inside the installed runtime. It also copies the selected Node.js executable and its distribution LICENSE into `runtime/licenses/Node-LICENSE`. Node.js and its bundled components retain their original licenses; they are not relicensed under Shifu's MIT license. No browser executable is redistributed by this installer; it uses the user's installed Chrome by default.
+
+## Terminal multiplexer
+
+Shifu.app ships a tmux executable at `Contents/Resources/bin/tmux` (and the download package at `bin/tmux`), built by `scripts/build-tmux.sh` from unmodified release sources. Shifu uses it only when no tmux is installed. These components keep their original licenses and are not relicensed under Shifu's MIT license. Their full license texts are bundled in `Shifu.app/Contents/Resources/licenses/tmux/`.
+
+- [tmux](https://github.com/tmux/tmux) 3.8: ISC License, Copyright (c) Various Authors (per-file copyright lines in its sources). License text: `tmux-COPYING`.
+- [libevent](https://github.com/libevent/libevent) 2.1.12-stable, statically linked: 3-clause BSD License, Copyright (c) 2000-2007 Niels Provos, Copyright (c) 2007-2012 Niels Provos and Nick Mathewson, plus the further notices listed in its LICENSE. License text: `libevent-LICENSE`.
+- [utf8proc](https://github.com/JuliaStrings/utf8proc) 2.12.0, statically linked: MIT License, Copyright (c) 2014-2021 Steven G. Johnson, Jiahao Chen, Tony Kelman, Jonas Fonseca and other contributors; Copyright (c) 2009, 2013 Public Software Group e. V., Berlin, Germany; its Unicode data files are under the Unicode, Inc. license included in the same file. License text: `utf8proc-LICENSE.md`.
+- [jemalloc](https://github.com/jemalloc/jemalloc) 5.4.0, statically linked (tmux uses it on macOS): 2-clause BSD License, Copyright (C) 2002-present Jason Evans, Copyright (C) 2007-2012 Mozilla Foundation, Copyright (C) 2009-present Facebook, Inc. License text: `jemalloc-COPYING`.
+
+The binary otherwise links only macOS system libraries (`/usr/lib/libncurses.5.4.dylib`, `libSystem`, `libresolv`), which are not redistributed.

@@ -14,11 +14,11 @@
    rm -rf "$HOME/.cargo/bin/web" && ditto bin/web "$HOME/.cargo/bin/web"
    ```
 
-4. 普通会话另需 tmux、对应 Agent 及登录；预构建 App 不需要 Rust。打开 App 后，第一屏会找出这台 Mac 上的 Agent 和项目，勾选项目后点「开始」；权限默认「按 Agent 自己的设置」，引导里的「免确认」开关默认关着。连接另一台 Mac 时才需要 [远程安装与配对](docs/REMOTE-RELAY.md)。此包用 Shifu 自己的固定证书签名、未经 Apple 公证；从 0.4.1 起各版证书相同，已给的辅助功能和屏幕录制授权在升级后保留；macOS 拦截时先核实下载来源，再按系统“隐私与安全性”的对应提示处理。
+4. 不用先装别的：Shifu 自带 tmux（`Contents/Resources/bin/tmux`，只在没装 tmux 时用），预构建 App 也不需要 Rust。打开 App 后，第一屏会找出这台 Mac 上的 Agent 和项目；缺 Agent 时点「安装」，它的官方安装命令会在 Shifu 的终端标签里运行，看得到进度（用 npm 装的 Agent 要先有 Node.js）；再勾选项目、点「开始」。以后在 Shifu 菜单的「准备情况…」里还能处理登录、浏览器、电脑操作和通知，每项一个按钮。权限默认「按 Agent 自己的设置」，引导里的「免确认」开关默认关着。连接另一台 Mac 时才需要 [远程安装与配对](docs/REMOTE-RELAY.md)。此包用 Shifu 自己的固定证书签名、未经 Apple 公证；从 0.4.1 起各版证书相同，已给的辅助功能和屏幕录制授权在升级后保留；macOS 拦截时先核实下载来源，再按系统“隐私与安全性”的对应提示处理。
 5. StepFun 使用 Step Plan 订阅入口，另需 Node.js 20.6+、独立 Pi 0.73.1 和密钥设置，见 [STEPFUN.md](docs/STEPFUN.md)。这些运行时与密钥不在包内。桌面密钥库兼容要求也在该文档中；CLI 支持环境注入。
 
-可选电脑操作：先备份已有 `~/Applications/Shifu Computer Use.app`；替换前用已安装 CLI 执行 `shifu computer stop` 停止转接程序，再通过 Finder 将 `helpers/Shifu Computer Use.app` 放到 `~/Applications`。不要从包内直接启动开发副本。运行 `shifu computer doctor` 查看状态，需要时再运行 `shifu computer permissions`，由本人设置辅助功能与屏幕录制权限。见 [使用指南](docs/COMPUTER-USE.md)。不使用电脑操作可跳过。
+可选电脑操作：在「准备情况…」里点电脑操作的「设置」，会把 Shifu 自带的辅助程序放进 `~/Applications` 并打开授权窗口（第一次运行 `shifu computer` 命令或 `shifu computer install` 也会这样放）。手动的做法：先备份已有 `~/Applications/Shifu Computer Use.app`；替换前用已安装 CLI 执行 `shifu computer stop` 停止转接程序，再通过 Finder 将 `helpers/Shifu Computer Use.app` 放到 `~/Applications`。不要从包内直接启动开发副本。运行 `shifu computer doctor` 查看状态，需要时再运行 `shifu computer permissions`，由本人设置辅助功能与屏幕录制权限。见 [使用指南](docs/COMPUTER-USE.md)。不使用电脑操作可跳过。
 
-`scripts/autopilot.py` 是独立后台托管入口，需 Python 3.9+、已登录 Codex 和审阅后的本轮配置；只支持现有 Codex 会话，不支持 StepFun 托管。安装不会启动托管，见 [AUTOPILOT.md](docs/AUTOPILOT.md)。Browser Use 的独立运行时需从源码按 [BROWSER-USE.md](docs/BROWSER-USE.md) 安装。 `shifu web` 网页任务池的运行文件在 `bin/web`，随 CLI 一起安装；另需 Node.js 18+ 和本机已运行的 Playwright 无界面 Chromium 服务端，见 [WEB-POOL.md](docs/WEB-POOL.md)。
+`scripts/autopilot.py` 是独立后台托管入口，需 Python 3.9+、已登录 Codex 和审阅后的本轮配置；只支持现有 Codex 会话，不支持 StepFun 托管。安装不会启动托管，见 [AUTOPILOT.md](docs/AUTOPILOT.md)。Browser Use 的运行时在第一次使用时自动安装（也可运行 `shifu browser install`，或在「准备情况」里点浏览器的「设置」），需要 Node.js 20+，见 [BROWSER-USE.md](docs/BROWSER-USE.md)。 `shifu web` 网页任务池的运行文件在 `bin/web`，随 CLI 一起安装；另需 Node.js 18+ 和本机已运行的 Playwright 无界面 Chromium 服务端，见 [WEB-POOL.md](docs/WEB-POOL.md)。
 
 本包不含账号、项目、会话、设备身份、服务器凭证、Pi/Node 或浏览器运行时。原生首次安装、真实远端 Mac 和跨国输入仍需在目标设备确认；本版本不自动升级云中继或其他设备。

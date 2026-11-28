@@ -13,6 +13,7 @@ pub const HELP: &str = "shifu computer — 操作本机窗口，不依赖 Orca
 
   doctor [--json]               检查辅助程序、签名和系统权限，不打开授权框
   guide [--json]
+  install                       把 Shifu 自带的辅助程序装到 ~/Applications（首次操作时也会自动装）
   capabilities / list-apps / permissions / stop
   list-windows --app <bundle-id|pid:PID|应用名>
   get-app-state --app <应用> [--window-id ID] [--no-screenshot]
@@ -44,7 +45,7 @@ pub const HELP: &str = "shifu computer — 操作本机窗口，不依赖 Orca
 多步前台流程的中间一步可加 --keep-foreground，暂不还原前台（鼠标仍还原）。
 SHIFU_COMPUTER_FOREGROUND=never 或 settings.json 的 \"computer_foreground\": \"never\" 完全禁止前台；
 SHIFU_COMPUTER_IDLE_SECONDS / \"computer_idle_seconds\" 调整空闲秒数。
-首次使用运行 permissions，在系统设置给 Shifu Computer Use 授权。";
+首次使用运行 permissions，由本人在系统设置给 Shifu Computer Use 授权。";
 
 pub fn run(args: &[String]) -> Result<(), String> {
     if args.is_empty() || matches!(args[0].as_str(), "help" | "--help" | "-h") {
@@ -62,6 +63,11 @@ pub fn run(args: &[String]) -> Result<(), String> {
             return Ok(());
         }
         if args[0] == "_serve" { return runtime::serve(); }
+        if args[0] == "install" {
+            let response = runtime::install()?;
+            println!("{}", serde_json::to_string_pretty(&response).map_err(|e| e.to_string())?);
+            return Ok(());
+        }
         if args[0] == "permissions" {
             if args.iter().any(|arg| arg == "--background-only") {
                 return Err("--background-only 不会打开权限窗口；请由本人单独处理权限".into());

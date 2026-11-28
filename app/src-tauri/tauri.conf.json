@@ -59,6 +59,7 @@
       "remote-bundle/": "remote/",
       "cli-bundle/": "bin/",
       "helpers-bundle/": "helpers/",
+      "licenses-bundle/": "licenses/",
       "../../docs/third-party/Steamcup-LICENSE": "licenses/Steamcup-LICENSE"
     }
   },

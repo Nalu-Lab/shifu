@@ -25,22 +25,77 @@ pub struct Tmux {
     conf: PathBuf,
 }
 
+/// Which tmux to run, for the server on `SHIFU_SOCKET` (default `shifu`). See `tmux_bin_for`.
 pub fn find_tmux_bin() -> PathBuf {
+    let socket = std::env::var("SHIFU_SOCKET").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| "shifu".to_string());
+    tmux_bin_for(&socket)
+}
+
+/// Which tmux to run for the server on `socket`: `SHIFU_TMUX`; else, while that server runs, the tmux Shifu started
+/// it with (a different tmux may not talk to it); else the person's own (Homebrew, /usr/local, PATH); else the one
+/// shipped with Shifu (`bundled_tmux`); else a bare `tmux`.
+pub fn tmux_bin_for(socket: &str) -> PathBuf {
     if let Some(p) = std::env::var_os("SHIFU_TMUX").filter(|p| !p.is_empty()) {
         return PathBuf::from(p);
     }
-    for candidate in ["/opt/homebrew/bin/tmux", "/usr/local/bin/tmux"] {
-        if Path::new(candidate).exists() {
-            return PathBuf::from(candidate);
-        }
-    }
-    PathBuf::from("tmux")
+    let started = fs::read_to_string(started_with_file()).ok().map(|s| PathBuf::from(s.trim()));
+    let path = std::env::var("PATH").unwrap_or_default();
+    let own = [Path::new("/opt/homebrew/bin/tmux"), Path::new("/usr/local/bin/tmux")];
+    choose_tmux(started.filter(|_| socket_path(socket).exists()).as_deref(), &own, &path, bundled_tmux().as_deref())
+}
+
+/// See `tmux_bin_for`; `started` is the tmux that started the running server, if any, `own` the usual places of a
+/// tmux the person installed.
+pub fn choose_tmux(started: Option<&Path>, own: &[&Path], path: &str, bundled: Option<&Path>) -> PathBuf {
+    let own = || own.iter().find(|p| is_executable(p)).map(|p| p.to_path_buf());
+    // Orca puts a tmux stand-in first on its terminals' PATH; it is not a tmux.
+    let on_path = || {
+        let dirs: Vec<&str> = path.split(':').filter(|d| !d.trim_end_matches('/').ends_with("/.orca/claude-agent-teams-bin")).collect();
+        crate::clis::find_program(&dirs.join(":"), &["tmux"])
+    };
+    started
+        .filter(|p| is_executable(p))
+        .map(Path::to_path_buf)
+        .or_else(own)
+        .or_else(on_path)
+        .or_else(|| bundled.filter(|p| is_executable(p)).map(Path::to_path_buf))
+        .unwrap_or_else(|| PathBuf::from("tmux"))
+}
+
+fn is_executable(path: &Path) -> bool {
+    crate::clis::is_executable(path)
+}
+
+/// The tmux shipped with Shifu, next to this executable: `Shifu.app/Contents/Resources/bin/tmux` (beside the
+/// bundled CLI, or found from the app's own `Contents/MacOS`), or the download package's `bin/tmux`; for a CLI
+/// installed on its own (`~/.cargo/bin/shifu`), an installed Shifu.app's.
+pub fn bundled_tmux() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?;
+    let home = PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
+    let app = "Applications/Shifu.app/Contents/Resources/bin/tmux";
+    [dir.join("tmux"), dir.join("../Resources/bin/tmux"), home.join(app), Path::new("/").join(app)]
+        .into_iter()
+        .find(|p| is_executable(p))
+        .map(|p| p.canonicalize().unwrap_or(p))
+}
+
+/// Where tmux keeps the socket for `-L socket`.
+fn socket_path(socket: &str) -> PathBuf {
+    let dir = std::env::var_os("TMUX_TMPDIR").filter(|d| !d.is_empty()).map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/tmp"));
+    // SAFETY: getuid has no preconditions.
+    dir.join(format!("tmux-{}", unsafe { libc::getuid() })).join(socket)
+}
+
+/// Names the tmux that started this home's server (written when Shifu starts it).
+fn started_with_file() -> PathBuf {
+    shifu_home().join("tmux-bin")
 }
 
 impl Tmux {
     pub fn from_env() -> Tmux {
         let socket = std::env::var("SHIFU_SOCKET").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| "shifu".to_string());
-        Tmux { bin: find_tmux_bin(), socket, conf: shifu_home().join("tmux.conf") }
+        Tmux { bin: tmux_bin_for(&socket), socket, conf: shifu_home().join("tmux.conf") }
     }
 
     fn command(&self) -> Command {
@@ -51,6 +106,7 @@ impl Tmux {
 
     /// 可能起新服务的那条命令：服务里所有窗口都继承这里的环境，所以在这里清掉父会话的标记（见 `server_env_changes`）。
     pub fn server_command(&self) -> Command {
+        self.record_server_bin();
         let mut cmd = self.command();
         let (removed, path) = server_env_changes(&std::env::vars().collect::<Vec<_>>());
         for key in removed {
@@ -60,6 +116,14 @@ impl Tmux {
             cmd.env("PATH", path);
         }
         cmd
+    }
+
+    /// Remembers which tmux may start the server (see `tmux_bin_for`); while one runs this is the tmux it was
+    /// started with already. A bare name is not worth keeping.
+    fn record_server_bin(&self) {
+        if self.bin.is_absolute() {
+            let _ = fs::write(started_with_file(), self.bin.to_string_lossy().as_bytes());
+        }
     }
 
     /// 跑一条 tmux 命令，成功返回去掉末尾换行的 stdout。
@@ -330,6 +394,33 @@ mod tests {
         let m = parse_panes("%9 0 @2 2\n%3 0 @2 0\n%4 0 @5 0\n%7 0 @2 1");
         assert_eq!(page_panes(&m, "@2"), [(0, "%3".to_string()), (1, "%7".to_string()), (2, "%9".to_string())]);
         assert!(page_panes(&m, "@8").is_empty());
+    }
+
+    #[test]
+    fn a_running_server_keeps_its_tmux_then_the_persons_own_then_the_bundled_one() {
+        let dir = std::env::temp_dir().join(format!("shifu-tmux-choice-{}", std::process::id()));
+        let (mine, bundled) = (dir.join("mine"), dir.join("bundled"));
+        fs::create_dir_all(&mine).unwrap();
+        fs::create_dir_all(&bundled).unwrap();
+        for bin in [mine.join("tmux"), bundled.join("tmux")] {
+            fs::write(&bin, "#!/bin/sh\n").unwrap();
+            fs::set_permissions(&bin, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+        }
+        let b = bundled.join("tmux");
+        let none: [&Path; 0] = [];
+        let (m, p) = (mine.to_string_lossy().into_owned(), mine.join("tmux"));
+        assert_eq!(choose_tmux(Some(&b), &[&p], &m, Some(&b)), b, "the running server's tmux wins");
+        assert_eq!(choose_tmux(None, &[&p], "/nonexistent", Some(&b)), p, "then Homebrew's");
+        assert_eq!(choose_tmux(None, &none, &m, Some(&b)), p, "then one on PATH");
+        assert_eq!(choose_tmux(None, &none, "/nonexistent", Some(&b)), b, "then the bundled one");
+        assert_eq!(choose_tmux(None, &none, "/nonexistent", None), PathBuf::from("tmux"));
+        let orca = dir.join(".orca/claude-agent-teams-bin");
+        fs::create_dir_all(&orca).unwrap();
+        fs::copy(&b, orca.join("tmux")).unwrap();
+        assert_eq!(choose_tmux(None, &none, &orca.to_string_lossy(), Some(&b)), b, "Orca's stand-in is skipped");
+        let gone = dir.join("gone/tmux");
+        assert_eq!(choose_tmux(Some(&gone), &none, "/nonexistent", Some(&b)), b, "a tmux that is gone is skipped");
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

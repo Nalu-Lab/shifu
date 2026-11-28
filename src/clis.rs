@@ -163,6 +163,13 @@ pub fn shifu_usable(bin: &str) -> bool {
     !bin.is_empty() && find_program(&path, &[bin]).is_some()
 }
 
+/// The one-line installer for agent `id`: `SHIFU_INSTALL_<ID>` when set (so the one-click install can be tried with
+/// a harmless script), else the table's.
+pub fn install_command(id: &str, table: Option<&str>) -> Option<String> {
+    let key = format!("SHIFU_INSTALL_{}", id.to_ascii_uppercase().replace('-', "_"));
+    std::env::var(key).ok().filter(|c| !c.trim().is_empty()).or_else(|| table.map(Into::into))
+}
+
 /// Every agent in `agents_spec::AGENTS`, then the user's own from `<SHIFU_HOME>/agents.json`, with where each was
 /// found in `path`. StepFun counts as installed when node is there and Shifu's Pi runtime is set up; Qwen honours
 /// `SHIFU_QWEN_BIN` as `shifu qwen` does.
@@ -188,7 +195,7 @@ pub fn detect_with(path: &str, users: &[crate::user_agents::UserAgent]) -> Vec<F
                 name: spec.label.into(),
                 path: found.map(|p| p.to_string_lossy().into_owned()),
                 install_url: spec.install_url.into(),
-                install_command: spec.install_command.map(Into::into),
+                install_command: install_command(spec.id, spec.install_command),
                 login_command: spec.login_command.map(Into::into),
                 signed_in: None,
                 source: crate::agents_spec::source(spec).into(),

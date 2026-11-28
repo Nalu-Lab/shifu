@@ -6,16 +6,17 @@
 
 ## 安装与诊断
 
-安装时需要 Node.js 20+、npm，以及本机 Chrome：
+需要 Node.js 20+、npm，以及本机 Chrome。运行时在第一次使用时自动安装（下载包和 App 自带的 CLI 也一样，不需要仓库）；也可以先装好：
 
 ```bash
-cargo install --path . --locked --force
-bash scripts/install-browser.sh
+shifu browser install    # 或在 Shifu 菜单「准备情况…」里点浏览器的「设置」
 shifu browser doctor
 shifu browser guide
 ```
 
-安装脚本按 `browser/package-lock.json` 安装依赖，将运行所需的 Node 可执行文件、许可和依赖放在 `~/.shifu/browser/runtime`；后续执行不依赖系统 PATH 中的 Node，不在操作时通过 npx 下载代码。再次安装会备份旧运行时。更新依赖前请先逐个关闭自己的浏览器会话；依赖升级可能令旧 daemon 不兼容。
+没有 Node 时，`open` 等命令返回 `runtime_missing`，提示先装 Node.js 20+ 再运行 `shifu browser install`。在仓库里也可以运行 `bash scripts/install-browser.sh`，效果相同。
+
+安装按 `browser/package-lock.json`（编进 CLI 里的同一份）安装依赖，将运行所需的 Node 可执行文件、许可和依赖放在 `~/.shifu/browser/runtime`；后续执行不依赖系统 PATH 中的 Node，不在操作时通过 npx 下载代码。再次安装会备份旧运行时。更新依赖前请先逐个关闭自己的浏览器会话；依赖升级可能令旧 daemon 不兼容。
 
 `doctor` 只检查 Node 版本和运行时，不打开浏览器、不连接已有标签、不读取登录信息。它不证明 Chrome 已安装或某个网页可达；浏览器启动失败会由 `open` 返回。`guide` 和 `help` 在运行时缺失时仍可读取。
 

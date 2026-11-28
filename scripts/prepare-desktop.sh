@@ -16,6 +16,13 @@ cargo build --locked --release --manifest-path "$project_root/Cargo.toml" --bin 
 mkdir -p "$project_root/app/src-tauri/cli-bundle"
 install -m 755 "$CARGO_TARGET_DIR/release/shifu" "$project_root/app/src-tauri/cli-bundle/shifu.tmp"
 mv -f "$project_root/app/src-tauri/cli-bundle/shifu.tmp" "$project_root/app/src-tauri/cli-bundle/shifu"
+# tmux ships beside it (Contents/Resources/bin/tmux), so a Mac without tmux needs nothing else; Shifu prefers a tmux
+# the person installed (src/tmux.rs). Built once from pinned sources, then reused (scripts/build-tmux.sh).
+tmux_bin=$(bash "$project_root/scripts/build-tmux.sh" | tail -n 1)
+install -m 755 "$tmux_bin" "$project_root/app/src-tauri/cli-bundle/tmux.tmp"
+mv -f "$project_root/app/src-tauri/cli-bundle/tmux.tmp" "$project_root/app/src-tauri/cli-bundle/tmux"
+mkdir -p "$project_root/app/src-tauri/licenses-bundle/tmux"
+cp "$(dirname "$tmux_bin")"/licenses/* "$project_root/app/src-tauri/licenses-bundle/tmux/"
 stage_root=${SHIFU_BUILD_STAGE_ROOT:-"$project_root/target/remote-bundle-staging"}
 mkdir -p "$bundle" "$stage_root"
 stage=$(mktemp -d "$stage_root/release.XXXXXX")
