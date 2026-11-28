@@ -30,4 +30,5 @@ pub mod qwen;
 pub mod tabs;
 pub mod tmux;
 pub mod topic;
+pub mod user_agents;
 pub mod workspace;

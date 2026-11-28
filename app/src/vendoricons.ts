@@ -9,13 +9,15 @@ import type { Vendor } from "./limits";
 const antigravityIcon = new URL("./assets/antigravity.svg", import.meta.url).href;
 
 /** Agents with a mark: the two with usage limits, plus CodeBuddy and Kimi. */
-export type Mark = Vendor | "codebuddy" | "kimi" | "antigravity" | "stepfun" | "qwen" | "opencode" | "pi" | "gemini" | "terminal";
+export type Mark = Vendor | "codebuddy" | "kimi" | "antigravity" | "stepfun" | "qwen" | "opencode" | "pi" | "gemini" | "terminal" | "plain";
 
 /** Bar colours: Claude's orange, the blue of the Codex cloud. */
-export const VENDOR_COLORS: Record<Mark, string> = { claude: "#d97757", codex: "#5560f6", codebuddy: "currentColor", kimi: "#000", antigravity: "currentColor", stepfun: "currentColor", qwen: "currentColor", opencode: "currentColor", pi: "currentColor", gemini: "currentColor", terminal: "currentColor" };
-const VIEWBOX: Record<Mark, string> = { claude: "0 0 24 24", codex: "0 0 12 12", codebuddy: "0 0 12 12", kimi: "0 0 12 12", antigravity: "0 0 16 16", stepfun: "0 0 12 12", qwen: "0 0 12 12", opencode: "0 0 12 12", pi: "0 0 12 12", gemini: "0 0 12 12", terminal: "0 0 12 12" };
+export const VENDOR_COLORS: Record<Mark, string> = { claude: "#d97757", codex: "#5560f6", codebuddy: "currentColor", kimi: "#000", antigravity: "currentColor", stepfun: "currentColor", qwen: "currentColor", opencode: "currentColor", pi: "currentColor", gemini: "currentColor", terminal: "currentColor", plain: "currentColor" };
+const VIEWBOX: Record<Mark, string> = { claude: "0 0 24 24", codex: "0 0 12 12", codebuddy: "0 0 12 12", kimi: "0 0 12 12", antigravity: "0 0 16 16", stepfun: "0 0 12 12", qwen: "0 0 12 12", opencode: "0 0 12 12", pi: "0 0 12 12", gemini: "0 0 12 12", terminal: "0 0 12 12", plain: "0 0 12 12" };
 
 const PATHS: Record<Exclude<Mark, "antigravity">, string> = {
+  // A neutral ring for agents without a mark of their own (extra plain agents, the user's agents.json).
+  plain: "M6 1.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z",
   terminal: "M2.2 2.8L5.4 6l-3.2 3.2.85.85L7.1 6 3.05 1.95zM6.8 9h3.4v1.2H6.8z",
   gemini: "M6 0C6.45 3.35 8.65 5.55 12 6C8.65 6.45 6.45 8.65 6 12C5.55 8.65 3.35 6.45 0 6C3.35 5.55 5.55 3.35 6 0Z",
   // Neutral Q monogram, not an official vendor logo.
@@ -30,6 +32,9 @@ const PATHS: Record<Exclude<Mark, "antigravity">, string> = {
   claude: "M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z",
   codex: "M11.75 6.0L11.75 6.5L11.75 7.01L11.6 7.5L11.46 7.99L11.23 8.44L10.85 8.8L10.38 9.07L9.94 9.3L9.47 9.47L9.33 9.97L9.02 10.31L8.72 10.71L8.31 10.96L7.9 11.21L7.4 11.21L6.96 11.46L6.48 11.46L6.0 11.2L5.54 11.2L5.13 10.96L4.74 10.7L4.29 10.71L3.81 10.7L3.28 10.71L2.88 10.45L2.48 10.2L2.04 9.96L1.59 9.7L1.27 9.31L1.11 8.82L0.96 8.35L0.97 7.83L0.95 7.35L0.77 6.92L0.52 6.48L0.21 6.0L0.21 5.49L0.21 4.98L0.34 4.48L0.52 4.0L0.94 3.64L1.11 3.18L1.56 2.89L2.18 2.79L2.48 2.48L2.63 1.98L2.94 1.63L3.32 1.37L3.72 1.11L4.13 0.87L4.63 0.87L5.05 0.61L5.53 0.61L6.0 0.86L6.45 0.86L6.86 1.12L7.24 1.38L7.69 1.37L8.15 1.38L8.68 1.37L9.07 1.62L9.48 1.85L9.92 2.08L10.31 2.38L10.69 2.71L10.85 3.2L10.98 3.68L10.99 4.18L10.99 4.66L11.15 5.09L11.46 5.52Z",
 };
+
+/** `kind`'s own mark, or the neutral one for an agent Shifu has no mark for. */
+export const markFor = (kind: string): Mark => (kind in VIEWBOX ? (kind as Mark) : "plain");
 
 export function vendorIcon(vendor: Mark, className = "limit-icon"): SVGSVGElement {
   const ns = "http://www.w3.org/2000/svg";

@@ -109,7 +109,7 @@ Shifu 把 Claude Code、Codex、Kimi、CodeBuddy、Antigravity、opencode、Pi�
 - 应用用 Shifu 自己的固定证书签名，尚未公证；首次打开若被拦，确认来源后按「系统设置 → 隐私与安全性」中的对应提示处理。
 - 第一次启动 Codex 会提示检查 hooks，请阅读后决定是否信任。CLI 安装路径保持不变时，无需每次重复设置。
 - PATH 设置只对当前终端生效。新终端尚未配置该路径时，可运行 `"$HOME/.cargo/bin/shifu"`，或自行将该目录加入 shell 配置。
-- 只想用命令行：`shifu` 打开工作台，`shifu new claude ~/proj` 开一个 Agent，`shifu ls` 列出会话，`shifu jump` 跳到等待处理的会话。
+- 只想用命令行：`shifu` 打开工作台，`shifu new claude ~/proj` 开一个 Agent，`shifu ls` 列出会话，`shifu agents` 看这台 Mac 上找到哪些 Agent CLI（自己的 CLI 可写进 `~/.shifu/app/agents.json`，见 [docs/AGENTS.md](docs/AGENTS.md)），`shifu jump` 跳到等待处理的会话。
 
 <details>
 <summary>从源码构建（开发者）</summary>

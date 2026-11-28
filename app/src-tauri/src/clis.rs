@@ -48,7 +48,11 @@ pub fn report() -> Report {
         .or_else(|| clis::find_program(&path, &["tmux"]))
         .map(|p| p.to_string_lossy().into_owned());
     let user_home = PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
-    let mut agents = clis::detect(&path);
+    let (users, warnings) = shifu::user_agents::load();
+    for warning in &warnings {
+        eprintln!("shifu-app: {warning}");
+    }
+    let mut agents = clis::detect_with(&path, &users);
     with_sign_in(&mut agents, |kind| clis::signed_in(kind, &user_home, |key| std::env::var(key).ok()));
     Report { agents, tmux, shell_read: SHELL_READ.load(Ordering::Relaxed) }
 }
@@ -117,6 +121,9 @@ mod tests {
             install_command: None,
             login_command: None,
             signed_in: None,
+            source: "built-in".into(),
+            hooks: "none".into(),
+            extra: false,
         };
         let report = [found("claude", Some("/bin/claude")), found("antigravity", None)];
         assert!(is_installed(&report, "claude"));

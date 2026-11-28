@@ -52,7 +52,7 @@ function agentItem(agent: CliFound): CheckItem {
 }
 
 /** The rows: tmux, then the installed agents (with sign-in where it can be told), then, only when none is
- *  installed, every agent with how to install it. When some are installed the others are only a line of links
+ *  installed, every core agent with how to install it. When some are installed the others are only a line of links
  *  (`missingLine`), since one agent is enough. */
 export function setupChecks(report: CliReport): CheckItem[] {
   const items: CheckItem[] = [
@@ -70,7 +70,8 @@ export function setupChecks(report: CliReport): CheckItem[] {
   const installed = agents.filter((a) => a.path !== null);
   if (installed.length > 0) return [...items, ...installed.map(agentItem)];
   items.push({ label: "Agent", state: "missing", detail: "还没找到 Agent 命令行工具，装好下面任意一个就行：" });
-  return [...items, ...agents.map(agentItem)];
+  // Extra plain agents and the user's own are offered once found, not suggested for installing.
+  return [...items, ...agents.filter((a) => !a.extra).map(agentItem)];
 }
 
 const MARKS: Record<CheckState, string> = { ok: "✓", missing: "✕", note: "!" };

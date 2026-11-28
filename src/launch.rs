@@ -397,9 +397,11 @@ pub fn agent_command(kind: Kind, command: &str, shifu: &str, claude_settings: &s
             let shell = std::env::var("SHELL").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| "/bin/zsh".into());
             return format!("{} -l", sh_quote(&shell));
         }
+        // A plain agent: its table row's program, an agents.json entry's command and args, or the command as given.
         None => {
-            let mut words = vec![sh_quote(command)];
-            words.extend(extra.iter().map(|a| sh_quote(a)));
+            let (program, own) = agents_spec::plain_launch(command);
+            let mut words = vec![sh_quote(&program)];
+            words.extend(own.iter().chain(extra).map(|a| sh_quote(a)));
             return words.join(" ");
         }
     };
@@ -755,6 +757,18 @@ mod tests {
     fn other_command_is_plain_with_quoted_args() {
         let c = agent_command(Kind::Other, "sh", "/opt/shifu", "", &["-c".to_string(), "sleep 600".to_string()], Permissions::Bypass);
         assert_eq!(c, "'sh' '-c' 'sleep 600'");
+    }
+
+    #[test]
+    fn extra_plain_agents_start_and_resume_as_their_program() {
+        for id in ["aider", "cursor-agent", "copilot"] {
+            assert_eq!(Kind::of_command(id), Kind::Other);
+            for perms in [Permissions::Bypass, Permissions::Own] {
+                assert_eq!(agent_command(Kind::Other, id, "/s", "", &[], perms), format!("'{id}'"));
+                assert_eq!(resume_command(Kind::Other, id, "/s", "", Some("x"), &[], perms), format!("'{id}'"));
+            }
+            assert!(model_flags(Kind::Other, Some("m"), Some("high")).is_empty());
+        }
     }
 
     #[test]

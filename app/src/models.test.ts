@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AGENTS, specOf, defaultKind, effortsFor, installUrl, isInstalled, mergeCatalog, splitAgents, validPick, type ModelInfo } from "./models";
 import type { CliReport } from "./api";
+import { markFor } from "./vendoricons";
 
 const m = (id: string, efforts: string[]): ModelInfo => ({ id, label: id, efforts });
 const models = [m("opus", ["low", "high", "max"]), m("sonnet", ["low", "medium", "high"]), m("haiku-4-5", [])];
@@ -71,6 +72,26 @@ describe("installed agents", () => {
     expect(defaultKind(report(["claude", "codex"]), "codex")).toBe("codex");
     expect(defaultKind(report(["codex", "qwen"]), "claude")).toBe("codex");
     expect(defaultKind(report([]), "claude")).toBe("terminal");
+  });
+
+  it("extra and user-defined agents are offered only when found, before the terminal", () => {
+    const base = report(["codex"]);
+    const more = (kind: string, name: string, path: string | null, source: string) =>
+      ({ kind, name, path, install_url: "", source, hooks: "none", extra: true });
+    const r: CliReport = {
+      ...base,
+      agents: [...base.agents, more("aider", "Aider", "/bin/aider", "plain"), more("droid", "Factory Droid", null, "plain"),
+        more("mybot", "My Bot", "/opt/mybot", "agents.json"), more("gone", "Gone", null, "agents.json")],
+    };
+    const { installed, missing } = splitAgents(r);
+    expect(installed.map((a) => a.kind)).toEqual(["codex", "aider", "mybot", "terminal"]);
+    expect(missing.map((a) => a.kind)).not.toContain("droid");
+    expect(missing.map((a) => a.kind)).not.toContain("gone");
+    expect(missing.map((a) => a.kind)).toContain("claude");
+    expect(installed.find((a) => a.kind === "mybot")?.name).toBe("My Bot");
+    expect(defaultKind({ ...r, agents: r.agents.map((a) => (a.kind === "codex" ? { ...a, path: null } : a)) }, "claude")).toBe("aider");
+    expect(markFor("aider")).toBe("plain");
+    expect(markFor("codex")).toBe("codex");
   });
 
   it("an agent the report does not list is not hidden", () => {

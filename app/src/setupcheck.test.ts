@@ -29,6 +29,13 @@ describe("setup checklist", () => {
     expect(setupChecks(report(true, [agent("claude", true)]))[0]).toMatchObject({ label: "tmux", state: "ok" });
   });
 
+  it("with no agent installed, extra agents are not suggested; once found they count", () => {
+    const missing = setupChecks(report(true, [agent("claude", false), agent("aider", false, { extra: true })]));
+    expect(missing.map((i) => i.label)).toEqual(["tmux", "Agent", "claude"]);
+    const found = setupChecks(report(true, [agent("claude", false), agent("mybot", true, { extra: true })]));
+    expect(found.map((i) => [i.label, i.state])).toEqual([["tmux", "ok"], ["mybot", "ok"]]);
+  });
+
   it("with no agent installed, lists every agent with its install command or page", () => {
     const items = setupChecks(report(true, [agent("claude", false), agent("kimi", false, { install_command: null })]));
     expect(items.map((i) => [i.label, i.state])).toEqual([

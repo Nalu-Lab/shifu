@@ -20,13 +20,14 @@
 | `bypass_env` | 免确认要靠环境变量而不是参数时用 | 目前没有 Agent 用到；留给只认环境变量的 Agent |
 | `model_args` / `effort_args` | 模型、思考档位的参数模板，`{model}`、`{effort}` 会被替换 | `["-m", "{model}"]` |
 | `resume_by_id` / `resume_latest` | 按保存的会话 id 恢复；没有 id 时怎么恢复（空 = 重新开） | `["--session", "{id}"]` / `["--continue"]` |
+| `extra` | `true`：只在找到时出现，不列进「未安装」（表里额外的普通 Agent） | `Aider` 这类 |
 | `hooks` | 状态怎么回报：`ClaudeSettings`、`Codex`、`KimiConfig`、`AntigravityHooksJson`、`PiExtension`、`OpencodePlugin`、`None` | |
 | `launch` | `Direct`（`程序 [hook 参数] [权限参数] [模型] [恢复]`）、`Shifu`（经 `shifu stepfun` / `shifu qwen` 启动）、`Bespoke`（自己的代码） | |
 
 读这张表的地方：
 
 - `Kind::of_command`：命令名对应哪个 kind。
-- `clis::detect`：哪些 Agent 装了（StepFun 另查 Pi 运行时，Qwen 另认 `SHIFU_QWEN_BIN`）。
+- `clis::detect`：哪些 Agent 装了（StepFun 另查 Pi 运行时，Qwen 另认 `SHIFU_QWEN_BIN`），后面接 agents.json 里用户自己的。
 - `launch::model_flags`、`agent_command`、`resume_command`：启动、恢复的命令行。
 
 每一种现有 Agent 的启动、恢复命令都有逐字比对的单元测试，迁到表上之后输出一个字都没变。
@@ -61,17 +62,44 @@
 - Agent 在自己的 shell 工具里再开一个 opencode/pi 时，子进程会继承 `SHIFU_ID`。插件第一次加载时设 `SHIFU_STATUS_OWNER=<自己的 pid>`，子进程看到别人的 pid 就不回报，不会把父会话的 id 换掉。
 - `shifu hook opencode|pi …` 只改同类的记录（`hook::foreign_caller`），比如 Claude 里跑的 opencode 不会改 Claude 对话的状态。
 
-## 以后：让用户自己声明普通 Agent（hooks: none）
+## 普通 Agent：表里的和用户自己加的（hooks: none）
 
-Gemini CLI 已经是表里的一行普通 Agent（`kind: Other`、`hooks: None`）：能被找到、出现在列表、按命令启动，侧栏在它运行期间显示运行中，退出后重新打开。下一步可以让用户在 `SHIFU_HOME/agents.toml` 里写同样的几列（名字、命令、安装链接、模型参数模板、恢复参数），App 启动时读进来接在内置表后面：
+普通 Agent（`kind: Other`、`hooks: None`）能被找到、出现在列表、按命令启动；没有状态 hook，侧栏在它的窗格活着时显示运行中，退出后「恢复」就是把同一条命令再跑一次（没有会话 id，也不加 `--continue`）。权限开关、模型和思考档位对它们不起作用：没有一家的免确认参数在真实安装上核对过，所以一个都不加。
 
-- 只允许 `hooks = "none"`，因此不需要运行用户提供的代码，也不需要新的 hook 类型；
-- 命令名不能和内置的重名，参数都经过 shell 引号处理；
-- `kind` 都存成 `other`，记录里另存 `command`，恢复时按用户写的 `resume_latest` 重开。
+**表里的（`extra: true`，只在找到时出现）：** 不放进「未安装」和准备情况清单，免得清单越拉越长；装了就出现在新建任务的下拉、「+」菜单和引导的默认 Agent 里。2026-11-27 按 npm、PyPI、Homebrew 和各家安装页核对了命令名：
+
+| 显示名 | 命令 | 核对来源 |
+|---|---|---|
+| Aider | `aider` | PyPI `aider-chat` 0.86.2；aider.chat/docs/install.html |
+| Goose | `goose` | Homebrew `block-goose-cli` 1.61.1；goose-docs.ai。数据库迁移工具 `goose` 也叫这个名字，装了它也会显示成 Goose |
+| Amp | `amp` | npm `@sourcegraph/amp`；ampcode.com/docs |
+| Cursor CLI | `cursor-agent` | cursor.com/install 同时装 `agent` 和 `cursor-agent`，Homebrew cask `cursor-cli` 只装 `cursor-agent`；`agent` 太常见，不拿来认 |
+| Factory Droid | `droid` | npm `@factory/cli` 1.23.0；docs.factory.com/droid-cli/quickstart |
+| GitHub Copilot CLI | `copilot` | npm `@github/copilot` 1.0.117；docs.github.com 的 Copilot CLI 安装页 |
+| Crush | `crush` | npm `@charmland/crush` 0.104.0；github.com/charmbracelet/crush |
+
+Gemini CLI 也是普通 Agent，但属于核心列表（`extra: false`），没装时仍列在「未安装」。
+
+**用户自己加的：`<SHIFU_HOME>/agents.json`**（桌面应用是 `~/.shifu/app/agents.json`，终端版 `~/.shifu/agents.json`），见 `src/user_agents.rs`：
+
+```json
+[{"id": "mybot", "label": "My Bot", "command": "mybot", "args": ["--foo"], "install_url": "https://example.com/mybot"}]
+```
+
+- `id`、`command` 必填；`label` 默认等于 `id`；`args`、`install_url` 可省。
+- `id` 只能用字母、数字和 `. _ + -`，不能和内置 Agent 的 id 或命令名重名（也不能叫 `terminal`、`other`、`shifu`），文件里重复的只认第一个。
+- `command` 是程序名（在 PATH 里找）或绝对路径，不能是 shell 命令；参数写进 `args`。启动时每个词都加 shell 引号。`install_url` 要以 `https://` 或 `http://` 开头。
+- 写错的条目被跳过，其余照常；文件读不了或不是 JSON 也不影响别的。原因由 `shifu agents` 打出来，App 写进自己的日志。
+- 每次检测和启动都重新读这个文件，改了对下一次启动生效。记录里存的是 `id`（`kind: other`、`command: mybot`），恢复时按文件里当时的 `command` 和 `args` 再跑；条目删了就按 `mybot` 这个命令名跑，找不到时启动失败面板会说明。
+- 启动失败面板（`launch_failure.rs`）用它的 `label` 和 `install_url`；没有安装命令。
+
+## `shifu agents [--json]`
+
+一行一个 Agent：显示名、找到的路径或 `not installed`、是否已登录（`yes` / `no` / `unknown`，只对 Claude、Codex、Gemini CLI 能判断）、状态怎么回报（hook 类型，或 `none`）、来源（`built-in` 有 hook、`plain` 表里的普通 Agent、`agents.json` 用户自己的）。最后一行说读的是哪个 agents.json，写错的条目打在 stderr。找 PATH 的办法和 App 一样：当场问登录 shell（10 秒超时，问不到用 App 上次存的 `shell-path`），再加当前 PATH 和常见安装目录；只看文件，不运行它们。没设 `SHIFU_HOME` 时看桌面应用的 `~/.shifu/app`。`--json` 输出 `{agents, agents_json, warnings}`，`agents` 的每项和 App 的 `clis_detect` 一样。
 
 ## 暂缓：zcode
 
-zcode 先不加：还不知道它有没有能挂状态的 hook / 插件机制，也不知道怎么按 id 恢复会话。等这两点有了文档或源码可查，再按上面的列补一行；在那之前，可以作为用户声明的普通 Agent 使用。
+zcode 先不加：还不知道它有没有能挂状态的 hook / 插件机制，也不知道怎么按 id 恢复会话。等这两点有了文档或源码可查，再按上面的列补一行；在那之前，可以写进 agents.json 作为普通 Agent 使用。
 
 ## 测试记录（2026-11-23）
 

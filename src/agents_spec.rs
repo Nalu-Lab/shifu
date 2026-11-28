@@ -64,6 +64,9 @@ pub struct AgentSpec {
     pub resume_latest: &'static [&'static str],
     pub hooks: Hooks,
     pub launch: Launch,
+    /// A plain agent offered only when it is found: not named under 未安装, so the list of what to install stays
+    /// the core agents.
+    pub extra: bool,
 }
 
 const NONE: &[&str] = &[];
@@ -91,6 +94,7 @@ pub const AGENTS: &[AgentSpec] = &[
         resume_latest: &["--continue"],
         hooks: Hooks::ClaudeSettings,
         launch: Launch::Direct,
+        extra: false,
     },
     AgentSpec {
         id: "codex",
@@ -111,6 +115,7 @@ pub const AGENTS: &[AgentSpec] = &[
         resume_latest: &["--last"],
         hooks: Hooks::Codex,
         launch: Launch::Bespoke,
+        extra: false,
     },
     AgentSpec {
         id: "codebuddy",
@@ -130,6 +135,7 @@ pub const AGENTS: &[AgentSpec] = &[
         resume_latest: &["--continue"],
         hooks: Hooks::ClaudeSettings,
         launch: Launch::Direct,
+        extra: false,
     },
     AgentSpec {
         id: "kimi",
@@ -152,6 +158,7 @@ pub const AGENTS: &[AgentSpec] = &[
         resume_latest: &["--continue"],
         hooks: Hooks::KimiConfig,
         launch: Launch::Direct,
+        extra: false,
     },
     AgentSpec {
         id: "antigravity",
@@ -172,6 +179,7 @@ pub const AGENTS: &[AgentSpec] = &[
         resume_latest: NONE,
         hooks: Hooks::AntigravityHooksJson,
         launch: Launch::Direct,
+        extra: false,
     },
     AgentSpec {
         id: "stepfun",
@@ -192,6 +200,7 @@ pub const AGENTS: &[AgentSpec] = &[
         resume_latest: NONE,
         hooks: Hooks::PiExtension,
         launch: Launch::Shifu,
+        extra: false,
     },
     AgentSpec {
         id: "qwen",
@@ -212,6 +221,7 @@ pub const AGENTS: &[AgentSpec] = &[
         resume_latest: NONE,
         hooks: Hooks::ClaudeSettings,
         launch: Launch::Shifu,
+        extra: false,
     },
     AgentSpec {
         id: "opencode",
@@ -231,6 +241,7 @@ pub const AGENTS: &[AgentSpec] = &[
         resume_latest: &["--continue"],
         hooks: Hooks::OpencodePlugin,
         launch: Launch::Direct,
+        extra: false,
     },
     AgentSpec {
         id: "pi",
@@ -252,6 +263,7 @@ pub const AGENTS: &[AgentSpec] = &[
         resume_latest: &["--continue"],
         hooks: Hooks::PiExtension,
         launch: Launch::Direct,
+        extra: false,
     },
     AgentSpec {
         id: "gemini",
@@ -271,8 +283,89 @@ pub const AGENTS: &[AgentSpec] = &[
         resume_latest: NONE,
         hooks: Hooks::None,
         launch: Launch::Direct,
+        extra: false,
     },
+    // Plain agents offered only when found. Command names and install pages checked 2026-11-27 against npm, PyPI,
+    // Homebrew and each project's install page. No permission flags: none was checked against a real install.
+    // PyPI aider-chat 0.86.2.
+    plain(&["aider"], "Aider", "https://aider.chat/docs/install.html", Some("python -m pip install aider-install && aider-install")),
+    // Homebrew block-goose-cli 1.61.1. The `goose` database migration tool installs the same name.
+    plain(&["goose"], "Goose", "https://goose-docs.ai/docs/getting-started/installation/", Some("brew install block-goose-cli")),
+    // npm @sourcegraph/amp.
+    plain(&["amp"], "Amp", "https://ampcode.com/docs", Some("npm install -g @sourcegraph/amp")),
+    // cursor.com/install links both `agent` and `cursor-agent`, the Homebrew cask cursor-cli only `cursor-agent`;
+    // `agent` alone is too common a name to mean Cursor.
+    plain(&["cursor-agent"], "Cursor CLI", "https://cursor.com/docs/cli/installation", Some("curl https://cursor.com/install -fsS | bash")),
+    // npm @factory/cli 1.23.0 (bin `droid`).
+    plain(&["droid"], "Factory Droid", "https://docs.factory.com/droid-cli/quickstart", Some("npm install -g @factory/cli")),
+    // npm @github/copilot 1.0.117 (bin `copilot`).
+    plain(&["copilot"], "GitHub Copilot CLI", "https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli", Some("npm install -g @github/copilot")),
+    // npm @charmland/crush 0.104.0.
+    plain(&["crush"], "Crush", "https://github.com/charmbracelet/crush", Some("npm install -g @charmland/crush")),
 ];
+
+/// An `extra` plain agent named after its program (`id` is `commands[0]`): found by that name, started as it is,
+/// no hooks, model or resume arguments.
+const fn plain(commands: &'static [&'static str], label: &'static str, install_url: &'static str, install_command: Option<&'static str>) -> AgentSpec {
+    AgentSpec {
+        id: commands[0],
+        kind: Kind::Other,
+        commands,
+        detect: commands,
+        label,
+        install_url,
+        install_command,
+        login_command: None,
+        bypass_args: NONE,
+        own_args: NONE,
+        bypass_env: &[],
+        model_args: NONE,
+        effort_args: NONE,
+        resume_by_id: NONE,
+        resume_latest: NONE,
+        hooks: Hooks::None,
+        launch: Launch::Direct,
+        extra: true,
+    }
+}
+
+/// Where a row comes from, as `shifu agents` shows it: `built-in` (with status hooks) or `plain` (no hooks).
+pub fn source(spec: &AgentSpec) -> &'static str {
+    if spec.hooks == Hooks::None { "plain" } else { "built-in" }
+}
+
+impl Hooks {
+    /// How `shifu agents` names it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Hooks::ClaudeSettings => "claude-settings",
+            Hooks::Codex => "codex",
+            Hooks::KimiConfig => "kimi-config",
+            Hooks::AntigravityHooksJson => "antigravity-hooks-json",
+            Hooks::PiExtension => "pi-extension",
+            Hooks::OpencodePlugin => "opencode-plugin",
+            Hooks::None => "none",
+        }
+    }
+}
+
+/// The program and its own arguments for a plain command recorded as `command`: an agent from
+/// `<SHIFU_HOME>/agents.json` with that id runs its `command` and `args` (read again at every start and resume, so
+/// an edit applies to the next one); a plain row of the table runs its program; anything else runs as it is.
+pub fn plain_launch(command: &str) -> (String, Vec<String>) {
+    let (users, _) = crate::user_agents::load();
+    plain_launch_with(command, &users)
+}
+
+pub fn plain_launch_with(command: &str, users: &[crate::user_agents::UserAgent]) -> (String, Vec<String>) {
+    if let Some(user) = users.iter().find(|u| u.id == command) {
+        return (user.command.clone(), user.args.clone());
+    }
+    match of_command(command).filter(|s| s.kind == Kind::Other) {
+        Some(spec) => (spec.commands[0].to_string(), Vec::new()),
+        None => (command.to_string(), Vec::new()),
+    }
+}
 
 /// The row a recorded kind runs by; `None` for `Kind::Other` (plain commands keep the command they were given).
 pub fn of_kind(kind: Kind) -> Option<&'static AgentSpec> {
@@ -327,6 +420,27 @@ mod tests {
     fn plain_agents_take_no_hooks() {
         for spec in AGENTS.iter().filter(|s| s.kind == Kind::Other) {
             assert_eq!(spec.hooks, Hooks::None, "{}", spec.id);
+            assert!(spec.bypass_args.is_empty() && spec.own_args.is_empty() && spec.bypass_env.is_empty(), "{}", spec.id);
+            assert_eq!(source(spec), "plain");
         }
+        // Extra rows are plain, named after their program, and only the core rows are listed when missing.
+        for spec in AGENTS.iter().filter(|s| s.extra) {
+            assert_eq!((spec.kind, spec.commands[0], spec.detect), (Kind::Other, spec.id, spec.commands), "{}", spec.id);
+        }
+        assert!(AGENTS.iter().filter(|s| s.kind != Kind::Other).all(|s| !s.extra && source(s) == "built-in"));
+        assert!(!of_command("gemini").unwrap().extra);
+    }
+
+    #[test]
+    fn plain_commands_run_the_user_entry_then_the_row_then_as_given() {
+        use crate::user_agents::UserAgent;
+        let users = [UserAgent {
+            id: "mybot".into(), label: "My Bot".into(), command: "/opt/my bot/run".into(), args: vec!["--foo".into()], install_url: None,
+        }];
+        assert_eq!(plain_launch_with("mybot", &users), ("/opt/my bot/run".to_string(), vec!["--foo".to_string()]));
+        assert_eq!(plain_launch_with("cursor-agent", &users), ("cursor-agent".to_string(), vec![]));
+        assert_eq!(plain_launch_with("sh", &users), ("sh".to_string(), vec![]));
+        // A hooked agent's command is not a plain one.
+        assert_eq!(plain_launch_with("claude", &[]).0, "claude");
     }
 }

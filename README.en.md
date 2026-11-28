@@ -109,7 +109,7 @@ Install Shifu (https://github.com/Nalu-Lab/shifu) for me. Read README.en.md and 
 - The app is signed with Shifu's own fixed certificate and not notarized. If macOS blocks it, confirm the source and follow the app-specific prompt in System Settings → Privacy & Security.
 - Codex asks you to review its hooks on first launch; read them before deciding whether to trust them. Keeping the CLI installation path avoids repeating setup.
 - The PATH command applies to the current terminal. In a new terminal without that PATH setting, use `"$HOME/.cargo/bin/shifu"` or add that directory to your shell configuration.
-- CLI only: `shifu` opens the workbench, `shifu new claude ~/proj` starts an agent, `shifu ls` lists sessions, and `shifu jump` opens a waiting conversation.
+- CLI only: `shifu` opens the workbench, `shifu new claude ~/proj` starts an agent, `shifu ls` lists sessions, `shifu agents` shows which agent CLIs this Mac has (add your own CLI in `~/.shifu/app/agents.json`, see [docs/AGENTS.md](docs/AGENTS.md)), and `shifu jump` opens a waiting conversation.
 
 <details>
 <summary>Build from source (developers)</summary>

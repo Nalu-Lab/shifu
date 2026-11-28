@@ -4,7 +4,9 @@
 import { type CliReport, clisDetect, modelsList } from "./api";
 import type { Mark } from "./vendoricons";
 
-export type AgentKind = Mark;
+/** A built-in agent with its own mark, or the id of another one the report found (a plain agent from the table
+ *  or the user's agents.json), drawn with the neutral mark (`markFor`). */
+export type AgentKind = Mark | (string & {});
 
 export interface AgentSpec {
   kind: AgentKind;
@@ -25,7 +27,15 @@ export const AGENTS: AgentSpec[] = [
   { kind: "terminal", name: "终端" },
 ];
 
-export const specOf = (kind: string): AgentSpec | undefined => AGENTS.find((a) => a.kind === kind);
+/** The built-in list, with the agents only the report knows (extra plain agents, the user's own) before the
+ *  terminal, in the report's order. */
+export function agentList(report: CliReport | null): AgentSpec[] {
+  const known = new Set(AGENTS.map((a) => a.kind));
+  const more = (report?.agents ?? []).filter((a) => !known.has(a.kind)).map((a) => ({ kind: a.kind, name: a.name }));
+  return [...AGENTS.filter((a) => a.kind !== "terminal"), ...more, ...AGENTS.filter((a) => a.kind === "terminal")];
+}
+
+export const specOf = (kind: string): AgentSpec | undefined => agentList(clis).find((a) => a.kind === kind);
 
 /** What `clis_detect` found; null until the first answer, when every agent counts as installed (nothing hidden). */
 let clis: CliReport | null = null;
@@ -52,18 +62,24 @@ export function isInstalled(report: CliReport | null, kind: string): boolean {
   return !found || found.path !== null;
 }
 
-/** The agents to offer (installed, in catalog order) and the ones to point at an install page. */
+/** Offered only when found: a missing one is not named under 未安装 (`Found::extra` in clis.rs). */
+const isExtra = (report: CliReport | null, kind: string): boolean =>
+  report?.agents.find((a) => a.kind === kind)?.extra === true;
+
+/** The agents to offer (installed, in catalog order) and the ones to point at an install page; extra ones that
+ *  are missing are left out of both. */
 export function splitAgents(report: CliReport | null): { installed: AgentSpec[]; missing: AgentSpec[] } {
+  const list = agentList(report);
   return {
-    installed: AGENTS.filter((a) => isInstalled(report, a.kind)),
-    missing: AGENTS.filter((a) => !isInstalled(report, a.kind)),
+    installed: list.filter((a) => isInstalled(report, a.kind)),
+    missing: list.filter((a) => !isInstalled(report, a.kind) && !isExtra(report, a.kind)),
   };
 }
 
 /** `current` while it is installed, else the first installed agent (Claude, Codex, … order), else the terminal. */
 export function defaultKind(report: CliReport | null, current: string): string {
   if (isInstalled(report, current)) return current;
-  return AGENTS.find((a) => a.kind !== "terminal" && isInstalled(report, a.kind))?.kind ?? "terminal";
+  return agentList(report).find((a) => a.kind !== "terminal" && isInstalled(report, a.kind))?.kind ?? "terminal";
 }
 
 export const installUrl = (report: CliReport | null, kind: string): string | undefined =>
