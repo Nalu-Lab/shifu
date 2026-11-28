@@ -27,6 +27,7 @@ mod remotecontrol;
 mod search;
 mod seen;
 mod session;
+mod setup;
 mod statusline;
 mod tasks;
 mod taskgoals;
@@ -846,6 +847,9 @@ fn main() {
             guide_done_get,
             guide_done_set,
             clis::clis_detect,
+            setup::setup_run,
+            setup::setup_extras,
+            setup::setup_open,
             projectscan::projects_scan,
             ui_chinese,
             agent_new,

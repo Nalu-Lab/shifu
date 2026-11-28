@@ -19,7 +19,9 @@ Shifu 新建的 Claude、Codex 会话在首次启动时自动收到简短指南�
 
 ## 安装与权限
 
-在仓库根目录运行：
+下载版：发布版 Shifu.app 带着辅助程序（`Contents/Resources/helpers/`）。在「准备情况…」里点电脑操作的「设置」，或第一次运行任何 `shifu computer` 命令（`shifu computer install` 只做这一步），都会把它校验签名后放到 `~/Applications/Shifu Computer Use.app`；已装的不动。之后运行 `shifu computer permissions`（或「准备情况」里的「授权」），由本人在系统设置里授权。
+
+从源码装，在仓库根目录运行：
 
 ```bash
 bash scripts/local-signing.sh create   # 只需一次：建一个本机固定签名身份

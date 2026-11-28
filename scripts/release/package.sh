@@ -40,6 +40,9 @@ app="$cache/release/bundle/macos/Shifu.app"
 ditto "$app" "$pkg/Shifu.app"
 [ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$pkg/Shifu.app/Contents/Info.plist")" = "$version" ]
 [ -x "$pkg/Shifu.app/Contents/Resources/helpers/Shifu Computer Use.app/Contents/MacOS/shifu-computer-use-macos" ]
+# The bundled tmux runs with macOS's own libraries only (no Homebrew).
+"$pkg/Shifu.app/Contents/Resources/bin/tmux" -V >/dev/null
+if otool -L "$pkg/Shifu.app/Contents/Resources/bin/tmux" | tail -n +2 | awk '{print $1}' | grep -vE '^(/usr/lib/|/System/)' | grep -q .; then echo 'bundled tmux links outside macOS' >&2; exit 1; fi
 /usr/bin/codesign --verify --deep --strict "$pkg/Shifu.app"
 clear_helpers
 
@@ -57,6 +60,8 @@ fi
 # Matching CLI for terminal use (the app already carries one, so installing it is optional) and optional Computer Use helper (signed with the same identity, not notarized).
 cargo build --locked --release --manifest-path "$root/Cargo.toml" --bin shifu
 install -m 755 "$root/target/release/shifu" "$pkg/bin/shifu"
+# The same tmux as the app's, so the terminal CLI also works on a Mac without one.
+install -m 755 "$pkg/Shifu.app/Contents/Resources/bin/tmux" "$pkg/bin/tmux"
 # shifu web looks for web/cli.mjs next to the CLI; ship it with its one pinned dependency (pure JS).
 mkdir -p "$pkg/bin/web"
 cp "$root"/web/*.mjs "$root/web/package.json" "$root/web/package-lock.json" "$pkg/bin/web/"
@@ -86,8 +91,8 @@ cat > "$pkg/BUILD-INFO.json" <<JSON
   "notarized": false,
   "built_by": "$built_by",
   "built_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "included": ["Shifu.app (with the matching CLI at Contents/Resources/bin/shifu and Computer Use helper at Contents/Resources/helpers)", "bin/shifu (optional, for terminal use)", "helpers/Shifu Computer Use.app", "scripts/autopilot.py", "public instructions and licenses"],
-  "external_runtimes": ["tmux", "chosen agents", "Node/Pi for StepFun", "browser runtime for Browser Use"]
+  "included": ["Shifu.app (with the matching CLI at Contents/Resources/bin/shifu and Computer Use helper at Contents/Resources/helpers)", "tmux at Contents/Resources/bin/tmux and bin/tmux (used when no tmux is installed)", "bin/shifu (optional, for terminal use)", "helpers/Shifu Computer Use.app", "scripts/autopilot.py", "public instructions and licenses"],
+  "external_runtimes": ["chosen agents", "Node/Pi for StepFun", "browser runtime for Browser Use"]
 }
 JSON
 

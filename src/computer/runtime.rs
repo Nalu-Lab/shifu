@@ -19,10 +19,62 @@ pub(super) fn home() -> Result<PathBuf, String> {
     Ok(PathBuf::from(user).join(".shifu/computer"))
 }
 
+/// The helper, installed on first need from the copy Shifu ships (`install`).
 fn helper() -> Result<PathBuf, String> {
     let path = helper_path();
-    if !path.is_file() { return Err("还没安装 Shifu Computer Use 辅助程序；运行 shifu computer doctor 查看安装入口".into()); }
+    if !path.is_file() {
+        if bundled_helper().is_none() {
+            return Err(MISSING.into());
+        }
+        let installed = install()?;
+        eprintln!("已安装 Shifu Computer Use：{}；首次使用还需本人授权：shifu computer permissions", installed["result"]["helper"].as_str().unwrap_or_default());
+    }
     Ok(path)
+}
+
+const HELPER_APP: &str = "Shifu Computer Use.app";
+const MISSING: &str = "还没安装 Shifu Computer Use 辅助程序，这份 Shifu 也没带它；从下载包的 helpers/ 拖到 ~/Applications，或在 Shifu 仓库运行 bash scripts/install-computer.sh";
+
+/// The helper Shifu ships: `Shifu.app/Contents/Resources/helpers` beside the bundled CLI (or the app itself), the
+/// download package's `helpers/` beside its `bin/shifu`, else an installed Shifu.app's.
+fn bundled_helper() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok().and_then(|e| e.canonicalize().ok());
+    let dir = exe.as_deref().and_then(Path::parent);
+    let home = PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
+    let mut candidates: Vec<PathBuf> = dir.map(|d| vec![d.join("../helpers"), d.join("../Resources/helpers")]).unwrap_or_default();
+    candidates.push(PathBuf::from("/Applications/Shifu.app/Contents/Resources/helpers"));
+    candidates.push(home.join("Applications/Shifu.app/Contents/Resources/helpers"));
+    candidates.into_iter().map(|d| d.join(HELPER_APP)).find(|app| app.join("Contents/MacOS/shifu-computer-use-macos").is_file())
+}
+
+/// Copies the shipped helper to where `shifu computer` looks for it (`~/Applications`, or `SHIFU_COMPUTER_HELPER`'s
+/// app), checking its signature first. Does nothing when one is installed already: an in-app update keeps that one
+/// in step. Permissions are the person's to grant afterwards (`permissions`).
+pub fn install() -> Result<Value, String> {
+    let path = helper_path();
+    let app = path.parent().and_then(Path::parent).and_then(Path::parent).ok_or("辅助程序路径不在 .app 中")?.to_path_buf();
+    if path.is_file() {
+        return Ok(json!({"ok":true,"result":{"helper":path,"application":app,"installed":"already","nextStep":"shifu computer doctor"}}));
+    }
+    let source = bundled_helper().ok_or(MISSING)?;
+    let parent = app.parent().ok_or("没有安装目录")?;
+    fs::create_dir_all(parent).map_err(|e| format!("创建 {} 失败：{e}", parent.display()))?;
+    let stage = parent.join(format!(".shifu-computer-install.{}", std::process::id()));
+    let _ = fs::remove_dir_all(&stage);
+    fs::create_dir_all(&stage).map_err(|e| e.to_string())?;
+    let staged = stage.join(HELPER_APP);
+    let result = (|| -> Result<(), String> {
+        let copied = Command::new("/usr/bin/ditto").arg(&source).arg(&staged).stdin(Stdio::null()).status().map_err(|e| e.to_string())?;
+        if !copied.success() { return Err("复制辅助程序失败".into()); }
+        let signed = Command::new("/usr/bin/codesign").args(["--verify", "--deep", "--strict"]).arg(&staged)
+            .stdin(Stdio::null()).stderr(Stdio::null()).status().map_err(|e| e.to_string())?;
+        if !signed.success() { return Err(format!("{} 的签名无效，未安装", source.display())); }
+        fs::rename(&staged, &app).map_err(|e| format!("放到 {} 失败：{e}", app.display()))
+    })();
+    let _ = fs::remove_dir_all(&stage);
+    result?;
+    Ok(json!({"ok":true,"result":{"helper":path,"application":app,"installed":"now","source":source,
+        "nextStep":"运行 shifu computer permissions，由本人在系统设置里授权"}}))
 }
 
 fn helper_path() -> PathBuf {
@@ -36,7 +88,12 @@ fn helper_path() -> PathBuf {
 pub fn doctor() -> Result<Value, String> {
     let path = helper_path();
     if !path.is_file() {
-        return Ok(json!({"ok":false,"result":{"installed":false,"helper":path,"nextStep":"在 Shifu 仓库运行 bash scripts/install-computer.sh；之后运行 shifu computer permissions，由本人授权"}}));
+        let next = if bundled_helper().is_some() {
+            "运行 shifu computer install（任何 shifu computer 操作也会自动安装）；之后运行 shifu computer permissions，由本人授权"
+        } else {
+            "在 Shifu 仓库运行 bash scripts/install-computer.sh；之后运行 shifu computer permissions，由本人授权"
+        };
+        return Ok(json!({"ok":false,"result":{"installed":false,"helper":path,"nextStep":next}}));
     }
     let app = path.parent().and_then(Path::parent).and_then(Path::parent).ok_or("辅助程序不在 .app 中")?;
     let signature = Command::new("/usr/bin/codesign").args(["--verify", "--deep", "--strict"]).arg(app)

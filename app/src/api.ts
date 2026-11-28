@@ -213,8 +213,23 @@ export interface CliFound {
 export interface CliReport {
   agents: CliFound[];
   tmux: string | null;
+  /** That tmux is the one shipped inside Shifu.app. */
+  tmux_bundled?: boolean;
+  /** npm, which most agents' one-line installers need; null without Node. */
+  npm?: string | null;
   shell_read: boolean;
 }
+/** The setup checklist's one-click actions (setup.rs). A terminal action opens a tab in task `task` (or, with none,
+ *  a new task named `label` in the home folder) and types the command the backend picks for `kind` and `action`. */
+export const setupRun = (kind: string, action: "install" | "login" | "browser", task: string | null, label: string) =>
+  invoke<Changed>("setup_run", { kind, action, task, label });
+/** `computer`: "ready", "permissions" (installed, not allowed yet), "install" (carried, not installed) or "missing". */
+export interface SetupExtras {
+  browser: boolean;
+  computer: "ready" | "permissions" | "install" | "missing";
+}
+export const setupExtras = () => invoke<SetupExtras>("setup_extras");
+export const setupOpen = (what: "computer" | "notifications") => invoke<void>("setup_open", { what });
 /** Which agent CLIs (and tmux) are installed here: file checks only, nothing is started. */
 export const clisDetect = () => invoke<CliReport>("clis_detect");
 

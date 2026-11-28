@@ -23,6 +23,10 @@ pub struct Report {
     pub agents: Vec<Found>,
     /// Shifu runs every conversation in tmux; `None` when it is missing.
     pub tmux: Option<String>,
+    /// That tmux is the one shipped inside Shifu.app.
+    pub tmux_bundled: bool,
+    /// `npm`, which most agents' one-line installers need; `None` when Node is not installed.
+    pub npm: Option<String>,
     /// The login shell's PATH was read this run (else it is last run's, or only the usual folders).
     pub shell_read: bool,
 }
@@ -42,11 +46,12 @@ fn current_path() -> String {
 
 pub fn report() -> Report {
     let path = current_path();
-    let tmux = std::env::var_os("SHIFU_TMUX")
-        .filter(|p| !p.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| clis::find_program(&path, &["tmux"]))
-        .map(|p| p.to_string_lossy().into_owned());
+    let tmux = Some(shifu::tmux::find_tmux_bin())
+        .filter(|p| p.is_absolute() && clis::is_executable(p))
+        .or_else(|| clis::find_program(&path, &["tmux"]));
+    let tmux_bundled = tmux.as_ref().is_some_and(|t| Some(t.canonicalize().unwrap_or_else(|_| t.clone())) == shifu::tmux::bundled_tmux());
+    let tmux = tmux.map(|p| p.to_string_lossy().into_owned());
+    let npm = clis::find_program(&path, &["npm"]).map(|p| p.to_string_lossy().into_owned());
     let user_home = PathBuf::from(std::env::var_os("HOME").unwrap_or_default());
     let (users, warnings) = shifu::user_agents::load();
     for warning in &warnings {
@@ -54,7 +59,7 @@ pub fn report() -> Report {
     }
     let mut agents = clis::detect_with(&path, &users);
     with_sign_in(&mut agents, |kind| clis::signed_in(kind, &user_home, |key| std::env::var(key).ok()));
-    Report { agents, tmux, shell_read: SHELL_READ.load(Ordering::Relaxed) }
+    Report { agents, tmux, tmux_bundled, npm, shell_read: SHELL_READ.load(Ordering::Relaxed) }
 }
 
 /// Fills in `signed_in` for the installed agents (for the setup checklist); a missing agent has nothing to sign in.

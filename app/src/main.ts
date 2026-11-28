@@ -52,6 +52,7 @@ import {
   tasksLoad,
   type CliReport,
   setBeforeAgentStart,
+  setupRun,
   uiChinese,
 } from "./api";
 import { setChinese, tr } from "./i18n";
@@ -63,7 +64,7 @@ import { currentlyNeeding, nextNotices, type Notice, type Notified, staleNotices
 import { closeNewPopover, currentDefaultKind, showAddAgentPopover, showNewTaskPopover } from "./newpopover";
 import { shouldShowGuide, showGuide } from "./onboarding";
 import { ensurePermissionsChosen } from "./permissions";
-import { setupReady, showSetupChecklist } from "./setupcheck";
+import { setSetupTabOpener, setupReady, showSetupChecklist } from "./setupcheck";
 import { startPtyBus } from "./ptybus";
 import { Sidebar, type Role } from "./sidebar";
 import { botKindKey } from "./botpicker";
@@ -213,6 +214,14 @@ async function main() {
     workspace.open(name);
     if (getCurrentId() === taskId && workspace.activeAgent() === name) openedByUser(name);
   };
+
+  // The setup checklist's Install / Sign In / browser setup: a terminal tab in the current task (or a new one).
+  setSetupTabOpener(async (kind, action, label) => {
+    const { file, agent } = await setupRun(kind, action, getCurrentId(), label);
+    setAgents(await agentsList());
+    setTaskFile(file);
+    if (file.current && agent) await focusAgent(file.current, agent);
+  });
 
   const createTask = async (project: string, name: string, kind: string) => {
     const { file } = await taskNew(project, name, kind, pickArgs(pickFor(kind)));

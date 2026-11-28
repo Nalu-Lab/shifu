@@ -72,6 +72,8 @@ jobs:
           fi
           file bin/shifu | grep -q arm64
           bin/shifu --help >/dev/null
+          bin/tmux -V && Shifu.app/Contents/Resources/bin/tmux -V
+          if otool -L Shifu.app/Contents/Resources/bin/tmux | tail -n +2 | awk '{print $1}' | grep -vE '^(/usr/lib/|/System/)' | grep -q .; then echo 'bundled tmux links outside macOS' >&2; exit 1; fi
           test -f bin/web/cli.mjs && test -f bin/web/node_modules/playwright-core/package.json
           test -x "Shifu.app/Contents/Resources/helpers/Shifu Computer Use.app/Contents/MacOS/shifu-computer-use-macos"
       - name: Check the in-app update package
