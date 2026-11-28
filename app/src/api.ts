@@ -228,3 +228,22 @@ export const permissionsSet = (mode: Permissions) => invoke<void>("permissions_s
 /** Whether the first-run guide was finished or skipped (`guide_done` in settings.json). */
 export const guideDoneGet = () => invoke<boolean>("guide_done_get");
 export const guideDoneSet = () => invoke<void>("guide_done_set");
+
+/** Whether the system language is Chinese (the same rule as the menu); see i18n.ts. */
+export const uiChinese = () => invoke<boolean>("ui_chinese");
+
+/** A folder the first-run scan found (projectscan.rs): only names and times were read. */
+export interface FoundProject {
+  path: string;
+  name: string;
+  git: boolean;
+  modified: number;
+}
+export interface ProjectScan {
+  projects: FoundProject[];
+  /** Desktop, Documents, Downloads where they exist and were not looked through (macOS asks first). */
+  protected_left: string[];
+  partial: boolean;
+}
+/** `protectedToo` also looks through Desktop, Documents and Downloads, which makes macOS ask the first time. */
+export const projectsScan = (protectedToo: boolean) => invoke<ProjectScan>("projects_scan", { protected: protectedToo });

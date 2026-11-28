@@ -2,7 +2,7 @@
 
 [回到 Shifu](../README.md)　[English](INSTALL.en.md)
 
-Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1)，内含 App、匹配的 Shifu CLI 和安装说明；使用普通会话无需 Rust，StepFun 另需 Node/Pi；tmux、Agent 和账号登录需自行准备。按[远程安装与配对](REMOTE-RELAY.md)完成首次设置。
+Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1)，内含 App、匹配的 Shifu CLI 和安装说明；使用普通会话无需 Rust，StepFun 另需 Node/Pi；tmux、Agent 和账号登录需自行准备。[远程安装与配对](REMOTE-RELAY.md)只在连接另一台 Mac 时需要，首次安装用不到。
 
 普通会话优先使用下载包；源码构建方式收在下方开发者说明。
 
@@ -16,7 +16,7 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
 
 ## 快速开始
 
-[下载 Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1)，内含 App、匹配 CLI 和安装说明。普通会话无需 Rust；另备 tmux 和已登录的 Agent 即可。从 0.4.3 之后的版本起，缺什么，App 的「准备情况」（第一次打开时自动出现，以后在 Shifu 菜单里）会列出来，附安装命令和说明链接。StepFun 需[单独设置 Node/Pi 和订阅密钥](STEPFUN.md)。
+[下载 Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/releases/tag/remote-v0.4.3-preview.1)，内含 App、匹配 CLI 和安装说明。普通会话无需 Rust；另备 tmux 和已登录的 Agent 即可。从 0.4.3 之后的版本起，第一次打开会出现一屏简短的引导：自动找出这台 Mac 上的 Agent 和项目文件夹，勾选项目后点「开始」。缺 tmux 或 Agent 时也在这一屏列出安装命令；以后可在 Shifu 菜单的「准备情况」里再看。StepFun 需[单独设置 Node/Pi 和订阅密钥](STEPFUN.md)。
 
 <!-- cli-step: required (the app in the linked release does not carry its CLI; scripts/release/check-docs.py checks this against the release tag) -->
 
@@ -58,12 +58,12 @@ Shifu 提供 [Apple Silicon 预发布包](https://github.com/Nalu-Lab/shifu/rele
    brew install tmux   # 已有 tmux 时跳过
    ```
 
-3. 校验通过后，将 `Shifu.app` 移到 `~/Applications`，再打开 Shifu，选择项目和已登录的 Agent，创建第一条对话。完整说明见[安装指南](INSTALL.md)；连接另一台 Mac 时再看[远程安装与配对](REMOTE-RELAY.md)。
+3. 校验通过后，将 `Shifu.app` 移到 `~/Applications`，再打开 Shifu，选择项目和已登录的 Agent，创建第一条对话（0.4.3 之后的版本打开时有简短引导，会自动找出两者）。连接另一台 Mac 时才需要[远程安装与配对](REMOTE-RELAY.md)。
 
 - 应用用 Shifu 自己的固定证书签名，尚未公证；首次打开若被拦，确认来源后按「系统设置 → 隐私与安全性」中的对应提示处理。
 - 第一次启动 Codex 会提示检查 hooks，请阅读后决定是否信任。CLI 安装路径保持不变时，无需每次重复设置。
 - PATH 设置只对当前终端生效。新终端尚未配置该路径时，可运行 `"$HOME/.cargo/bin/shifu"`，或自行将该目录加入 shell 配置。
-- 只想用命令行：`shifu` 打开工作台，`shifu new claude ~/proj` 开一个 Agent，`shifu ls` 列出会话，`shifu jump` 跳到等待处理的会话。
+- 只想用命令行：`shifu` 打开工作台，`shifu new claude ~/proj` 开一个 Agent，`shifu ls` 列出会话，`shifu agents` 看这台 Mac 上找到哪些 Agent CLI（自己的 CLI 可写进 `~/.shifu/app/agents.json`，见 [docs/AGENTS.md](AGENTS.md)），`shifu jump` 跳到等待处理的会话。
 
 <details>
 <summary>从源码构建（开发者）</summary>
@@ -116,7 +116,7 @@ npm run build:desktop -- --debug
 
 | 你喜欢…… | 可以贡献 |
 |---|---|
-| Rust、并发 | 把读分支名的 git 挪出锁外、加超时，修好上面那个整窗卡住的问题 |
+| Rust、并发 | 把读分支名的 git 挪出锁外、加超时，让慢的 git 调用不会卡住整个窗口 |
 | 终端、xterm.js | 修长路径折行后点不开；终端里的搜索 |
 | 接新的 agent | Gemini CLI、Cursor CLI 等：写 hooks 适配，把状态接进侧栏 |
 | 跨平台 | Linux 上的通知、拖放和打包 |

@@ -51,13 +51,15 @@ import {
   tasksLoad,
   type CliReport,
   setBeforeAgentStart,
+  uiChinese,
 } from "./api";
+import { setChinese, tr } from "./i18n";
 import { baselineSeen } from "./attention";
 import { agentLabel, type AgentView } from "./format";
 import { closeMenu } from "./menu";
 import { waitForVerdict } from "./jev";
 import { currentlyNeeding, nextNotices, type Notice, type Notified, staleNotices } from "./notify";
-import { closeNewPopover, showAddAgentPopover, showNewTaskPopover } from "./newpopover";
+import { closeNewPopover, currentDefaultKind, showAddAgentPopover, showNewTaskPopover } from "./newpopover";
 import { shouldShowGuide, showGuide } from "./onboarding";
 import { ensurePermissionsChosen } from "./permissions";
 import { setupReady, showSetupChecklist } from "./setupcheck";
@@ -95,7 +97,7 @@ import {
   setWindowFocused,
   subscribe,
 } from "./store";
-import { projectsOf, taskOfAgent, withPickedFolders } from "./tasks";
+import { type TaskFile, projectsOf, taskOfAgent, withPickedFolders } from "./tasks";
 import { loadWaitingSeen, WAITING_SEEN_KEY } from "./waitingseen";
 
 const PINNED_TASKS_KEY = "shifu.pinnedTasks";
@@ -114,6 +116,8 @@ import type { DockviewGroupPanel } from "dockview";
 async function main() {
   // A fresh install is asked how agents may act before the first one starts (permissions.ts).
   setBeforeAgentStart(ensurePermissionsChosen);
+  // The first-run screens, the new-task form and the empty page follow the system language (i18n.ts).
+  setChinese(await uiChinese().catch(() => true));
   applyStoredTheme();
   applyStoredFontSizes();
   // The picker uses last launch's list until this answers (a couple of seconds).
@@ -216,6 +220,34 @@ async function main() {
     setAgents(await agentsList());
     setTaskFile(file);
     if (file.current) await showTask(file.current);
+  };
+
+  /** The first-run guide's 开始: one task per ticked folder with `kind`, then the first one opened. A folder that
+   *  fails is reported and the rest still go ahead. */
+  const createTasks = async (projects: string[], kind: string): Promise<number> => {
+    let first: string | null = null;
+    let last: TaskFile | null = null;
+    for (const project of projects) {
+      try {
+        const { file } = await taskNew(project, "", kind, pickArgs(pickFor(kind)));
+        first ??= file.current;
+        last = file;
+        dropPickedFolder(project);
+      } catch (e) {
+        reportError(e);
+      }
+    }
+    if (!last) return 0;
+    setAgents(await agentsList());
+    setTaskFile(last);
+    if (first) await showTask(first);
+    return projects.length;
+  };
+
+  /** 添加项目 on the empty page: the folder dialog, then a task there with the default agent. */
+  const addProject = async () => {
+    const dir = await openPanel({ directory: true, multiple: false, title: tr("添加项目", "Add Project") });
+    if (typeof dir === "string") await createTask(dir, "", currentDefaultKind());
   };
 
   /** Add an agent to the current task and open it (in `group` if given, or split off it toward `direction`). */
@@ -472,6 +504,7 @@ async function main() {
     requestSplit: (anchor, group, direction) => split(direction, group, anchor),
     addAgent: (kind) => void addAgent(kind).catch(reportError),
     requestNewTask: (anchor) => requestNewTask(anchor),
+    addProject: () => void addProject().catch(reportError),
     activeChanged: (name) => {
       sidebar.setActive(name);
       setActiveAgent(name);
@@ -530,7 +563,7 @@ async function main() {
   // The statusbar is already visible while restoring a task; its sidebar action must be ready first.
   if (file.current) await showTask(file.current);
   // First open: the one-screen guide (docs/ONBOARDING.md, 第 3 阶段). A failed read shows nothing.
-  if (shouldShowGuide(file.tasks.length, await guideDoneGet().catch(() => true))) showGuide(createTask);
+  if (shouldShowGuide(file.tasks.length, await guideDoneGet().catch(() => true))) showGuide(createTasks);
   // Otherwise, while tmux or every agent CLI is missing, the setup checklist (the guide has it in step 1).
   else {
     const check = () => {
