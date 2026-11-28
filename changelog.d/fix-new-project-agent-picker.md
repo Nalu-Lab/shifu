@@ -1,0 +1,2 @@
+- 新建项目任务时，可以从「类型」下拉菜单点选 Codex 或其他已安装的 Agent，并用所选 Agent 建立任务。（还没装）
+- When creating a project task, you can select Codex or another installed agent from the dropdown and create the task with that agent.
