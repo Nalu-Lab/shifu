@@ -726,9 +726,10 @@ export class Sidebar {
 
   constructor(private readonly actions: SidebarActions) {
     const header = el("div", "sidebar-head");
-    header.dataset.tauriDragRegion = "";
+    // "deep": a press anywhere in the row moves the window, gaps between the buttons included; the buttons still
+    // click, because Tauri's drag script never drags from a button.
+    header.dataset.tauriDragRegion = "deep";
     const brand = el("span", "brand", "Shifu");
-    brand.dataset.tauriDragRegion = "";
     // The acceptance copy calls itself "Shifu 测试", so it is never taken for the real one.
     appName().then((n) => (brand.textContent = n)).catch(reportError);
     this.catImage.alt = "";
